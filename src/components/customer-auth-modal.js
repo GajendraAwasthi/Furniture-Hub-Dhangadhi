@@ -2,7 +2,7 @@ export function renderCustomerAuthModal(container, state, events) {
   container.innerHTML = `
     <!-- Unified Auth Backdrop -->
     <div class="modal-backdrop ${state.isCustomerAuthOpen ? 'open' : ''}" id="customer-auth-backdrop">
-      <div class="modal-card customer-auth-modal-card" style="max-width: 440px; text-align: center; padding: 36px 30px;">
+      <div class="modal-card customer-auth-modal-card" style="max-width: 420px; text-align: center; padding: 36px 28px;">
         <!-- Close Button -->
         <div style="display: flex; justify-content: flex-end; margin-top: -12px; margin-right: -12px;">
           <button class="btn-icon" id="customer-auth-close-btn" aria-label="Close modal">
@@ -14,7 +14,7 @@ export function renderCustomerAuthModal(container, state, events) {
         </div>
 
         <!-- Brand Header -->
-        <div style="margin-bottom: 24px;">
+        <div style="margin-bottom: 28px;">
           <img src="/images/furniture-hub-logo.png" alt="Furniture Hub Dhangadhi" style="height: 48px; width: auto; margin: 0 auto 16px auto; display: block;">
           <h3 style="font-size: 1.45rem; font-weight: 800; color: var(--color-primary); margin-bottom: 8px;">
             Sign In to Furniture Hub
@@ -25,7 +25,7 @@ export function renderCustomerAuthModal(container, state, events) {
         </div>
 
         <!-- Google OAuth Button Only -->
-        <div style="margin-bottom: 22px;">
+        <div>
           <button type="button" class="btn-oauth btn-oauth-google" id="btn-oauth-google" style="width: 100%; justify-content: center; padding: 14px 20px; font-size: 1rem; font-weight: 700; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); cursor: pointer;">
             <svg width="22" height="22" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
@@ -35,19 +35,6 @@ export function renderCustomerAuthModal(container, state, events) {
             </svg>
             <span>Continue with Google</span>
           </button>
-        </div>
-
-        <!-- Trust & Security Info -->
-        <div style="background: rgba(18, 45, 37, 0.04); border-radius: 12px; padding: 14px 16px; border: 1px solid rgba(18, 45, 37, 0.08); text-align: left;">
-          <div style="display: flex; gap: 10px; align-items: flex-start;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-            <div style="font-size: 0.82rem; color: var(--color-text-subtle); line-height: 1.4;">
-              <strong style="color: var(--color-primary); display: block; margin-bottom: 2px;">Instant 1-Click Sign In</strong>
-              Sign in securely with Google. After connecting, you will confirm your delivery address and contact number for seamless order processing.
-            </div>
-          </div>
         </div>
       </div>
     </div>

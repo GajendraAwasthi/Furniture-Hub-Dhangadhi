@@ -325,10 +325,10 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
     };
     localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
     updateChrome();
-    showToast(welcomeMsg || `👋 Welcome, ${res.user.name || 'Valued Customer'}!`, 'success');
+    showToast(welcomeMsg || `Welcome, ${res.user.name || 'Valued Customer'}!`, 'success');
 
-    // Post-Login Location and Details Dialog
-    const isMissingDetails = !res.user.phone || !res.user.address || res.user.phone === '9841000000';
+    // Post-Login Mandatory Location and Mobile Number Dialog
+    const isMissingDetails = !res.user.phone || !res.user.address;
     if (isMissingDetails) {
       openPostLoginOnboardingModal(res.user, (details) => {
         updateCustomerProfile(res.user.id, details);
@@ -336,7 +336,7 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
         state.customerProfile = { ...state.customerProfile, ...details };
         localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
         updateChrome();
-        showToast('📍 Delivery details saved! Welcome to Furniture Hub Dhangadhi.', 'success');
+        showToast('Delivery details saved! Welcome to Furniture Hub Dhangadhi.', 'success');
       });
     }
 
@@ -351,14 +351,14 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
 // Google OAuth Login Handler (Google Sign-In Only)
 events.on('oauth-login', async ({ provider = 'google' }) => {
   try {
-    showToast('🔄 Connecting with Google...', 'info');
+    showToast('Connecting with Google...', 'info');
     const authRes = await loginWithOAuth('google');
     if (authRes?.url) {
       window.location.href = authRes.url;
       return;
     }
     const res = await authenticateOAuthUser('google', authRes?.user);
-    applyAuthenticatedSession(res, '🎉 Signed in successfully with Google!');
+    applyAuthenticatedSession(res, 'Signed in successfully with Google.');
   } catch (err) {
     showToast(err.message || 'Google authentication error.', 'danger');
   }
