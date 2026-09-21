@@ -39,7 +39,7 @@ export function renderAboutView(container, state, events) {
       <div class="site-container">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px; text-align: center;">
           <div>
-            <div style="font-family: var(--font-heading); font-size: 2.8rem; font-weight: 800; color: #ffcd29; margin-bottom: 4px;">10,000+</div>
+            <div style="font-family: var(--font-heading); font-size: 2.8rem; font-weight: 800; color: #ffcd29; margin-bottom: 4px;">1000+</div>
             <div style="font-size: 0.95rem; opacity: 0.9;">Homes & Spaces Furnished</div>
           </div>
           <div>
