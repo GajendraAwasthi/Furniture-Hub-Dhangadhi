@@ -177,13 +177,13 @@ export function renderShopView(container, state, events, params) {
               `).join('')}
             </div>
           ` : `
-            <div style="text-align: center; padding: 80px 20px; background: #ffffff; border-radius: 16px; border: 1px solid rgba(18, 45, 37, 0.1);">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 24px; min-height: 420px; height: 100%; background: #ffffff; border-radius: 16px; border: 1px solid rgba(18, 45, 37, 0.1); box-sizing: border-box;">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 16px; color: var(--color-text-subtle);">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <h3 style="font-size: 1.4rem; margin-bottom: 8px;">${state.products.length === 0 ? 'Catalog is currently empty' : 'No matching furniture pieces found'}</h3>
-              <p class="text-subtitle" style="margin-bottom: 24px;">
+              <h3 style="font-size: 1.4rem; font-weight: 700; color: var(--color-primary); margin-bottom: 8px; text-align: center;">${state.products.length === 0 ? 'Catalog is currently empty' : 'No matching furniture pieces found'}</h3>
+              <p class="text-subtitle" style="margin: 0 auto 24px auto; text-align: center; max-width: 520px;">
                 ${state.products.length === 0 
                   ? 'New handcrafted furniture collections are uploaded directly through the store administration portal.' 
                   : 'Try modifying your search keywords or resetting your category filters.'}
