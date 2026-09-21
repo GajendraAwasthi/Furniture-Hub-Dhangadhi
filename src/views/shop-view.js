@@ -91,21 +91,6 @@ export function renderShopView(container, state, events, params) {
         </div>
       </div>
 
-      ${!state.customerUser ? `
-        <div class="shop-guest-auth-alert" style="background: linear-gradient(135deg, rgba(18, 45, 37, 0.04) 0%, rgba(18, 45, 37, 0.08) 100%); border: 1.5px solid rgba(18, 45, 37, 0.14); border-radius: 14px; padding: 14px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 1.4rem;">🔒</span>
-            <div>
-              <strong style="color: var(--color-primary); font-size: 0.95rem; display: block;">Sign In Required to Shop & Add to Cart</strong>
-              <span style="font-size: 0.82rem; color: var(--color-text-subtle);">Browse our collection freely. Sign in with your customer account to add furniture to your cart and place orders.</span>
-            </div>
-          </div>
-          <button type="button" class="btn btn-primary btn-sm" id="shop-guest-signin-btn" style="padding: 9px 18px; font-weight: 700; border-radius: 10px;">
-            Sign In / Register
-          </button>
-        </div>
-      ` : ''}
-
       <!-- Category Filter Pills (Figma: Chairs, Surfaces, Decorations, Greens, Long Sofa, Combos) -->
       <div class="filter-pills" id="shop-category-pills">
         ${categories.map(cat => `
@@ -291,12 +276,6 @@ export function renderShopView(container, state, events, params) {
     });
   });
 
-  const guestSignInBtn = container.querySelector('#shop-guest-signin-btn');
-  if (guestSignInBtn) {
-    guestSignInBtn.addEventListener('click', () => {
-      events.emit('open-customer-auth');
-    });
-  }
 
   // Open Reviews Modal when clicking card rating
   container.querySelectorAll('[data-open-reviews-pid]').forEach(btn => {
