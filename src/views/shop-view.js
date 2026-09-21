@@ -197,9 +197,16 @@ export function renderShopView(container, state, events, params) {
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <h3 style="font-size: 1.4rem; margin-bottom: 8px;">No matching furniture pieces found</h3>
-              <p class="text-subtitle" style="margin-bottom: 24px;">Try modifying your search keywords or resetting your category filters.</p>
-              <a href="#shop" class="btn btn-primary">Reset Filters</a>
+              <h3 style="font-size: 1.4rem; margin-bottom: 8px;">${state.products.length === 0 ? 'Catalog is currently empty' : 'No matching furniture pieces found'}</h3>
+              <p class="text-subtitle" style="margin-bottom: 24px;">
+                ${state.products.length === 0 
+                  ? 'New handcrafted furniture collections are uploaded directly through the store administration portal.' 
+                  : 'Try modifying your search keywords or resetting your category filters.'}
+              </p>
+              ${state.products.length === 0 
+                ? (isCurrentAdmin() ? '<a href="#admin/products" class="btn btn-primary">Add Product in Admin</a>' : '<a href="#home" class="btn btn-primary">Return to Home</a>')
+                : '<a href="#shop" class="btn btn-primary">Reset Filters</a>'
+              }
             </div>
           `}
         </div>

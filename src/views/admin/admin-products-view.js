@@ -101,7 +101,7 @@ export async function renderAdminProductsView(container, state, events) {
                   <tr>
                     <td>
                       <div class="product-row-flex">
-                        <img src="${p.image}" alt="${p.name}" class="product-table-thumb">
+                        <img src="${p.image || '/images/hero-living-room.png'}" alt="${p.name}" class="product-table-thumb" onerror="this.src='/images/hero-living-room.png'">
                         <div>
                           <div style="font-weight: 700; color: var(--color-primary);">${p.name}</div>
                           <div style="font-size: 0.75rem; color: var(--color-text-subtle);">ID: ${p.id}</div>
@@ -146,8 +146,10 @@ export async function renderAdminProductsView(container, state, events) {
                   </tr>
                 `).join('') : `
                   <tr>
-                    <td colspan="6" style="text-align: center; padding: 48px 20px; color: var(--color-text-muted);">
-                      No matching products found. Try changing your search query or filter.
+                    <td colspan="6" style="text-align: center; padding: 56px 20px; color: var(--color-text-muted);">
+                      <div style="font-size: 1.1rem; font-weight: 700; color: var(--color-primary); margin-bottom: 6px;">No products in database yet</div>
+                      <div style="font-size: 0.88rem; margin-bottom: 16px;">All preloaded demo products have been cleared. Click below to add your first furniture piece.</div>
+                      <button class="btn btn-primary btn-sm" id="btn-empty-add-product">+ Add First Product</button>
                     </td>
                   </tr>
                 `}
@@ -206,8 +208,19 @@ export async function renderAdminProductsView(container, state, events) {
                 </div>
 
                 <div class="settings-form-group full-width">
-                  <label class="settings-label" for="form-p-image">Primary Image URL or Path *</label>
-                  <input type="text" id="form-p-image" class="settings-input" placeholder="/images/product-argo-chair.png" required>
+                  <label class="settings-label" for="form-p-image">Primary Image URL or File *</label>
+                  <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                    <input type="text" id="form-p-image" class="settings-input" placeholder="/images/hero-living-room.png or paste image URL" required style="flex: 1;">
+                    <label for="form-p-file" class="btn btn-secondary btn-sm" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                      <span>Choose File</span>
+                    </label>
+                    <input type="file" id="form-p-file" accept="image/*" style="display: none;">
+                  </div>
+                  <div id="form-p-preview-wrap" style="display: none; align-items: center; gap: 10px; margin-top: 6px;">
+                    <img id="form-p-preview" src="" alt="Preview" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(18,45,37,0.15);">
+                    <span style="font-size: 0.8rem; color: var(--color-text-subtle);">Image file loaded successfully.</span>
+                  </div>
                 </div>
 
                 <div class="settings-form-group full-width">
@@ -299,6 +312,8 @@ export async function renderAdminProductsView(container, state, events) {
           await deleteProduct(id);
           events.emit('toast', { message: `Product "${id}" deleted from database`, type: 'info' });
           products = await fetchProducts();
+          state.products = products;
+          events.emit('products-updated', products);
           render();
         }
       });
@@ -349,7 +364,43 @@ export async function renderAdminProductsView(container, state, events) {
         isModalOpen = false;
         editingProduct = null;
         products = await fetchProducts();
+        state.products = products;
+        events.emit('products-updated', products);
         render();
+      });
+    }
+
+    // Empty state add button listener
+    const emptyAddBtn = container.querySelector('#btn-empty-add-product');
+    if (emptyAddBtn) {
+      emptyAddBtn.addEventListener('click', () => {
+        editingProduct = null;
+        isModalOpen = true;
+        render();
+      });
+    }
+
+    // Direct Image File Chooser listener
+    const fileInput = container.querySelector('#form-p-file');
+    const imageInput = container.querySelector('#form-p-image');
+    const previewWrap = container.querySelector('#form-p-preview-wrap');
+    const previewImg = container.querySelector('#form-p-preview');
+
+    if (fileInput && imageInput) {
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            imageInput.value = dataUrl;
+            if (previewImg && previewWrap) {
+              previewImg.src = dataUrl;
+              previewWrap.style.display = 'flex';
+            }
+          };
+          reader.readAsDataURL(file);
+        }
       });
     }
   }

@@ -38,7 +38,7 @@ import {
 // Global Application State
 const initialCustomer = getCurrentCustomer();
 const state = {
-  products: productsData,
+  products: Array.isArray(productsData) ? productsData : [],
   cart: initialCustomer ? (JSON.parse(localStorage.getItem('fh_cart_' + initialCustomer.id)) || JSON.parse(localStorage.getItem('fh_cart')) || []) : [],
   wishlist: JSON.parse(localStorage.getItem('fh_wishlist')) || [],
   customerUser: initialCustomer,
@@ -628,14 +628,20 @@ async function renderCurrentView() {
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     const dbProducts = await fetchProducts();
-    if (dbProducts && dbProducts.length > 0) {
-      state.products = dbProducts;
-    }
+    state.products = Array.isArray(dbProducts) ? dbProducts : [];
   } catch (err) {
-    console.warn('Using bundled product catalog fallback');
+    console.warn('Product database fetch error:', err);
+    state.products = [];
   }
   updateChrome();
   renderCurrentView();
+});
+
+events.on('products-updated', (updatedList) => {
+  if (Array.isArray(updatedList)) {
+    state.products = updatedList;
+    renderCurrentView();
+  }
 });
 
 window.addEventListener('hashchange', () => {

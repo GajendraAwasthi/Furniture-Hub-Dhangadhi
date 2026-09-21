@@ -70,7 +70,12 @@ export function renderHomeView(container, state, events) {
         <h2 class="figma-section-title-white">New Arrivals</h2>
         
         <div class="figma-products-grid">
-          ${newArrivals.map(p => renderExactCard(p)).join('')}
+          ${newArrivals.length > 0 ? newArrivals.map(p => renderExactCard(p)).join('') : `
+            <div style="grid-column: 1/-1; text-align: center; padding: 48px 20px; color: rgba(255,255,255,0.75);">
+              <p style="font-size: 1.05rem; margin-bottom: 6px;">New handcrafted arrivals are being prepared by our Dhangadhi workshop.</p>
+              <span style="font-size: 0.85rem; opacity: 0.8;">Custom orders and inquiries are welcome directly via our WhatsApp concierge.</span>
+            </div>
+          `}
         </div>
 
         <div class="figma-btn-center-wrap">
@@ -87,7 +92,12 @@ export function renderHomeView(container, state, events) {
         <h2 class="figma-section-title-dark">Best Sellers</h2>
 
         <div class="figma-products-grid">
-          ${bestSellers.map(p => renderExactCard(p)).join('')}
+          ${bestSellers.length > 0 ? bestSellers.map(p => renderExactCard(p)).join('') : `
+            <div style="grid-column: 1/-1; text-align: center; padding: 48px 20px; color: var(--color-text-muted);">
+              <p style="font-size: 1.05rem; margin-bottom: 6px;">Signature showroom pieces are currently being cataloged.</p>
+              <span style="font-size: 0.85rem; color: var(--color-text-subtle);">Explore our workshop inventory or message our team directly.</span>
+            </div>
+          `}
         </div>
 
         <div class="figma-btn-center-wrap">

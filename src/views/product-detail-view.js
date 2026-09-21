@@ -5,8 +5,34 @@ import { openProductReviewsModal } from '../components/product-reviews-modal.js'
 import { escapeHtml } from '../utils/security.js';
 
 export function renderProductDetailView(container, state, events, params) {
-  const productId = params.get('id') || 'argo-office-chair';
+  const productId = params.get('id') || '';
   const product = state.products.find(p => p.id === productId) || state.products[0];
+
+  if (!product) {
+    container.innerHTML = `
+      <div class="container" style="padding: 100px 20px; text-align: center;">
+        <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 48px 32px; border: 1px solid rgba(18,45,37,0.1); box-shadow: 0 8px 30px rgba(18,45,37,0.06);">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 16px auto; color: var(--color-text-subtle);">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 10px; color: var(--color-primary);">Piece Not Available</h2>
+          <p style="color: var(--color-text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 24px;">
+            This furniture piece is currently unavailable or has not yet been uploaded to our catalog.
+          </p>
+          <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <a href="#shop" class="btn btn-primary" style="padding: 12px 24px; font-weight: 700; border-radius: 12px;">Browse Catalog</a>
+            <a href="#home" class="btn btn-secondary" style="padding: 12px 24px; font-weight: 700; border-radius: 12px;">Back to Home</a>
+          </div>
+        </div>
+      </div>
+      <div id="figma-footer-container"></div>
+    `;
+    const footerContainer = container.querySelector('#figma-footer-container');
+    if (footerContainer) renderFigmaFooter(footerContainer);
+    return;
+  }
 
   let selectedColor = product.colors && product.colors.length > 0 ? product.colors[0].name : '';
   let selectedImage = product.gallery && product.gallery.length > 0 ? product.gallery[0] : product.image;

@@ -3,7 +3,7 @@ import initialProducts from '../data/products.json' with { type: 'json' };
 
 // Configuration keys
 const STORAGE_DEMO_USER = 'fh_demo_admin_user';
-const STORAGE_LOCAL_PRODUCTS = 'fh_local_products';
+const STORAGE_LOCAL_PRODUCTS = 'fh_store_products_v2';
 const STORAGE_LOCAL_ORDERS = 'fh_local_orders';
 const STORAGE_LOCAL_SETTINGS = 'fh_local_settings';
 const STORAGE_LOCAL_COUPONS = 'fh_local_coupons';
@@ -325,12 +325,16 @@ export async function testSupabaseConnection() {
 // ==========================================================================
 
 function getLocalProducts() {
-  const stored = localStorage.getItem(STORAGE_LOCAL_PRODUCTS);
-  if (stored) {
-    try { return JSON.parse(stored); } catch { /* ignore */ }
-  }
-  localStorage.setItem(STORAGE_LOCAL_PRODUCTS, JSON.stringify(initialProducts));
-  return initialProducts;
+  try {
+    localStorage.removeItem('fh_local_products'); // Clean any legacy demo products cache
+    const stored = localStorage.getItem(STORAGE_LOCAL_PRODUCTS);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch { /* ignore */ }
+  localStorage.setItem(STORAGE_LOCAL_PRODUCTS, JSON.stringify([]));
+  return [];
 }
 
 function saveLocalProducts(products) {
