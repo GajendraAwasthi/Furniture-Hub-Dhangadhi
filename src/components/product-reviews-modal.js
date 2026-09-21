@@ -1,6 +1,7 @@
 import { getProductReviews, getProductRatingSummary, addCustomerReview, hasCustomerPurchasedProduct } from '../services/reviews.js';
 import { getCurrentCustomerUser, isCurrentAdmin } from '../services/customer-auth.js';
 import { escapeHtml } from '../utils/security.js';
+import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 
 export function openProductReviewsModal(product, events) {
   // Remove any existing reviews modal
@@ -27,7 +28,7 @@ export function openProductReviewsModal(product, events) {
         <!-- Header -->
         <div class="product-reviews-header">
           <div class="product-reviews-header-info">
-            <img src="${product.image}" alt="${product.name}" class="product-reviews-thumb">
+            <img src="${resolveCloudImageUrl(product.image)}" alt="${product.name}" class="product-reviews-thumb" onerror="this.src='/images/hero-living-room.png'">
             <div>
               <span class="product-reviews-cat">${product.category || 'Furniture'}</span>
               <h3 id="p-rev-title" class="product-reviews-title">${product.name} Reviews</h3>

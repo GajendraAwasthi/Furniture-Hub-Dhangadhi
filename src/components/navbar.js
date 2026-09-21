@@ -1,4 +1,5 @@
 import { isCurrentAdmin } from '../services/customer-auth.js';
+import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 
 export function renderNavbar(container, state, events) {
   const cartCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -351,7 +352,7 @@ export function renderNavbar(container, state, events) {
 
     searchResultsList.innerHTML = matches.slice(0, 5).map(p => `
       <a href="#product-detail?id=${p.id}" class="search-result-row" data-id="${p.id}">
-        <img src="${p.image}" alt="${p.name}" class="search-result-img">
+        <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" class="search-result-img" onerror="this.src='/images/hero-living-room.png'">
         <div class="search-result-info">
           <div class="search-result-title">${p.name}</div>
           <div class="search-result-meta">${p.category} &bull; Rating: ${p.rating} ★</div>

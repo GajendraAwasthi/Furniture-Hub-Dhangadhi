@@ -1,6 +1,7 @@
 import { renderFigmaFooter } from '../components/footer.js';
 import { isCurrentAdmin } from '../services/customer-auth.js';
 import { openProductReviewsModal } from '../components/product-reviews-modal.js';
+import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 
 export function renderShopView(container, state, events, params) {
   let activeCategory = params.get('category') || 'All';
@@ -141,7 +142,7 @@ export function renderShopView(container, state, events, params) {
                           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                         </svg>
                       </button>
-                      <img src="${p.image || '/images/hero-living-room.png'}" alt="${p.name}" loading="lazy" class="product-navigate-trigger" data-id="${p.id}" onerror="this.src='/images/hero-living-room.png'">
+                      <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" loading="lazy" class="product-navigate-trigger" data-id="${p.id}" onerror="this.src='/images/hero-living-room.png'">
                     </div>
                     <div class="product-info">
                       <span class="product-category-label">${p.category}</span>

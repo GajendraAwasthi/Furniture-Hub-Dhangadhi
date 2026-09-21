@@ -1,5 +1,6 @@
 import { fetchProducts, fetchOrders, fetchStoreSettings, updateOrderStatus } from '../../services/supabase.js';
 import { getSellerNumber } from '../../services/whatsapp.js';
+import { resolveCloudImageUrl } from '../../utils/cloud-image-resolver.js';
 
 export async function renderAdminOverviewView(container, state, events) {
   container.innerHTML = `
@@ -230,7 +231,7 @@ export async function renderAdminOverviewView(container, state, events) {
                 <tr>
                   <td>
                     <div class="product-row-flex">
-                      <img src="${p.image}" alt="${p.name}" class="product-table-thumb">
+                      <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" class="product-table-thumb" onerror="this.src='/images/hero-living-room.png'">
                       <div>
                         <div style="font-weight: 700;">${p.name}</div>
                         <div style="font-size: 0.76rem; color: var(--color-text-subtle);">ID: ${p.id}</div>

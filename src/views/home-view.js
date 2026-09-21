@@ -2,6 +2,7 @@ import { renderFigmaFooter } from '../components/footer.js';
 import { isCurrentAdmin } from '../services/customer-auth.js';
 import { getTopReviews } from '../services/reviews.js';
 import { openProductReviewsModal } from '../components/product-reviews-modal.js';
+import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 
 export function renderHomeView(container, state, events) {
   function renderStars(rating = 5) {
@@ -18,7 +19,7 @@ export function renderHomeView(container, state, events) {
     return `
       <div class="figma-product-card" data-id="${product.id}">
         <div class="figma-card-img-wrap">
-          <img src="${product.image || '/images/hero-living-room.png'}" alt="${product.name}" loading="lazy" onerror="this.src='/images/hero-living-room.png'">
+          <img src="${resolveCloudImageUrl(product.image)}" alt="${product.name}" loading="lazy" onerror="this.src='/images/hero-living-room.png'">
         </div>
         <span class="figma-card-category">${product.category || 'Decorations'}</span>
         <h4 class="figma-card-title">${product.name}</h4>

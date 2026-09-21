@@ -1,4 +1,5 @@
 import { renderFigmaFooter } from '../components/footer.js';
+import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 
 export function renderNotFoundView(container, state, events) {
   const recommended = state.products.slice(0, 4);
@@ -86,7 +87,7 @@ export function renderNotFoundView(container, state, events) {
         ${recommended.map(product => `
           <div class="figma-product-card" data-id="${product.id}" style="cursor: pointer;">
             <div class="figma-card-img-wrap">
-              <img src="${product.image}" alt="${product.name}" loading="lazy">
+              <img src="${resolveCloudImageUrl(product.image)}" alt="${product.name}" loading="lazy" onerror="this.src='/images/hero-living-room.png'">
             </div>
             <span class="figma-card-category">${product.category || 'Decorations'}</span>
             <h4 class="figma-card-title">${product.name}</h4>

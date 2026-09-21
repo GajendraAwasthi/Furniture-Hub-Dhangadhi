@@ -1,4 +1,5 @@
 import { getCustomerOrders, updateCustomerProfile, logoutUser } from '../../services/customer-auth.js';
+import { resolveCloudImageUrl } from '../../utils/cloud-image-resolver.js';
 
 export function renderCustomerDashboardView(container, state, events, activeTab = 'orders') {
   const customer = state.customerUser;
@@ -154,7 +155,7 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
                   <div class="cust-order-items">
                     ${(order.items || []).map(item => `
                       <div class="cust-order-item-row">
-                        <img src="${item.product?.image || '/images/products/argo-chair.jpg'}" alt="${item.product?.name || 'Item'}" class="cust-order-thumb">
+                        <img src="${resolveCloudImageUrl(item.product?.image)}" alt="${item.product?.name || 'Item'}" class="cust-order-thumb" onerror="this.src='/images/hero-living-room.png'">
                         <div class="cust-order-item-info">
                           <h4>${item.product?.name || 'Furniture Item'}</h4>
                           <span class="cust-order-meta">Qty: ${item.quantity || 1} ${item.color ? `&bull; Color: ${item.color}` : ''}</span>
@@ -276,7 +277,7 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
                 if (!p) return '';
                 return `
                   <div class="cust-wishlist-card">
-                    <img src="${p.image}" alt="${p.name}" class="cust-wishlist-img">
+                    <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" class="cust-wishlist-img" onerror="this.src='/images/hero-living-room.png'">
                     <div class="cust-wishlist-details">
                       <span class="cust-wishlist-cat">${p.category}</span>
                       <h4>${p.name}</h4>

@@ -3,6 +3,7 @@ import { isCurrentAdmin, getCurrentCustomerUser } from '../services/customer-aut
 import { getProductReviews, getProductRatingSummary, addCustomerReview, hasCustomerPurchasedProduct } from '../services/reviews.js';
 import { openProductReviewsModal } from '../components/product-reviews-modal.js';
 import { escapeHtml } from '../utils/security.js';
+import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 
 export function renderProductDetailView(container, state, events, params) {
   const productId = params.get('id') || '';
@@ -35,7 +36,11 @@ export function renderProductDetailView(container, state, events, params) {
   }
 
   let selectedColor = product.colors && product.colors.length > 0 ? product.colors[0].name : '';
-  let selectedImage = product.gallery && product.gallery.length > 0 ? product.gallery[0] : product.image;
+  const rawGallery = Array.isArray(product.gallery) && product.gallery.length > 0 
+    ? product.gallery 
+    : (product.image ? [product.image] : ['/images/hero-living-room.png']);
+  const gallery = rawGallery.map(img => resolveCloudImageUrl(img));
+  let selectedImage = gallery[0] || '/images/hero-living-room.png';
   let quantity = 1;
 
   function formatPrice(num) {
@@ -70,20 +75,21 @@ export function renderProductDetailView(container, state, events, params) {
       <div class="product-detail-grid">
         <!-- Gallery Column -->
         <div class="detail-gallery">
-          <div class="detail-main-img">
-            <img id="detail-active-img" src="${selectedImage || '/images/hero-living-room.png'}" alt="${product.name}" onerror="this.src='/images/hero-living-room.png'">
+          <div class="detail-main-img" id="detail-main-img-wrap" style="position: relative; cursor: zoom-in;" title="Click to view full-resolution image">
+            <img id="detail-active-img" src="${selectedImage}" alt="${product.name}" onerror="this.src='/images/hero-living-room.png'">
+            <span style="position: absolute; bottom: 12px; right: 12px; background: rgba(18,45,37,0.8); color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; backdrop-filter: blur(4px); display: flex; align-items: center; gap: 4px; pointer-events: none;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+              <span>HQ Zoom</span>
+            </span>
           </div>
 
-          <!-- Thumbnails with +5 more indicator from Figma -->
-          <div class="detail-thumbnails">
-            ${(product.gallery || [product.image]).map((imgUrl, idx) => `
-              <div class="detail-thumb ${imgUrl === selectedImage ? 'active' : ''}" data-img-url="${imgUrl}">
+          <!-- Thumbnails -->
+          <div class="detail-thumbnails" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;">
+            ${gallery.map((imgUrl, idx) => `
+              <div class="detail-thumb ${imgUrl === selectedImage ? 'active' : ''}" data-img-url="${imgUrl}" style="cursor: pointer; flex-shrink: 0;" title="View angle ${idx + 1}">
                 <img src="${imgUrl}" alt="${product.name} angle ${idx + 1}" onerror="this.src='/images/hero-living-room.png'">
               </div>
             `).join('')}
-            <div class="detail-thumb" style="font-weight: 800; color: var(--color-primary); background: var(--color-bg-card);" title="View all angles">
-              +5
-            </div>
           </div>
         </div>
 
@@ -292,7 +298,7 @@ export function renderProductDetailView(container, state, events, params) {
             <div class="product-card" data-id="${p.id}">
               <div class="product-media">
                 <span class="product-badge-overlay badge-tag">${p.category}</span>
-                <img src="${p.image}" alt="${p.name}" class="product-navigate-trigger" data-id="${p.id}">
+                <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" class="product-navigate-trigger" data-id="${p.id}" onerror="this.src='/images/hero-living-room.png'">
               </div>
               <div class="product-info">
                 <span class="product-category-label">${p.category}</span>
@@ -317,20 +323,62 @@ export function renderProductDetailView(container, state, events, params) {
       </section>
     </div>
 
+    <!-- FULLSCREEN HIGH-RESOLUTION LIGHTBOX MODAL -->
+    <div id="product-lightbox-modal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.92); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 20px;">
+      <button type="button" id="btn-close-lightbox" style="position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.15); border: none; color: #ffffff; width: 44px; height: 44px; border-radius: 50%; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10001; transition: background 0.2s ease;">
+        ✕
+      </button>
+      
+      <div style="max-width: 90vw; max-height: 88vh; position: relative; display: flex; flex-direction: column; align-items: center;">
+        <img id="lightbox-full-img" src="${selectedImage}" alt="${product.name}" style="max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+        <div style="color: #ffffff; margin-top: 14px; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px; opacity: 0.9;">
+          ${product.name} • High Resolution Studio View
+        </div>
+      </div>
+    </div>
+
     <!-- EXACT FIGMA NEWSLETTER & FOOTER (Matching Screenshot) -->
     ${renderFigmaFooter()}
   `;
 
-  // Gallery thumbnail switching
+  // Gallery thumbnail switching & Lightbox wiring
   const mainImg = container.querySelector('#detail-active-img');
+  const mainImgWrap = container.querySelector('#detail-main-img-wrap');
+  const lightboxModal = container.querySelector('#product-lightbox-modal');
+  const lightboxImg = container.querySelector('#lightbox-full-img');
+  const closeLightboxBtn = container.querySelector('#btn-close-lightbox');
+
   container.querySelectorAll('.detail-thumb[data-img-url]').forEach(thumb => {
     thumb.addEventListener('click', () => {
       container.querySelectorAll('.detail-thumb').forEach(t => t.classList.remove('active'));
       thumb.classList.add('active');
       const url = thumb.dataset.imgUrl;
+      selectedImage = url;
       if (mainImg) mainImg.src = url;
+      if (lightboxImg) lightboxImg.src = url;
     });
   });
+
+  if (mainImgWrap && lightboxModal && lightboxImg) {
+    mainImgWrap.addEventListener('click', () => {
+      lightboxImg.src = selectedImage;
+      lightboxModal.style.display = 'flex';
+    });
+  }
+
+  if (closeLightboxBtn && lightboxModal) {
+    closeLightboxBtn.addEventListener('click', () => {
+      lightboxModal.style.display = 'none';
+    });
+  }
+
+  if (lightboxModal) {
+    lightboxModal.addEventListener('click', (e) => {
+      if (e.target === lightboxModal) {
+        lightboxModal.style.display = 'none';
+      }
+    });
+  }
 
   // Color pill selection
   const colorLabel = container.querySelector('#detail-selected-color-label');

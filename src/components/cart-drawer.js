@@ -1,3 +1,4 @@
+import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 import { getSellerNumber, formatCurrency } from '../services/whatsapp.js';
 
 function getColorHex(name) {
@@ -84,7 +85,7 @@ export function renderCartDrawer(container, state, events) {
           ${state.cart.map(item => `
             <div class="cart-item" data-cart-item-id="${item.product.id}">
               <div class="cart-item-img">
-                <img src="${item.product.image}" alt="${item.product.name}" loading="lazy">
+                <img src="${resolveCloudImageUrl(item.product.image)}" alt="${item.product.name}" loading="lazy" onerror="this.src='/images/hero-living-room.png'">
               </div>
               <div class="cart-item-details">
                 <div class="cart-item-top">
