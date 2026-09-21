@@ -1,0 +1,273 @@
+/* ==========================================================================
+   EXACT NEWSLETTER & FOOTER (Matching User's Screenshot 100%)
+   ========================================================================== */
+.figma-footer-wrapper {
+  background-color: #f9eee3;
+  padding: 40px 0 35px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Newsletter Box */
+.figma-newsletter-container {
+  max-width: var(--container-width);
+  margin: 0 auto 60px;
+  padding: 0 clamp(16px, 3vw, 24px);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.figma-newsletter-card {
+  background-color: #122d25;
+  border-radius: 18px;
+  padding: clamp(28px, 4vw, 42px) clamp(20px, 4.5vw, 55px);
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  align-items: center;
+  gap: clamp(20px, 3vw, 40px);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.figma-newsletter-heading {
+  color: #ffffff;
+  font-size: clamp(1.6rem, 3.2vw, 2.65rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.figma-newsletter-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.figma-email-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.figma-email-input-wrap svg {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #122d25;
+}
+
+.figma-email-input {
+  width: 100%;
+  height: 52px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  border: none;
+  padding: 0 20px 0 56px;
+  font-size: 0.96rem;
+  color: #122d25;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.figma-email-input::placeholder {
+  color: #555555;
+  font-weight: 400;
+}
+
+.figma-subscribe-btn {
+  width: 100%;
+  height: 52px;
+  border-radius: 12px;
+  background-color: #f9eee3;
+  color: #122d25;
+  font-weight: 700;
+  font-size: 0.96rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+  box-sizing: border-box;
+}
+
+.figma-subscribe-btn:hover {
+  opacity: 0.9;
+}
+
+/* Footer Content */
+.figma-footer-content {
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 clamp(16px, 3vw, 24px);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.figma-footer-main-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1.2fr 1fr;
+  gap: clamp(20px, 3vw, 40px);
+  margin-bottom: 45px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.figma-footer-about h3 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #122d25;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+
+.figma-footer-about p {
+  font-size: 0.88rem;
+  color: #5c6b65;
+  line-height: 1.65;
+  max-width: 290px;
+  margin-bottom: 24px;
+}
+
+.figma-social-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.figma-social-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: #000000;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.figma-social-circle:hover {
+  transform: translateY(-2px);
+  background-color: #122d25;
+}
+
+.figma-footer-column h4 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #122d25;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 20px;
+}
+
+.figma-footer-links-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.figma-footer-links-list a {
+  font-size: 0.92rem;
+  color: #5c6b65;
+  transition: color 0.15s ease;
+}
+
+.figma-footer-links-list a:hover {
+  color: #122d25;
+  font-weight: 600;
+}
+
+/* Footer Bottom Divider & Badges */
+.figma-footer-divider {
+  border: none;
+  height: 1px;
+  background-color: rgba(18, 45, 37, 0.12);
+  margin-bottom: 24px;
+}
+
+.figma-footer-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #6e7a75;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.figma-payment-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.figma-pay-badge {
+  background-color: #ffffff;
+  border-radius: 6px;
+  padding: 5px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.figma-pay-badge img, .figma-pay-badge svg {
+  height: 18px;
+  width: auto;
+}
+
+/* ==========================================================================
+   FOOTER RESPONSIVE BREAKPOINTS
+   ========================================================================== */
+@media (max-width: 992px) {
+  .figma-footer-main-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+  }
+}
+
+@media (max-width: 860px) {
+  .figma-newsletter-card {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .figma-newsletter-heading br {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .figma-newsletter-container {
+    margin-bottom: 40px;
+  }
+  .figma-footer-bottom-row {
+    flex-direction: column-reverse;
+    gap: 16px;
+    text-align: center;
+  }
+  .figma-payment-pills {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .figma-footer-main-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .figma-footer-about p {
+    max-width: 100%;
+  }
+  .figma-newsletter-card {
+    padding: 26px 18px;
+  }
+}

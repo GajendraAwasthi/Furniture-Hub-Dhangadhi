@@ -1,0 +1,26 @@
+# Dependencies & Build Output
+node_modules/
+dist/
+
+# Local Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+
+# Documentation & Internal Notes (Exempt from GitHub)
+docs/
+
+# Unwanted & Scratch Test Scripts (Exempt from GitHub)
+unwanted_scripts/
+scratch/
+fig_assets/
+*.fig
+*.py
+*.txt
+/*.png
+
+# Editor & OS Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

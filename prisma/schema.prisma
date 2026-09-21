@@ -1,0 +1,265 @@
+// Prisma Schema for Furniture Hub Production E-Commerce System
+// Database: PostgreSQL with integer minor units for all monetary fields
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. User Entity (Customers)
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  fullName     String    @map("full_name")
+  phone        String?
+  isVerified   Boolean   @default(false) @map("is_verified")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  addresses    Address[]
+  carts        Cart[]
+  orders       Order[]
+
+  @@map("users")
+}
+
+// 2. Address Entity (Customer Address Book)
+model Address {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  recipientName String   @map("recipient_name")
+  phone         String
+  addressLine1  String   @map("address_line1")
+  addressLine2  String?  @map("address_line2")
+  city          String
+  state         String?
+  postalCode    String?  @map("postal_code")
+  landmark      String?
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+// 3. Category Entity
+model Category {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  name        String
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  products    Product[]
+
+  @@map("categories")
+}
+
+// 4. Product Entity
+// Notice: priceMinor and compareAtPriceMinor are BigInt integer minor units, NEVER floats.
+model Product {
+  id                  String         @id @default(uuid())
+  slug                String         @unique
+  sku                 String         @unique
+  name                String
+  categoryId          String         @map("category_id")
+  description         String?
+  priceMinor          BigInt         @map("price_minor")
+  compareAtPriceMinor BigInt?        @map("compare_at_price_minor")
+  isActive            Boolean        @default(true) @map("is_active")
+  materials           String?
+  dimensions          String?
+  weight              String?
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  category            Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  inventory           Inventory?
+  images              ProductImage[]
+  cartItems           CartItem[]
+  orderItems          OrderItem[]
+
+  @@index([categoryId])
+  @@index([slug])
+  @@index([categoryId, isActive, id])
+  @@map("products")
+}
+
+// 5. ProductImage Entity
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String   @map("product_id")
+  url       String
+  altText   String?  @map("alt_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+// 6. Inventory Entity
+model Inventory {
+  id                String   @id @default(uuid())
+  productId         String   @unique @map("product_id")
+  availableQuantity Int      @default(0) @map("available_quantity")
+  reservedQuantity  Int      @default(0) @map("reserved_quantity")
+  lowStockThreshold Int      @default(3) @map("low_stock_threshold")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("inventory")
+}
+
+// 7. Cart Entity (Supports anonymous session cookies and authenticated user carts)
+model Cart {
+  id           String     @id @default(uuid())
+  userId       String?    @map("user_id")
+  sessionToken String?    @unique @map("session_token")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  user         User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items        CartItem[]
+
+  @@index([userId])
+  @@map("carts")
+}
+
+// 8. CartItem Entity
+model CartItem {
+  id            String   @id @default(uuid())
+  cartId        String   @map("cart_id")
+  productId     String   @map("product_id")
+  quantity      Int      @default(1)
+  selectedColor String?  @map("selected_color")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId, selectedColor])
+  @@index([cartId])
+  @@index([productId])
+  @@map("cart_items")
+}
+
+// 9. Order Entity
+// The database is the source of truth. Reference is unique. Money is integer minor units.
+model Order {
+  id                String               @id @default(uuid())
+  reference         String               @unique
+  userId            String               @map("user_id")
+  shippingAddressId String               @map("shipping_address_id")
+  status            String               @default("PLACED")
+  subtotalMinor     BigInt               @map("subtotal_minor")
+  deliveryFeeMinor  BigInt               @map("delivery_fee_minor")
+  discountMinor     BigInt               @default(0) @map("discount_minor")
+  totalMinor        BigInt               @map("total_minor")
+  paymentMethod     String               @default("Cash on Delivery") @map("payment_method")
+  paymentStatus     String               @default("PENDING") @map("payment_status")
+  customerNotes     String?              @map("customer_notes")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  user              User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  shippingAddress   Address              @relation(fields: [shippingAddressId], references: [id], onDelete: Restrict)
+  items             OrderItem[]
+  statusHistory     OrderStatusHistory[]
+
+  @@index([userId])
+  @@index([shippingAddressId])
+  @@index([reference])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@map("orders")
+}
+
+// 10. OrderItem Entity
+// Stores a frozen snapshot of product name, SKU, and unit price in integer minor units at purchase time.
+model OrderItem {
+  id                     String   @id @default(uuid())
+  orderId                String   @map("order_id")
+  productId              String   @map("product_id")
+  productNameSnapshot    String   @map("product_name_snapshot")
+  skuSnapshot            String   @map("sku_snapshot")
+  unitPriceMinorSnapshot BigInt   @map("unit_price_minor_snapshot")
+  quantity               Int
+  lineTotalMinor         BigInt   @map("line_total_minor")
+  color                  String?
+
+  order                  Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product                Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// 11. OrderStatusHistory Entity
+model OrderStatusHistory {
+  id                String     @id @default(uuid())
+  orderId           String     @map("order_id")
+  fromStatus        String?    @map("from_status")
+  toStatus          String     @map("to_status")
+  changedByAdminId  String?    @map("changed_by_admin_id")
+  notes             String?
+  createdAt         DateTime   @default(now()) @map("created_at")
+
+  order             Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByAdmin    AdminUser? @relation(fields: [changedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([changedByAdminId])
+  @@map("order_status_history")
+}
+
+// 12. AdminUser Entity
+model AdminUser {
+  id           String               @id @default(uuid())
+  email        String               @unique
+  passwordHash String               @map("password_hash")
+  name         String
+  role         String               @default("ADMIN")
+  isActive     Boolean              @default(true) @map("is_active")
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  statusChanges OrderStatusHistory[]
+  auditLogs     AuditLog[]
+
+  @@map("admin_users")
+}
+
+// 13. AuditLog Entity (Append-only audit trail for administrative actions)
+model AuditLog {
+  id         String     @id @default(uuid())
+  adminId    String?    @map("admin_id")
+  action     String
+  entityType String     @map("entity_type")
+  entityId   String     @map("entity_id")
+  metadata   Json?
+  ipAddress  String?    @map("ip_address")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  admin      AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
