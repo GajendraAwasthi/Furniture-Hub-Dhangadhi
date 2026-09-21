@@ -80,7 +80,7 @@ export async function loginWithEmail(email, password) {
       localStorage.setItem(STORAGE_DEMO_USER, JSON.stringify(demoUser));
       return { user: demoUser, session: { access_token: 'demo-token' } };
     } else {
-      throw new Error('Invalid email or password. Use demo login or set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
+      throw new Error('Invalid email or password. Error (Code: 401)');
     }
   }
 }
@@ -100,7 +100,7 @@ export async function signUpWithEmail(email, password) {
     if (error) throw error;
     return data;
   } else {
-    throw new Error('Supabase is not configured yet. Configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file to register new accounts.');
+    throw new Error('Error (Code: 503)');
   }
 }
 
@@ -239,7 +239,7 @@ export async function loginWithOAuth(provider = 'google') {
   const redirectUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_AUTH_REDIRECT_URL) || window.location.origin;
 
   if (!client) {
-    throw new Error('Google OAuth is not configured yet. Please configure your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY with Google provider enabled in your Supabase Dashboard.');
+    throw new Error('Error (Code: 503)');
   }
 
   const { data, error } = await client.auth.signInWithOAuth({
@@ -248,7 +248,9 @@ export async function loginWithOAuth(provider = 'google') {
       redirectTo: redirectUrl
     }
   });
-  if (error) throw error;
+  if (error) {
+    throw new Error(`Error (Code: ${error.status || 500})`);
+  }
   return data;
 }
 

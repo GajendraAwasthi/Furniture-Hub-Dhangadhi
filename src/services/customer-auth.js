@@ -222,7 +222,7 @@ export async function authenticateUser(identifier, password) {
   if (cleanId === 'admin@furniturehub.com') {
     const isSbAdmin = await checkIsSupabaseAdmin({ email: 'admin@furniturehub.com', id: 'demo-admin-id' });
     if (!isSbAdmin) {
-      throw new Error('Access denied: Administrator privileges revoked in Supabase. Only active Supabase admins can access this portal.');
+      throw new Error('Access denied. Error (Code: 403)');
     }
     const adminUser = {
       id: 'demo-admin-id',

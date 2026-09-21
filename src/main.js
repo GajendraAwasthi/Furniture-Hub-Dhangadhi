@@ -351,15 +351,15 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
 // Google OAuth Login Handler (Real Google Sign-In Only)
 events.on('oauth-login', async ({ provider = 'google' }) => {
   try {
-    showToast('Connecting with Google...', 'info');
     const authRes = await loginWithOAuth('google');
     if (authRes?.url) {
       window.location.href = authRes.url;
       return;
     }
-    showToast('Google OAuth initialization did not return a redirect URL.', 'danger');
+    showToast('Error (Code: 502)', 'danger');
   } catch (err) {
-    showToast(err.message || 'Google authentication error.', 'danger');
+    const msg = err?.message && err.message.startsWith('Error') ? err.message : `Error (Code: ${err?.status || 500})`;
+    showToast(msg, 'danger');
   }
 });
 
