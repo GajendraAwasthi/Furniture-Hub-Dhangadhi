@@ -19,7 +19,7 @@ import { renderAdminOrdersView } from './views/admin/admin-orders-view.js';
 import { renderAdminSettingsView } from './views/admin/admin-settings-view.js';
 import { renderCustomerDashboardView } from './views/customer/customer-dashboard-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
-import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin } from './services/supabase.js';
+import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, getClient } from './services/supabase.js';
 import { generateWhatsAppLink } from './services/whatsapp.js';
 import { 
   getCurrentCustomer, 
@@ -348,7 +348,7 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
   }
 }
 
-// Google OAuth Login Handler (Google Sign-In Only)
+// Google OAuth Login Handler (Real Google Sign-In Only)
 events.on('oauth-login', async ({ provider = 'google' }) => {
   try {
     showToast('Connecting with Google...', 'info');
@@ -357,8 +357,7 @@ events.on('oauth-login', async ({ provider = 'google' }) => {
       window.location.href = authRes.url;
       return;
     }
-    const res = await authenticateOAuthUser('google', authRes?.user);
-    applyAuthenticatedSession(res, 'Signed in successfully with Google.');
+    showToast('Google OAuth initialization did not return a redirect URL.', 'danger');
   } catch (err) {
     showToast(err.message || 'Google authentication error.', 'danger');
   }
@@ -633,6 +632,40 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.warn('Product database fetch error:', err);
     state.products = [];
   }
+
+  // Handle real Supabase Google OAuth callback session
+  const client = getClient();
+  if (client) {
+    try {
+      const { data: { session } } = await client.auth.getSession();
+      if (session?.user && !state.customerUser && !isCurrentAdmin()) {
+        const u = session.user;
+        const res = await authenticateOAuthUser('google', {
+          id: u.id,
+          email: u.email,
+          name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
+          avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
+        });
+        applyAuthenticatedSession(res, 'Signed in successfully with Google.');
+      }
+
+      client.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user && !state.customerUser && !isCurrentAdmin()) {
+          const u = session.user;
+          const res = await authenticateOAuthUser('google', {
+            id: u.id,
+            email: u.email,
+            name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
+            avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
+          });
+          applyAuthenticatedSession(res, 'Signed in successfully with Google.');
+        }
+      });
+    } catch (e) {
+      console.warn('Supabase OAuth session check error:', e);
+    }
+  }
+
   updateChrome();
   renderCurrentView();
 });

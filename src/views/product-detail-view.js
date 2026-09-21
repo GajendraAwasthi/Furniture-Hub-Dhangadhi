@@ -1,6 +1,6 @@
 import { renderFigmaFooter } from '../components/footer.js';
 import { isCurrentAdmin, getCurrentCustomerUser } from '../services/customer-auth.js';
-import { getProductReviews, getProductRatingSummary, addCustomerReview } from '../services/reviews.js';
+import { getProductReviews, getProductRatingSummary, addCustomerReview, hasCustomerPurchasedProduct } from '../services/reviews.js';
 import { openProductReviewsModal } from '../components/product-reviews-modal.js';
 import { escapeHtml } from '../utils/security.js';
 
@@ -443,28 +443,42 @@ export function renderProductDetailView(container, state, events, params) {
       e.preventDefault();
       const user = getCurrentCustomerUser();
       if (!user && !isCurrentAdmin()) {
-        events.emit('toast', { message: '🔒 Please sign in to publish a review.', type: 'danger' });
+        events.emit('toast', { message: 'Please sign in to publish a review.', type: 'danger' });
         events.emit('open-customer-auth');
         return;
       }
+
+      if (user && !hasCustomerPurchasedProduct(user.id, product.id) && !isCurrentAdmin()) {
+        events.emit('toast', { 
+          message: 'Only verified buyers who have purchased this piece can submit a review.', 
+          type: 'danger' 
+        });
+        return;
+      }
+
       const title = container.querySelector('#detail-review-title').value.trim();
       const comment = container.querySelector('#detail-review-comment').value.trim();
       const rating = parseInt(starHidden ? starHidden.value : '5', 10) || 5;
 
-      addCustomerReview({
-        productId: product.id,
-        productName: product.name,
-        userName: user ? (user.name || user.email.split('@')[0]) : 'Customer',
-        userAvatar: user ? user.avatar : '/images/social-user.png',
-        rating,
-        title,
-        comment,
-        location: 'Kathmandu, Nepal'
-      });
+      try {
+        addCustomerReview({
+          productId: product.id,
+          productName: product.name,
+          userId: user ? user.id : null,
+          userName: user ? (user.name || user.email.split('@')[0]) : 'Verified Buyer',
+          userAvatar: user ? user.avatar : '/images/social-user.png',
+          rating,
+          title,
+          comment,
+          location: (user?.city || 'Dhangadhi') + ', Nepal'
+        });
 
-      events.emit('toast', { message: '🌟 Thank you! Your verified review has been published.', type: 'success' });
-      // Re-render product detail view with newly added review
-      renderProductDetailView(container, state, events, params);
+        events.emit('toast', { message: 'Thank you! Your verified review has been published.', type: 'success' });
+        // Re-render product detail view with newly added review
+        renderProductDetailView(container, state, events, params);
+      } catch (err) {
+        events.emit('toast', { message: err.message, type: 'danger' });
+      }
     });
   }
 

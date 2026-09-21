@@ -148,8 +148,8 @@ export function renderHomeView(container, state, events) {
       <div class="site-container">
         <h2 class="figma-section-title-dark">Our Reviews</h2>
 
-        <div class="figma-reviews-grid" id="figma-reviews-grid">
-          ${reviewsData.map((rev, idx) => `
+        <div class="figma-reviews-grid" id="figma-reviews-grid" style="${reviewsData.length === 0 ? 'display: block; text-align: center;' : ''}">
+          ${reviewsData.length > 0 ? reviewsData.map((rev, idx) => `
             <div class="figma-review-card ${idx === 1 ? 'featured-review' : ''}" data-review-index="${idx}" data-review-pid="${rev.productId}">
               <div>
                 <div class="figma-review-header">
@@ -170,15 +170,26 @@ export function renderHomeView(container, state, events) {
                 <span class="figma-review-score">${rev.rating}/5</span>
               </div>
             </div>
-          `).join('')}
+          `).join('') : `
+            <div style="padding: 50px 24px; background: #ffffff; border-radius: 20px; border: 1px solid rgba(18, 45, 37, 0.08); max-width: 580px; margin: 0 auto; box-shadow: 0 4px 20px rgba(18, 45, 37, 0.04);">
+              <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: var(--color-primary); margin-bottom: 8px;">
+                Customer Reviews
+              </h3>
+              <p style="font-size: 0.9rem; color: var(--color-text-subtle); margin: 0; line-height: 1.5;">
+                Top 5-star reviews from verified buyers will appear here once orders are placed and delivered.
+              </p>
+            </div>
+          `}
         </div>
 
-        <!-- Pagination dots from Screenshot 5 -->
-        <div class="figma-pagination-dots" id="reviews-pagination-dots">
-          <span class="figma-dot" data-index="0"></span>
-          <span class="figma-dot active" data-index="1"></span>
-          <span class="figma-dot" data-index="2"></span>
-        </div>
+        ${reviewsData.length > 0 ? `
+          <!-- Pagination dots from Screenshot 5 -->
+          <div class="figma-pagination-dots" id="reviews-pagination-dots">
+            <span class="figma-dot" data-index="0"></span>
+            <span class="figma-dot active" data-index="1"></span>
+            <span class="figma-dot" data-index="2"></span>
+          </div>
+        ` : ''}
       </div>
     </section>
 

@@ -1,4 +1,4 @@
-import { getProductReviews, getProductRatingSummary, addCustomerReview } from '../services/reviews.js';
+import { getProductReviews, getProductRatingSummary, addCustomerReview, hasCustomerPurchasedProduct } from '../services/reviews.js';
 import { getCurrentCustomerUser, isCurrentAdmin } from '../services/customer-auth.js';
 import { escapeHtml } from '../utils/security.js';
 
@@ -162,8 +162,18 @@ export function openProductReviewsModal(product, events) {
     if (!user && !isCurrentAdmin()) {
       closeModal();
       if (events) {
-        events.emit('toast', { message: '🔒 Please sign in to write a verified customer review.', type: 'danger' });
+        events.emit('toast', { message: 'Please sign in to write a verified customer review.', type: 'danger' });
         events.emit('open-customer-auth');
+      }
+      return;
+    }
+
+    if (user && !hasCustomerPurchasedProduct(user.id, product.id) && !isCurrentAdmin()) {
+      if (events) {
+        events.emit('toast', { 
+          message: 'Only verified buyers who have purchased this product can submit a review.', 
+          type: 'danger' 
+        });
       }
       return;
     }
@@ -203,8 +213,18 @@ export function openProductReviewsModal(product, events) {
     if (!user && !isCurrentAdmin()) {
       closeModal();
       if (events) {
-        events.emit('toast', { message: '🔒 Please sign in to submit a review.', type: 'danger' });
+        events.emit('toast', { message: 'Please sign in to submit a review.', type: 'danger' });
         events.emit('open-customer-auth');
+      }
+      return;
+    }
+
+    if (user && !hasCustomerPurchasedProduct(user.id, product.id) && !isCurrentAdmin()) {
+      if (events) {
+        events.emit('toast', { 
+          message: 'Only verified buyers who have purchased this piece can submit a review.', 
+          type: 'danger' 
+        });
       }
       return;
     }
@@ -213,23 +233,30 @@ export function openProductReviewsModal(product, events) {
     const comment = document.getElementById('review-input-comment').value.trim();
     const rating = parseInt(starInput.value, 10) || 5;
 
-    const newRev = addCustomerReview({
-      productId: product.id,
-      productName: product.name,
-      userName: user ? (user.name || user.email.split('@')[0]) : 'Customer',
-      userAvatar: user ? user.avatar : '/images/social-user.png',
-      rating,
-      title,
-      comment,
-      location: 'Kathmandu, Nepal'
-    });
+    try {
+      addCustomerReview({
+        productId: product.id,
+        productName: product.name,
+        userId: user ? user.id : null,
+        userName: user ? (user.name || user.email.split('@')[0]) : 'Verified Buyer',
+        userAvatar: user ? user.avatar : '/images/social-user.png',
+        rating,
+        title,
+        comment,
+        location: (user?.city || 'Dhangadhi') + ', Nepal'
+      });
 
-    if (events) {
-      events.emit('toast', { message: '🌟 Thank you! Your verified review has been published.', type: 'success' });
+      if (events) {
+        events.emit('toast', { message: 'Thank you! Your verified review has been published.', type: 'success' });
+      }
+
+      // Refresh modal with the new review
+      closeModal();
+      openProductReviewsModal(product, events);
+    } catch (err) {
+      if (events) {
+        events.emit('toast', { message: err.message, type: 'danger' });
+      }
     }
-
-    // Refresh modal with the new review
-    closeModal();
-    openProductReviewsModal(product, events);
   });
 }

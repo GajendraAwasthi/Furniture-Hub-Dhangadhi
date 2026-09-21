@@ -1,20 +1,22 @@
 import defaultReviews from '../data/reviews.json' with { type: 'json' };
+import { getCustomerOrders } from './customer-auth.js';
 
-const STORAGE_KEY = 'furniturehub_customer_reviews';
+const STORAGE_KEY = 'fh_customer_reviews_v2';
 
 function getStoredReviews() {
   try {
+    localStorage.removeItem('furniturehub_customer_reviews'); // purge legacy mock reviews
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (e) {
     console.warn('Failed to read reviews from localStorage:', e);
   }
-  return defaultReviews;
+  return Array.isArray(defaultReviews) ? defaultReviews : [];
 }
 
 function saveReviews(reviews) {
@@ -26,52 +28,49 @@ function saveReviews(reviews) {
 }
 
 /**
- * Get all customer reviews (both default seed and user-submitted)
+ * Check if a customer has actually purchased a given product
+ */
+export function hasCustomerPurchasedProduct(customerId, productId) {
+  if (!customerId || !productId) return false;
+  try {
+    const orders = getCustomerOrders(customerId);
+    if (!Array.isArray(orders) || orders.length === 0) return false;
+    return orders.some(order => {
+      if (!order.items || !Array.isArray(order.items)) return false;
+      return order.items.some(item => 
+        item.id === productId || 
+        item.productId === productId || 
+        (item.name && typeof item.name === 'string' && item.name.toLowerCase() === productId.toLowerCase())
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get all customer reviews
  */
 export function getAllReviews() {
   return getStoredReviews();
 }
 
 /**
- * Get reviews specifically for a given product ID
+ * Get reviews specifically for a given product ID (Only real reviews)
  */
 export function getProductReviews(productId) {
   const all = getStoredReviews();
-  const matched = all.filter(r => r.productId === productId);
-  if (matched.length > 0) {
-    return matched;
-  }
-  // Fallback demo review if a product has no direct matches yet
-  return [
-    {
-      id: `rev-gen-${productId}`,
-      productId: productId,
-      productName: 'Furniture Item',
-      userName: 'Customer Reviewer',
-      userAvatar: '/images/social-user.png',
-      rating: 5,
-      date: 'September 2026',
-      location: 'Kathmandu, Nepal',
-      verifiedPurchase: true,
-      featuredOnHome: false,
-      title: 'Exceptional craftsmanship and sleek finish',
-      comment: 'Arrived exactly as described. High-end finish, sturdy construction, and fast delivery. Very pleased with this purchase!'
-    }
-  ];
+  return all.filter(r => r.productId === productId);
 }
 
 /**
- * Get the Top 3 customer reviews featured for the main home page
+ * Get top 3, 5-star reviews only from the whole project
  */
 export function getTopReviews(limit = 3) {
   const all = getStoredReviews();
-  // Filter featured ones first or sort by rating descending
-  const featured = all.filter(r => r.featuredOnHome);
-  if (featured.length >= limit) {
-    return featured.slice(0, limit);
-  }
-  const remaining = all.filter(r => !r.featuredOnHome);
-  return [...featured, ...remaining].slice(0, limit);
+  // Strictly filter only 5-star verified reviews from the whole project
+  const fiveStarReviews = all.filter(r => Number(r.rating) === 5);
+  return fiveStarReviews.slice(0, limit);
 }
 
 /**
@@ -105,11 +104,16 @@ export function getProductRatingSummary(productId) {
 }
 
 /**
- * Add a new customer review
+ * Add a new customer review (Strictly verified buyers only)
  */
 export function addCustomerReview(reviewData) {
   if (!reviewData.productId || !reviewData.comment) {
     throw new Error('Product ID and review comment are required');
+  }
+
+  // Check buyer verification
+  if (reviewData.userId && !hasCustomerPurchasedProduct(reviewData.userId, reviewData.productId)) {
+    throw new Error('Only verified buyers who have purchased this product can leave a review.');
   }
 
   const all = getStoredReviews();
@@ -117,14 +121,14 @@ export function addCustomerReview(reviewData) {
     id: `rev-${Date.now()}`,
     productId: reviewData.productId,
     productName: reviewData.productName || 'Furniture Item',
-    userName: reviewData.userName || 'Anonymous Customer',
+    userName: reviewData.userName || 'Verified Buyer',
     userAvatar: reviewData.userAvatar || '/images/social-user.png',
     rating: Number(reviewData.rating) || 5,
     date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-    location: reviewData.location || 'Nepal',
+    location: reviewData.location || 'Dhangadhi, Nepal',
     verifiedPurchase: true,
-    featuredOnHome: false,
-    title: reviewData.title || 'Verified Customer Review',
+    featuredOnHome: Number(reviewData.rating) === 5,
+    title: reviewData.title || 'Verified Purchase',
     comment: reviewData.comment.trim()
   };
 

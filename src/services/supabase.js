@@ -236,26 +236,20 @@ export async function removeSupabaseAdmin(emailOrId) {
 
 export async function loginWithOAuth(provider = 'google') {
   const client = getClient();
-  const redirectUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_AUTH_REDIRECT_URL) || `${window.location.origin}/#auth-callback`;
+  const redirectUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_AUTH_REDIRECT_URL) || window.location.origin;
 
-  if (client) {
-    const { data, error } = await client.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: redirectUrl
-      }
-    });
-    if (error) throw error;
-    return data;
-  } else {
-    // Fallback demo OAuth simulation (Google / GitHub)
-    const demoUser = {
-      id: `oauth-${provider}-user`,
-      email: `user@${provider}.com`,
-      user_metadata: { full_name: `${provider.toUpperCase()} Authorized Customer`, role: 'customer', provider }
-    };
-    return { user: demoUser };
+  if (!client) {
+    throw new Error('Google OAuth is not configured yet. Please configure your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY with Google provider enabled in your Supabase Dashboard.');
   }
+
+  const { data, error } = await client.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: redirectUrl
+    }
+  });
+  if (error) throw error;
+  return data;
 }
 
 export async function logout() {
