@@ -101,7 +101,12 @@ export function renderAboutView(container, state, events) {
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">
         <div style="background: #ffffff; border-radius: 16px; padding: 30px; border: 1.5px solid rgba(18, 45, 37, 0.1); box-shadow: 0 4px 16px rgba(18, 45, 37, 0.04);">
-          <div style="font-size: 2.2rem; margin-bottom: 14px;">🌲</div>
+          <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(18, 45, 37, 0.06); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; color: var(--color-primary);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.5 1 9.2A7 7 0 0 1 11 20z"></path>
+              <path d="m2 21 9-9"></path>
+            </svg>
+          </div>
           <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--color-primary); margin-bottom: 8px;">Responsible Wood</h3>
           <p style="font-size: 0.92rem; color: var(--color-text-subtle); line-height: 1.6;">
             100% certified kiln-dried hardwoods finished with plant-based, non-toxic satin sealants safe for families and children.
@@ -109,7 +114,14 @@ export function renderAboutView(container, state, events) {
         </div>
 
         <div style="background: #ffffff; border-radius: 16px; padding: 30px; border: 1.5px solid rgba(18, 45, 37, 0.1); box-shadow: 0 4px 16px rgba(18, 45, 37, 0.04);">
-          <div style="font-size: 2.2rem; margin-bottom: 14px;">🪑</div>
+          <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(18, 45, 37, 0.06); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; color: var(--color-primary);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"></path>
+              <path d="M3 11v5a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"></path>
+              <path d="M6 19v3"></path>
+              <path d="M18 19v3"></path>
+            </svg>
+          </div>
           <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--color-primary); margin-bottom: 8px;">Ergonomic Precision</h3>
           <p style="font-size: 0.92rem; color: var(--color-text-subtle); line-height: 1.6;">
             High-resilience memory foam cushioning and pneumatic lumbar support engineered for effortless posture and all-day comfort.
@@ -117,7 +129,11 @@ export function renderAboutView(container, state, events) {
         </div>
 
         <div style="background: #ffffff; border-radius: 16px; padding: 30px; border: 1.5px solid rgba(18, 45, 37, 0.1); box-shadow: 0 4px 16px rgba(18, 45, 37, 0.04);">
-          <div style="font-size: 2.2rem; margin-bottom: 14px;">🛠️</div>
+          <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(18, 45, 37, 0.06); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; color: var(--color-primary);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+            </svg>
+          </div>
           <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--color-primary); margin-bottom: 8px;">White-Glove Setup</h3>
           <p style="font-size: 0.92rem; color: var(--color-text-subtle); line-height: 1.6;">
             Our dedicated delivery specialists assemble every piece in your desired room, test joints, and remove all packaging debris.
@@ -125,7 +141,12 @@ export function renderAboutView(container, state, events) {
         </div>
 
         <div style="background: #ffffff; border-radius: 16px; padding: 30px; border: 1.5px solid rgba(18, 45, 37, 0.1); box-shadow: 0 4px 16px rgba(18, 45, 37, 0.04);">
-          <div style="font-size: 2.2rem; margin-bottom: 14px;">🛡️</div>
+          <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(18, 45, 37, 0.06); display: flex; align-items: center; justify-content: center; margin-bottom: 18px; color: var(--color-primary);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="m9 12 2 2 4-4"></path>
+            </svg>
+          </div>
           <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--color-primary); margin-bottom: 8px;">5-Year Warranty</h3>
           <p style="font-size: 0.92rem; color: var(--color-text-subtle); line-height: 1.6;">
             Every frame, joinery seam, and pneumatic mechanism is backed by our direct manufacturer structural replacement guarantee.
