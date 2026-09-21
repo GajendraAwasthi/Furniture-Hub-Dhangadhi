@@ -17,11 +17,11 @@ export function renderAboutView(container, state, events) {
         <span class="badge-tag" style="margin-bottom: 16px; background: rgba(18, 45, 37, 0.08); color: var(--color-primary); font-weight: 800;">
           Our Heritage & Philosophy
         </span>
-        <h1 style="font-family: var(--font-heading); font-size: clamp(2.4rem, 5vw, 3.8rem); font-weight: 800; color: var(--color-primary); line-height: 1.18; margin-bottom: 20px;">
-          Artisanal Craftsmanship Meets Nordic Minimalist Living
+        <h1 style="font-family: var(--font-heading); font-size: clamp(2.2rem, 4.5vw, 3.4rem); font-weight: 800; color: var(--color-primary); line-height: 1.2; margin-bottom: 16px;">
+          Quality Furniture for Modern Homes
         </h1>
-        <p style="font-size: 1.15rem; color: var(--color-text-subtle); line-height: 1.65; max-width: 680px; margin: 0 auto 36px;">
-          Rooted in Dhangadhi, Kailali, Furniture Hub Dhangadhi bridges Nordic design purity with generational Nepali timber craftsmanship — creating timeless pieces that bring warmth, calm, and individuality to your home across Sudurpashchim Province and nationwide.
+        <p style="font-size: 1.1rem; color: var(--color-text-subtle); line-height: 1.6; max-width: 620px; margin: 0 auto 32px;">
+          Based in Dhangadhi, Kailali, Furniture Hub brings you modern, durable wooden furniture for your home and office — with reliable delivery across Nepal.
         </p>
         <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
           <a href="#shop" class="btn btn-primary" style="padding: 13px 30px; border-radius: 99px; font-weight: 700;">
