@@ -1,0 +1,38 @@
+{
+  "name": "Furniture Hub Dhangadhi",
+  "short_name": "FH Dhangadhi",
+  "description": "Best furniture store in Dhangadhi, Kailali, Nepal — फर्निचर हब धनगढी। Sofas, beds, dining tables & home décor with WhatsApp delivery.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#122d25",
+  "lang": "ne",
+  "dir": "ltr",
+  "orientation": "portrait-primary",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "/images/furniture-hub-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/furniture-hub-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/hero-living-room.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Furniture Hub Dhangadhi — Living Room Collection"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

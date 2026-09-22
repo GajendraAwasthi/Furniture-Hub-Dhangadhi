@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Home Page -->
+  <url>
+    <loc>https://furniture-hub-dhangadhi.vercel.app/</loc>
+    <lastmod>2026-09-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://furniture-hub-dhangadhi.vercel.app/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://furniture-hub-dhangadhi.vercel.app/"/>
+    <image:image>
+      <image:loc>https://furniture-hub-dhangadhi.vercel.app/images/hero-living-room.png</image:loc>
+      <image:title>Furniture Hub Dhangadhi — Premium Living Room Furniture | फर्निचर हब धनगढी</image:title>
+      <image:caption>Best furniture store in Dhangadhi, Kailali, Nepal — सोफा, पलङ, टेबल, कुर्सी र घर सजावट</image:caption>
+    </image:image>
+  </url>
+
+  <!-- Shop Page -->
+  <url>
+    <loc>https://furniture-hub-dhangadhi.vercel.app/#shop</loc>
+    <lastmod>2026-09-22</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+
+  <!-- About Page -->
+  <url>
+    <loc>https://furniture-hub-dhangadhi.vercel.app/#about</loc>
+    <lastmod>2026-09-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- FAQ Page -->
+  <url>
+    <loc>https://furniture-hub-dhangadhi.vercel.app/#faq</loc>
+    <lastmod>2026-09-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.65</priority>
+  </url>
+
+  <!-- Terms & Privacy -->
+  <url>
+    <loc>https://furniture-hub-dhangadhi.vercel.app/#terms</loc>
+    <lastmod>2026-09-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+</urlset>
