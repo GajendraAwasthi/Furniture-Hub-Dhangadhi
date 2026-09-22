@@ -314,6 +314,7 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
     updateChrome();
     showToast(welcomeMsg || '🛡️ Welcome back, Store Administrator!', 'success');
     window.location.hash = '#admin/overview';
+    renderCurrentView();
   } else {
     state.customerUser = res.user;
     state.cart = JSON.parse(localStorage.getItem('fh_cart_' + res.user.id)) || JSON.parse(localStorage.getItem('fh_cart')) || [];
@@ -504,6 +505,11 @@ async function renderCurrentView() {
   const [route, queryString] = rawHash.split('?');
   const params = new URLSearchParams(queryString || '');
 
+  // If the URL contains an OAuth token, wait for Supabase to finish session processing
+  if (rawHash.includes('access_token=') || rawHash.includes('refresh_token=')) {
+    return;
+  }
+
   window.scrollTo({ top: 0, behavior: 'instant' });
 
   // Admin Portal Routes with Strict Role Guard
@@ -625,6 +631,15 @@ async function renderCurrentView() {
 
 // Initialization
 window.addEventListener('DOMContentLoaded', async () => {
+  // Sanitize double hash if redirect URL had a route like #admin#access_token=
+  if (window.location.hash.includes('access_token=')) {
+    const tokenIndex = window.location.hash.indexOf('access_token=');
+    if (tokenIndex > 1) {
+      const cleanFragment = '#' + window.location.hash.substring(tokenIndex);
+      window.history.replaceState(null, '', window.location.pathname + cleanFragment);
+    }
+  }
+
   try {
     const dbProducts = await fetchProducts();
     state.products = Array.isArray(dbProducts) ? dbProducts : [];
