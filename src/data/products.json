@@ -1,1 +1,356 @@
-[]
+[
+  {
+    "id": "argo-office-chair",
+    "name": "Argo Office Chair",
+    "category": "Seatings",
+    "price": 15000,
+    "originalPrice": 18500,
+    "rating": 5,
+    "reviewCount": 8,
+    "tag": "Seatings",
+    "description": "Ergonomically engineered for executive comfort. Features high-resilience memory foam, breathable premium finish, full pneumatic tilt lock, and silent glide nylon castors.",
+    "materials": "PU Leather, Metal Frame",
+    "dimensions": "85cm, 65cm, 45cm",
+    "weight": "22kg",
+    "colors": [
+      {
+        "name": "Snow White",
+        "hex": "#f5f5f5"
+      },
+      {
+        "name": "Red",
+        "hex": "#d22f27"
+      },
+      {
+        "name": "Forest Green",
+        "hex": "#122d25"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Best Seller",
+    "isNewArrival": true,
+    "isBestSeller": true,
+    "isTopDeal": true,
+    "inStock": true
+  },
+  {
+    "id": "sofa-decor-combo",
+    "name": "Sofa Decor Combo",
+    "category": "Combos",
+    "price": 45000,
+    "originalPrice": 52000,
+    "rating": 5,
+    "reviewCount": 14,
+    "tag": "Combos",
+    "description": "The complete contemporary living room ensemble. Includes the signature cloud lounge sofa, geometric companion coffee table, and handwoven accent pillows.",
+    "materials": "Nordic Fabric, Kiln-Dried Pine Wood",
+    "dimensions": "210cm, 95cm, 80cm",
+    "weight": "54kg",
+    "colors": [
+      {
+        "name": "Oatmeal Beige",
+        "hex": "#ebe7e0"
+      },
+      {
+        "name": "Charcoal Grey",
+        "hex": "#2e2e2e"
+      },
+      {
+        "name": "Forest Green",
+        "hex": "#122d25"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Trending",
+    "isNewArrival": true,
+    "isBestSeller": true,
+    "isTopDeal": true,
+    "inStock": true
+  },
+  {
+    "id": "valentina-accent-chair",
+    "name": "Valentina Accent Chair",
+    "category": "Seatings",
+    "price": 22000,
+    "originalPrice": 26000,
+    "rating": 4.9,
+    "reviewCount": 19,
+    "tag": "Seatings",
+    "description": "Architectural silhouette with plush cushioned padding and tapered brass-finish legs. Perfect statement seat for bedrooms, reading nooks, and formal salons.",
+    "materials": "Velvet Upholstery, Brushed Brass Base",
+    "dimensions": "78cm, 72cm, 82cm",
+    "weight": "16kg",
+    "colors": [
+      {
+        "name": "Emerald Green",
+        "hex": "#122d25"
+      },
+      {
+        "name": "Cream Bouclé",
+        "hex": "#f7f5f0"
+      },
+      {
+        "name": "Mustard Gold",
+        "hex": "#ffcd29"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "New Arrival",
+    "isNewArrival": true,
+    "isBestSeller": false,
+    "isTopDeal": false,
+    "inStock": true
+  },
+  {
+    "id": "winnie-side-table",
+    "name": "Winnie Side Table",
+    "category": "Surfaces",
+    "price": 12500,
+    "originalPrice": 14900,
+    "rating": 5,
+    "reviewCount": 11,
+    "tag": "Surfaces",
+    "description": "Curved minimalist pedestal table crafted with precision fluted wooden base and scratch-resistant satin matte tabletop.",
+    "materials": "Engineered Oak & Solid Birch",
+    "dimensions": "48cm, 48cm, 55cm",
+    "weight": "8.5kg",
+    "colors": [
+      {
+        "name": "Natural Oak",
+        "hex": "#d4b896"
+      },
+      {
+        "name": "Walnut Dark",
+        "hex": "#4a3525"
+      },
+      {
+        "name": "Matte Black",
+        "hex": "#1c1c1c"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Popular",
+    "isNewArrival": true,
+    "isBestSeller": true,
+    "isTopDeal": true,
+    "inStock": true
+  },
+  {
+    "id": "artisan-ceramic-vase",
+    "name": "Artisan Ceramic Vase",
+    "category": "Decorations",
+    "price": 4500,
+    "originalPrice": 5800,
+    "rating": 4.8,
+    "reviewCount": 26,
+    "tag": "Decorations",
+    "description": "Handcrafted terracotta ceramic vase with subtle textured glaze finish. Designed for dried florals, fresh botanical cuttings, or standalone sculptural display.",
+    "materials": "Handmade Clay Ceramic",
+    "dimensions": "22cm, 22cm, 35cm",
+    "weight": "3.2kg",
+    "colors": [
+      {
+        "name": "Terracotta Sand",
+        "hex": "#d9b391"
+      },
+      {
+        "name": "Bone Chalk",
+        "hex": "#f5f3ee"
+      },
+      {
+        "name": "Moss Green",
+        "hex": "#2a4235"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Top Rated",
+    "isNewArrival": false,
+    "isBestSeller": true,
+    "isTopDeal": false,
+    "inStock": true
+  },
+  {
+    "id": "botanical-monstera-plant",
+    "name": "Botanical Indoor Green",
+    "category": "Greens",
+    "price": 3800,
+    "originalPrice": 4500,
+    "rating": 5,
+    "reviewCount": 15,
+    "tag": "Greens",
+    "description": "Lush indoor botanical specimen in self-watering minimalist ceramic planter. Purifies indoor air while infusing living vitality into your interior spaces.",
+    "materials": "Live Plant & Glazed Ceramic Pot",
+    "dimensions": "30cm, 30cm, 60cm",
+    "weight": "4.5kg",
+    "colors": [
+      {
+        "name": "White Pot",
+        "hex": "#ffffff"
+      },
+      {
+        "name": "Terracotta Pot",
+        "hex": "#c47a53"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Fresh",
+    "isNewArrival": true,
+    "isBestSeller": false,
+    "isTopDeal": false,
+    "inStock": true
+  },
+  {
+    "id": "scandinavian-dining-table",
+    "name": "Scandinavian Dining Table",
+    "category": "Surfaces",
+    "price": 38500,
+    "originalPrice": 45000,
+    "rating": 4.9,
+    "reviewCount": 22,
+    "tag": "Surfaces",
+    "description": "6-seater solid timber dining table with beveled rounded safety corners and solid mortise-and-tenon craftsmanship.",
+    "materials": "Solid Ash Wood, Matte Polyurethane Finish",
+    "dimensions": "180cm, 90cm, 76cm",
+    "weight": "38kg",
+    "colors": [
+      {
+        "name": "Natural Ash",
+        "hex": "#e3d2bf"
+      },
+      {
+        "name": "Smoked Walnut",
+        "hex": "#3d2b1f"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Sale",
+    "isNewArrival": false,
+    "isBestSeller": true,
+    "isTopDeal": true,
+    "inStock": true
+  },
+  {
+    "id": "nordic-lounge-bench",
+    "name": "Nordic Minimalist Bench",
+    "category": "Seatings",
+    "price": 16500,
+    "originalPrice": 19800,
+    "rating": 4.7,
+    "reviewCount": 7,
+    "tag": "Seatings",
+    "description": "Versatile entryway and dining bench featuring clean geometric lines, woven paper cord seat, and reinforced hardwood frame.",
+    "materials": "Natural Paper Cord & Oak Wood",
+    "dimensions": "120cm, 40cm, 45cm",
+    "weight": "9kg",
+    "colors": [
+      {
+        "name": "Natural Cord / Light Oak",
+        "hex": "#dfcfba"
+      },
+      {
+        "name": "Black Cord / Black Oak",
+        "hex": "#1a1a1a"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Staff Pick",
+    "isNewArrival": true,
+    "isBestSeller": false,
+    "isTopDeal": false,
+    "inStock": true
+  },
+  {
+    "id": "halo-standing-lamp",
+    "name": "Halo Arch Floor Lamp",
+    "category": "Decorations",
+    "price": 8900,
+    "originalPrice": 11000,
+    "rating": 4.9,
+    "reviewCount": 18,
+    "tag": "Decorations",
+    "description": "Sculptural arched standing lamp with weighted solid marble base, brushed brass stem, and warm ambient dimmable LED glow.",
+    "materials": "Natural Marble & Brass-Plated Steel",
+    "dimensions": "40cm, 110cm, 185cm",
+    "weight": "14kg",
+    "colors": [
+      {
+        "name": "Brushed Brass",
+        "hex": "#d4af37"
+      },
+      {
+        "name": "Matte Black",
+        "hex": "#222222"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Best Seller",
+    "isNewArrival": false,
+    "isBestSeller": true,
+    "isTopDeal": true,
+    "inStock": true
+  },
+  {
+    "id": "zenith-curved-sofa",
+    "name": "Zenith Curved Lounge Sofa",
+    "category": "Long Sofa",
+    "price": 68000,
+    "originalPrice": 79000,
+    "rating": 5,
+    "reviewCount": 31,
+    "tag": "Long Sofa",
+    "description": "Statement curved 3-seater sofa tailored in textured boucle fabric. Designed to anchor modern open-plan living rooms with fluid organic curves.",
+    "materials": "French Bouclé Fabric, Pocket Springs, Solid Timber Frame",
+    "dimensions": "240cm, 105cm, 78cm",
+    "weight": "62kg",
+    "colors": [
+      {
+        "name": "Warm Ivory",
+        "hex": "#f5f2eb"
+      },
+      {
+        "name": "Forest Green",
+        "hex": "#122d25"
+      },
+      {
+        "name": "Slate Blue",
+        "hex": "#3b4d58"
+      }
+    ],
+    "image": "/images/hero-living-room.png",
+    "gallery": [
+      "/images/hero-living-room.png"
+    ],
+    "badge": "Signature",
+    "isNewArrival": false,
+    "isBestSeller": true,
+    "isTopDeal": false,
+    "inStock": true
+  }
+]

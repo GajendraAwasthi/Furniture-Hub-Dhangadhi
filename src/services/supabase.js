@@ -70,18 +70,7 @@ export async function loginWithEmail(email, password) {
     if (error) throw error;
     return data;
   } else {
-    // Local / Demo Mock Login
-    if (email === 'admin@furniturehub.com' && password === 'admin123') {
-      const demoUser = {
-        id: 'demo-admin-id',
-        email: 'admin@furniturehub.com',
-        user_metadata: { full_name: 'Store Administrator', role: 'admin' }
-      };
-      localStorage.setItem(STORAGE_DEMO_USER, JSON.stringify(demoUser));
-      return { user: demoUser, session: { access_token: 'demo-token' } };
-    } else {
-      throw new Error('Invalid email or password. Error (Code: 401)');
-    }
+    throw new Error('Supabase authentication service is currently unavailable. Please verify network or credentials.');
   }
 }
 
@@ -100,18 +89,12 @@ export async function signUpWithEmail(email, password) {
     if (error) throw error;
     return data;
   } else {
-    throw new Error('Error (Code: 503)');
+    throw new Error('Supabase registration service is currently unavailable.');
   }
 }
 
-// Storage key for Supabase store admins table simulation/cache
+// Storage key for Supabase store admins table cache
 const STORAGE_SUPABASE_ADMINS = 'fh_supabase_store_admins';
-
-const DEFAULT_SUPABASE_ADMINS = [
-  { id: 'admin-sb-01', email: 'admin@furniturehub.com', name: 'Store Administrator', role: 'admin', created_at: '2026-08-01T00:00:00Z' },
-  { id: 'cd44d9b4-9ece-4a01-82d8-40deb3f12015', user_id: 'admin123', email: 'gajendraawasthi123@gmail.com', name: 'Developer', role: 'admin', created_at: '2026-09-22T05:00:53+00:00' },
-  { id: 'admin-gajendra-506', email: 'gajendraawasthi506@gmail.com', name: 'Gajendra Awasthi (Admin)', role: 'admin', created_at: '2026-09-22T05:38:36+00:00' }
-];
 
 export function getLocalSupabaseAdmins() {
   try {
@@ -119,31 +102,18 @@ export function getLocalSupabaseAdmins() {
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Merge with defaults so developer admins are never missing
-        const merged = [...parsed];
-        DEFAULT_SUPABASE_ADMINS.forEach(def => {
-          if (!merged.some(m => m.email?.toLowerCase() === def.email.toLowerCase() || m.id === def.id)) {
-            merged.push(def);
-          }
-        });
-        return merged;
+        return parsed;
       }
     }
   } catch (e) {
     // ignore
   }
-  return DEFAULT_SUPABASE_ADMINS;
+  return [];
 }
 
 export function saveLocalSupabaseAdmins(admins) {
   if (Array.isArray(admins)) {
-    const merged = [...admins];
-    DEFAULT_SUPABASE_ADMINS.forEach(def => {
-      if (!merged.some(m => m.email?.toLowerCase() === def.email.toLowerCase() || m.id === def.id)) {
-        merged.push(def);
-      }
-    });
-    localStorage.setItem(STORAGE_SUPABASE_ADMINS, JSON.stringify(merged));
+    localStorage.setItem(STORAGE_SUPABASE_ADMINS, JSON.stringify(admins));
   }
 }
 
@@ -560,27 +530,31 @@ export async function fetchOrders() {
 
 export async function createOrder(order) {
   const client = getClient();
+
+  if (client) {
+    const { data, error } = await client.from('orders').insert({
+      id: order.id,
+      customer_name: order.customer_name || order.name,
+      customer_email: order.customer_email || order.email || null,
+      customer_phone: order.customer_phone || order.phone,
+      delivery_address: order.delivery_address || order.address,
+      items: order.items,
+      total_amount: order.total_amount || order.total,
+      payment_method: order.payment_method || order.paymentMethod || 'Cash on Delivery',
+      status: order.status || 'Pending'
+    });
+
+    if (error) {
+      console.error('Supabase order creation error:', error);
+      throw new Error(error.message || 'Database rejected order creation. Please verify order details.');
+    }
+  }
+
+  // Update local cache after successful persistence
   const local = getLocalOrders();
   local.unshift(order);
   saveLocalOrders(local);
 
-  if (client) {
-    try {
-      await client.from('orders').insert({
-        id: order.id,
-        customer_name: order.customer_name || order.name,
-        customer_email: order.customer_email || order.email || null,
-        customer_phone: order.customer_phone || order.phone,
-        delivery_address: order.delivery_address || order.address,
-        items: order.items,
-        total_amount: order.total_amount || order.total,
-        payment_method: order.payment_method || order.paymentMethod,
-        status: order.status || 'Pending'
-      });
-    } catch (e) {
-      console.warn('Could not write order to Supabase:', e);
-    }
-  }
   return order;
 }
 

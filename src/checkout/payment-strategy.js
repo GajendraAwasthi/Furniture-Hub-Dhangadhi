@@ -78,11 +78,15 @@ const strategies = {
   'whatsapp direct': new WhatsAppDirectStrategy()
 };
 
-export function getPaymentStrategy(method = 'whatsapp') {
-  const clean = (method || 'whatsapp').toLowerCase();
-  const strategy = strategies[clean] || strategies['whatsapp'];
+export function getPaymentStrategy(method) {
+  if (method === undefined || method === null || method === '') {
+    return strategies['whatsapp'];
+  }
+  const clean = String(method).trim().toLowerCase();
+  const strategy = strategies[clean];
   if (!strategy) {
     throw new Error(`Unsupported payment method: "${method}". Available methods: ${Object.keys(strategies).join(', ')}`);
   }
   return strategy;
 }
+

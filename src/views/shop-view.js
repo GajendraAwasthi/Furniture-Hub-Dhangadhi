@@ -2,6 +2,7 @@ import { renderFigmaFooter } from '../components/footer.js';
 import { isCurrentAdmin } from '../services/customer-auth.js';
 import { openProductReviewsModal } from '../components/product-reviews-modal.js';
 import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
+import { escapeHtml } from '../utils/security.js';
 
 export function renderShopView(container, state, events, params) {
   let activeCategory = params.get('category') || 'All';
@@ -105,7 +106,7 @@ export function renderShopView(container, state, events, params) {
       <div class="catalog-controls">
         <div class="results-count">
           Showing <strong>${filtered.length}</strong> items
-          ${searchQuery ? ` for "<strong>${searchQuery}</strong>" <a href="#shop" style="color: var(--color-danger); margin-left: 8px;">✕ Clear search</a>` : ''}
+          ${searchQuery ? ` for "<strong>${escapeHtml(searchQuery)}</strong>" <a href="#shop" style="color: var(--color-danger); margin-left: 8px;">✕ Clear search</a>` : ''}
           ${activeFilter === 'wishlist' ? ` in your saved wishlist` : ''}
         </div>
 
@@ -132,22 +133,22 @@ export function renderShopView(container, state, events, params) {
               ${pagedItems.map(p => {
                 const inWishlist = state.wishlist.includes(p.id);
                 return `
-                  <div class="product-card" data-id="${p.id}">
+                  <div class="product-card" data-id="${escapeHtml(p.id)}">
                     <div class="product-media">
                       <span class="product-badge-overlay badge-tag ${p.badge === 'Sale' ? 'badge-sale' : ''}">
-                        ${p.badge || p.category}
+                        ${escapeHtml(p.badge || p.category)}
                       </span>
-                      <button class="wishlist-btn ${inWishlist ? 'active' : ''}" data-wishlist-id="${p.id}" title="Toggle Wishlist">
+                      <button class="wishlist-btn ${inWishlist ? 'active' : ''}" data-wishlist-id="${escapeHtml(p.id)}" title="Toggle Wishlist">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="${inWishlist ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
                           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                         </svg>
                       </button>
-                      <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" loading="lazy" class="product-navigate-trigger" data-id="${p.id}" onerror="this.src='/images/hero-living-room.png'">
+                      <img src="${resolveCloudImageUrl(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" class="product-navigate-trigger" data-id="${escapeHtml(p.id)}" onerror="this.src='/images/hero-living-room.png'">
                     </div>
                     <div class="product-info">
-                      <span class="product-category-label">${p.category}</span>
-                      <h3 class="product-title product-navigate-trigger" data-id="${p.id}">${p.name}</h3>
-                      <div class="product-rating product-rating-interactive" data-open-reviews-pid="${p.id}" title="View ${p.name} reviews">
+                      <span class="product-category-label">${escapeHtml(p.category)}</span>
+                      <h3 class="product-title product-navigate-trigger" data-id="${escapeHtml(p.id)}">${escapeHtml(p.name)}</h3>
+                      <div class="product-rating product-rating-interactive" data-open-reviews-pid="${escapeHtml(p.id)}" title="View ${escapeHtml(p.name)} reviews">
                         <span class="stars">${renderStars(p.rating)}</span>
                         <span class="rating-count">(${p.reviewCount} reviews)</span>
                       </div>
@@ -156,7 +157,7 @@ export function renderShopView(container, state, events, params) {
                           <span class="price-current">${formatPrice(p.price)}</span>
                           ${p.originalPrice ? `<span class="price-original">${formatPrice(p.originalPrice)}</span>` : ''}
                         </div>
-                        <button class="card-add-btn" data-add-id="${p.id}" title="Add to Cart" aria-label="Add ${p.name} to cart">
+                        <button class="card-add-btn" data-add-id="${escapeHtml(p.id)}" title="Add to Cart" aria-label="Add ${escapeHtml(p.name)} to cart">
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>

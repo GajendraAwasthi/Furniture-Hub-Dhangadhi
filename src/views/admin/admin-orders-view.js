@@ -1,4 +1,5 @@
 import { fetchOrders, updateOrderStatus, deleteOrder, fetchStoreSettings } from '../../services/supabase.js';
+import { escapeHtml } from '../../utils/security.js';
 
 export async function renderAdminOrdersView(container, state, events) {
   let orders = await fetchOrders();
@@ -59,7 +60,7 @@ export async function renderAdminOrdersView(container, state, events) {
                 class="settings-input" 
                 id="order-search-input" 
                 placeholder="Search by Order ID, Name, or Phone..." 
-                value="${searchQuery}"
+                value="${escapeHtml(searchQuery)}"
                 style="padding-left: 38px;"
               >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-subtle);">

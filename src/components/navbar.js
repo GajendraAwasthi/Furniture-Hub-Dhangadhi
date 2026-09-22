@@ -86,8 +86,8 @@ export function renderNavbar(container, state, events) {
           `}
 
           <!-- Nepal Flag Badge (SVG to avoid Windows emoji NP text bug) -->
-          <span class="nepal-flag-icon" title="Nepal Delivery" aria-label="Nepal Delivery">
-            <svg width="20" height="22" viewBox="0 0 24 28" fill="none" class="nepal-flag-svg" style="display: inline-block; vertical-align: middle;">
+          <span class="nepal-flag-icon" role="img" title="Nepal Delivery" aria-label="Nepal Delivery">
+            <svg width="20" height="22" viewBox="0 0 24 28" fill="none" class="nepal-flag-svg" style="display: inline-block; vertical-align: middle;" aria-hidden="true">
               <path d="M2 1V27H6V22.5L22 22.5L11 12L22 12L2 1Z" fill="#DC143C" stroke="#003893" stroke-width="2" stroke-linejoin="round"/>
               <path d="M5.5 8.5C7.2 8.5 8.5 7.2 8.5 5.5C7.8 6.5 6.5 6.5 5.5 6.2V8.5Z" fill="#ffffff"/>
               <circle cx="8" cy="2.5" r="2.5" fill="#ffffff"/>

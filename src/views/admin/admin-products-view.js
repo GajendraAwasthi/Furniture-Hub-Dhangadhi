@@ -1,5 +1,6 @@
 import { fetchProducts, saveProduct, deleteProduct, fetchStoreSettings } from '../../services/supabase.js';
 import { resolveCloudImageUrl, parseBulkImageUrls, uploadProductImage } from '../../utils/cloud-image-resolver.js';
+import { escapeHtml } from '../../utils/security.js';
 
 export async function renderAdminProductsView(container, state, events) {
   let products = await fetchProducts();
@@ -189,7 +190,7 @@ export async function renderAdminProductsView(container, state, events) {
                 class="settings-input" 
                 id="product-search-input" 
                 placeholder="Search by name, ID, or tag..." 
-                value="${searchQuery}"
+                value="${escapeHtml(searchQuery)}"
                 style="padding-left: 38px;"
               >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-text-subtle);">

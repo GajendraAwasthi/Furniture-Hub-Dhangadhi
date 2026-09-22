@@ -94,18 +94,29 @@ ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_admins ENABLE ROW LEVEL SECURITY;
 
--- Clean existing policies so this script can be re-run safely
+-- Clean existing policies so this script can be re-run safely (Full Idempotency)
 DROP POLICY IF EXISTS "Public can view products" ON public.products;
 DROP POLICY IF EXISTS "Public can manage products" ON public.products;
+DROP POLICY IF EXISTS "Admins can manage products" ON public.products;
+
 DROP POLICY IF EXISTS "Public can view orders" ON public.orders;
 DROP POLICY IF EXISTS "Public can create orders" ON public.orders;
 DROP POLICY IF EXISTS "Public can manage orders" ON public.orders;
+DROP POLICY IF EXISTS "Customers can create orders" ON public.orders;
+DROP POLICY IF EXISTS "Customers view own orders" ON public.orders;
+DROP POLICY IF EXISTS "Admins can manage orders" ON public.orders;
+
 DROP POLICY IF EXISTS "Public can view coupons" ON public.coupons;
 DROP POLICY IF EXISTS "Public can manage coupons" ON public.coupons;
+DROP POLICY IF EXISTS "Admins can manage coupons" ON public.coupons;
+
 DROP POLICY IF EXISTS "Public can view settings" ON public.store_settings;
 DROP POLICY IF EXISTS "Public can manage settings" ON public.store_settings;
+DROP POLICY IF EXISTS "Admins can manage settings" ON public.store_settings;
+
 DROP POLICY IF EXISTS "Public can view admins" ON public.store_admins;
 DROP POLICY IF EXISTS "Public can manage admins" ON public.store_admins;
+DROP POLICY IF EXISTS "Admins can manage admins" ON public.store_admins;
 
 -- 1. Products: anyone can browse; only verified admins can manage
 CREATE POLICY "Public can view products" ON public.products FOR SELECT USING (true);
@@ -115,8 +126,12 @@ CREATE POLICY "Admins can manage products" ON public.products FOR ALL USING (
   (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
 );
 
--- 2. Orders: anyone can insert orders (checkout); customers view own orders; admins manage all
-CREATE POLICY "Customers can create orders" ON public.orders FOR INSERT WITH CHECK (true);
+-- 2. Orders: checkout orders validation; customers view own orders; admins manage all
+CREATE POLICY "Customers can create orders" ON public.orders FOR INSERT WITH CHECK (
+  (auth.jwt() IS NULL OR customer_email = (auth.jwt()->>'email'))
+  AND total_amount >= 0
+  AND status IN ('Pending', 'Processing')
+);
 CREATE POLICY "Customers view own orders" ON public.orders FOR SELECT USING (
   customer_email = (auth.jwt()->>'email') 
   OR (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
@@ -168,13 +183,22 @@ CREATE POLICY "Public Access product-images" ON storage.objects
 FOR SELECT USING (bucket_id = 'product-images');
 
 CREATE POLICY "Allow Uploads product-images" ON storage.objects
-FOR INSERT WITH CHECK (bucket_id = 'product-images');
+FOR INSERT WITH CHECK (
+  bucket_id = 'product-images'
+  AND (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 
 CREATE POLICY "Allow Updates product-images" ON storage.objects
-FOR UPDATE USING (bucket_id = 'product-images');
+FOR UPDATE USING (
+  bucket_id = 'product-images'
+  AND (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 
 CREATE POLICY "Allow Deletes product-images" ON storage.objects
-FOR DELETE USING (bucket_id = 'product-images');
+FOR DELETE USING (
+  bucket_id = 'product-images'
+  AND (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 
 -- ==========================================================================
 -- NOTE: ALL STORE DATA, PHONE NUMBERS, SETTINGS, PRODUCTS & COUPONS

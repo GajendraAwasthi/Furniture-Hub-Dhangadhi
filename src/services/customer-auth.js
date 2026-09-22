@@ -78,72 +78,50 @@ function saveAllOrdersToStorage(orders) {
 export function isCurrentAdmin() {
   const sbAdmins = getLocalSupabaseAdmins();
   if (!Array.isArray(sbAdmins) || sbAdmins.length === 0) {
+    localStorage.removeItem(STORAGE_ADMIN_SESSION);
     return false;
   }
 
-  // 1. Check verified admin session
-  const adminDemo = localStorage.getItem(STORAGE_ADMIN_SESSION);
-  if (adminDemo) {
-    try {
-      const parsed = JSON.parse(adminDemo);
-      if (parsed && typeof parsed === 'object') {
-        const email = (parsed.email || '').toLowerCase().trim();
-        const id = (parsed.id || '').trim();
-
-        // Must strictly match a verified admin record in store_admins
-        const isSbAdmin = sbAdmins.some(a => {
-          const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
-          if (r !== 'admin') return false;
-          const aEmail = (a.email || '').trim().toLowerCase();
-          const aId = (a.id || '').trim();
-          const aUserId = (a.user_id || '').trim();
-          return (email && aEmail === email) || (id && (aId === id || aUserId === id));
-        });
-
-        if (isSbAdmin) {
-          return true;
+  // 1. Verify active Supabase cryptographic JWT token in localStorage
+  let verifiedSbUser = null;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const val = JSON.parse(raw);
+        if (val?.access_token && val?.user && typeof val.user === 'object') {
+          verifiedSbUser = val.user;
+          break;
         }
       }
-      // If parsed fails verification against store_admins, wipe unverified/stale admin session
-      localStorage.removeItem(STORAGE_ADMIN_SESSION);
-    } catch {
-      localStorage.removeItem(STORAGE_ADMIN_SESSION);
+    }
+  } catch {
+    // ignore
+  }
+
+  // If a verified Supabase JWT token exists, validate against store_admins
+  if (verifiedSbUser) {
+    const email = (verifiedSbUser.email || '').toLowerCase().trim();
+    const id = (verifiedSbUser.id || '').trim();
+
+    const isSbAdmin = sbAdmins.some(a => {
+      const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
+      if (r !== 'admin') return false;
+      const aEmail = (a.email || '').trim().toLowerCase();
+      const aId = (a.id || '').trim();
+      const aUserId = (a.user_id || '').trim();
+      return (email && aEmail === email) || (id && (aId === id || aUserId === id));
+    });
+
+    if (isSbAdmin) {
+      return true;
     }
   }
 
-  // 2. Check Supabase cached auth token (JWT session)
-  const client = getClient();
-  if (client) {
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-          const raw = localStorage.getItem(key);
-          if (!raw) continue;
-          const val = JSON.parse(raw);
-          const user = val?.user;
-          if (user && typeof user === 'object') {
-            const email = (user.email || '').toLowerCase().trim();
-            const id = (user.id || '').trim();
-
-            const isSbAdmin = sbAdmins.some(a => {
-              const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
-              if (r !== 'admin') return false;
-              const aEmail = (a.email || '').trim().toLowerCase();
-              const aId = (a.id || '').trim();
-              const aUserId = (a.user_id || '').trim();
-              return (email && aEmail === email) || (id && (aId === id || aUserId === id));
-            });
-
-            if (isSbAdmin) return true;
-          }
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-
+  // If Supabase is configured or unauthenticated, wipe any rogue admin session
+  localStorage.removeItem(STORAGE_ADMIN_SESSION);
   return false;
 }
 
@@ -315,27 +293,7 @@ export async function authenticateUser(identifier, password) {
     }
   }
 
-  // 2. Demo Administrator Account (Strictly verifies credentials and Supabase admin status)
-  if (cleanId === 'admin@furniturehub.com') {
-    if (password !== 'admin123') {
-      throw new Error('Invalid email or password. Error (Code: 401)');
-    }
-    const isSbAdmin = await checkIsSupabaseAdmin({ email: 'admin@furniturehub.com', id: 'admin-sb-01' });
-    if (!isSbAdmin) {
-      throw new Error('Access denied. Administrator privileges revoked.');
-    }
-    const adminUser = {
-      id: 'admin-sb-01',
-      email: 'admin@furniturehub.com',
-      name: 'Store Administrator',
-      role: 'admin'
-    };
-    localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminUser));
-    localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
-    return { success: true, role: 'admin', user: adminUser };
-  }
-
-  // 3. Check Customer Accounts with salted hash verification (Never plaintext)
+  // 2. Check Customer Accounts with salted hash verification (Never plaintext)
   const accounts = getStoredAccounts();
   for (let i = 0; i < accounts.length; i++) {
     const acc = accounts[i];

@@ -116,6 +116,34 @@ export function buildWhatsAppMessage(order, items = [], address = {}, options = 
 }
 
 /**
+ * Fits an encoded URL within maxUrlLength by safely truncating unencoded source text
+ * Never slices through percent escapes (%XX) or UTF-8 byte sequences
+ */
+export function fitEncodedUrl(baseUrl, message, maxUrlLength = WHATSAPP_CONFIG.maxUrlLength) {
+  let encoded = baseUrl + encodeURIComponent(message);
+  if (encoded.length <= maxUrlLength) return encoded;
+
+  const characters = Array.from(message);
+  let low = 0;
+  let high = characters.length;
+  let best = baseUrl;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const sub = characters.slice(0, mid).join('');
+    const testUrl = baseUrl + encodeURIComponent(sub);
+    if (testUrl.length <= maxUrlLength) {
+      best = testUrl;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return best;
+}
+
+/**
  * Generates the WhatsApp deep link adhering strictly to the 1800 character ceiling.
  */
 export function generateWhatsAppLink(order, items = [], address = {}) {
@@ -126,7 +154,7 @@ export function generateWhatsAppLink(order, items = [], address = {}) {
   let message = buildWhatsAppMessage(order, items, address, { forceTruncate: false });
   let encodedUrl = baseUrl + encodeURIComponent(message);
 
-  // If over 1800, force truncation
+  // If over 1800, force truncation of items
   if (encodedUrl.length > WHATSAPP_CONFIG.maxUrlLength) {
     message = buildWhatsAppMessage(order, items, address, { forceTruncate: true });
     encodedUrl = baseUrl + encodeURIComponent(message);
@@ -146,7 +174,7 @@ export function generateWhatsAppLink(order, items = [], address = {}) {
     const appBaseUrl = (typeof window !== 'undefined' && window.location ? window.location.origin : '') || 'https://furniturehub.com.np';
     const adminOrderUrl = `${appBaseUrl}/#admin/orders?ref=${encodeURIComponent(order.reference || order.id)}`;
 
-    const fallbackMsg = [
+    message = [
       `New Order #${order.reference || order.id}`,
       `Customer: ${customerName} (${customerPhone})`,
       `Items:`,
@@ -155,14 +183,10 @@ export function generateWhatsAppLink(order, items = [], address = {}) {
       `Deliver to: ${order.address || address.city || 'Kathmandu'}`,
       `View full order: ${adminOrderUrl}`
     ].join('\n');
-
-    encodedUrl = baseUrl + encodeURIComponent(fallbackMsg);
   }
 
-  // Absolute hard cutoff at 1800 characters
-  if (encodedUrl.length > WHATSAPP_CONFIG.maxUrlLength) {
-    encodedUrl = encodedUrl.slice(0, WHATSAPP_CONFIG.maxUrlLength);
-  }
+  // Safe encoding fit preventing broken % escapes or malformed URIs
+  encodedUrl = fitEncodedUrl(baseUrl, message, WHATSAPP_CONFIG.maxUrlLength);
 
   return {
     url: encodedUrl,
@@ -170,3 +194,4 @@ export function generateWhatsAppLink(order, items = [], address = {}) {
     sellerNumber
   };
 }
+

@@ -69,6 +69,33 @@ export function buildWhatsAppMessage(order, items, address, options = {}) {
 }
 
 /**
+ * Fits an encoded URL within maxUrlLength by safely truncating unencoded source text
+ */
+function fitEncodedUrl(baseUrl, message, maxUrlLength = WHATSAPP_CONFIG.maxUrlLength) {
+  let encoded = baseUrl + encodeURIComponent(message);
+  if (encoded.length <= maxUrlLength) return encoded;
+
+  const characters = Array.from(message);
+  let low = 0;
+  let high = characters.length;
+  let best = baseUrl;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const sub = characters.slice(0, mid).join('');
+    const testUrl = baseUrl + encodeURIComponent(sub);
+    if (testUrl.length <= maxUrlLength) {
+      best = testUrl;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return best;
+}
+
+/**
  * Generates the WhatsApp deep-link URL and enforces the 1800 character ceiling.
  * Format: https://wa.me/<SELLER_NUMBER_E164_NO_PLUS>?text=<encodeURIComponent(msg)>
  */
@@ -96,7 +123,7 @@ export function generateWhatsAppDeepLink(order, items, address) {
     const appBaseUrl = process.env.APP_BASE_URL || 'https://furniturehub.com.np';
     const adminOrderUrl = `${appBaseUrl}/#admin/orders?ref=${encodeURIComponent(order.reference)}`;
 
-    const fallbackMsg = [
+    message = [
       `New Order #${order.reference}`,
       `Customer: ${address.recipient_name} (${address.phone})`,
       `Items:`,
@@ -106,14 +133,10 @@ export function generateWhatsAppDeepLink(order, items, address) {
       `Placed: ${placedIso}`,
       `View full order: ${adminOrderUrl}`
     ].join('\n');
-
-    encodedUrl = baseUrl + encodeURIComponent(fallbackMsg);
   }
 
-  if (encodedUrl.length > WHATSAPP_CONFIG.maxUrlLength) {
-    // Hard substring cut ensuring absolute adherence to 1800 ceiling
-    encodedUrl = encodedUrl.slice(0, WHATSAPP_CONFIG.maxUrlLength);
-  }
+  // Safe encoding fit preventing broken % escapes or malformed URIs
+  encodedUrl = fitEncodedUrl(baseUrl, message, WHATSAPP_CONFIG.maxUrlLength);
 
   return {
     url: encodedUrl,

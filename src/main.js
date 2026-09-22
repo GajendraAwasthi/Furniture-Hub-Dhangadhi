@@ -38,20 +38,21 @@ import {
   updateCustomerProfile, 
   saveCustomerOrder 
 } from './services/customer-auth.js';
+import { safeGetJson, safeSetJson } from './utils/security.js';
 
 // Global Application State
 const initialCustomer = getCurrentCustomer();
 const state = {
   products: Array.isArray(productsData) ? productsData : [],
-  cart: initialCustomer ? (JSON.parse(localStorage.getItem('fh_cart_' + initialCustomer.id)) || JSON.parse(localStorage.getItem('fh_cart')) || []) : [],
-  wishlist: JSON.parse(localStorage.getItem('fh_wishlist')) || [],
+  cart: initialCustomer ? (safeGetJson('fh_cart_' + initialCustomer.id, null) || safeGetJson('fh_cart', [])) : [],
+  wishlist: safeGetJson('fh_wishlist', []),
   customerUser: initialCustomer,
-  customerProfile: JSON.parse(localStorage.getItem('fh_customer_profile')) || {
+  customerProfile: safeGetJson('fh_customer_profile', {
     name: '',
     phone: '',
     address: '',
     city: 'Dhangadhi'
-  },
+  }),
   isProfileOpen: false,
   isCustomerAuthOpen: false,
   customerAuthTab: 'login',
@@ -84,12 +85,12 @@ const events = new EventBus();
 
 function saveState() {
   if (state.customerUser) {
-    localStorage.setItem('fh_cart_' + state.customerUser.id, JSON.stringify(state.cart));
-    localStorage.setItem('fh_cart', JSON.stringify(state.cart));
+    safeSetJson('fh_cart_' + state.customerUser.id, state.cart);
+    safeSetJson('fh_cart', state.cart);
   } else {
-    localStorage.removeItem('fh_cart');
+    try { localStorage.removeItem('fh_cart'); } catch {}
   }
-  localStorage.setItem('fh_wishlist', JSON.stringify(state.wishlist));
+  safeSetJson('fh_wishlist', state.wishlist);
 }
 
 // Toast Notification
@@ -258,39 +259,41 @@ events.on('order-placed', async (orderData = {}) => {
   });
   orderPayload.whatsappUrl = wa.url;
 
-  state.isCheckoutOpen = false;
-  state.isReceiptOpen = true;
-  state.lastOrder = orderPayload;
-  state.cart = [];
-  saveState();
-  saveCustomerOrder(orderPayload);
-  updateChrome();
-  showToast(`🎊 Order #${orderRef} placed successfully!`, 'success');
-
-  // Attempt auto-opening WhatsApp notification window if allowed by browser
-  try {
-    if (orderPayload.whatsappUrl) {
-      window.open(orderPayload.whatsappUrl, '_blank');
-    }
-  } catch (popupErr) {
-    // Popup blockers handled gracefully by receipt modal button
-  }
-
   // Push order directly into Supabase / local database first (source of truth)
   try {
     await createOrder({
       id: orderPayload.id,
       customer_name: orderPayload.name,
+      customer_email: orderPayload.customerEmail,
       customer_phone: orderPayload.phone,
       delivery_address: orderPayload.address,
       items: orderPayload.items,
       total_amount: orderPayload.total,
       payment_method: orderPayload.paymentMethod,
-      status: 'PLACED',
+      status: 'Pending',
       created_at: orderPayload.created_at
     });
+
+    state.isCheckoutOpen = false;
+    state.isReceiptOpen = true;
+    state.lastOrder = orderPayload;
+    state.cart = [];
+    saveState();
+    saveCustomerOrder(orderPayload);
+    updateChrome();
+    showToast(`🎊 Order #${orderRef} placed successfully!`, 'success');
+
+    // Attempt auto-opening WhatsApp notification window if allowed by browser
+    try {
+      if (orderPayload.whatsappUrl) {
+        window.open(orderPayload.whatsappUrl, '_blank');
+      }
+    } catch (popupErr) {
+      // Popup blockers handled gracefully by receipt modal button
+    }
   } catch (err) {
     console.error('Error recording order to database:', err);
+    showToast(`❌ Failed to place order: ${err.message || 'Please check your connection and try again.'}`, 'danger');
   }
 });
 
@@ -321,14 +324,14 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
     renderCurrentView();
   } else {
     state.customerUser = res.user;
-    state.cart = JSON.parse(localStorage.getItem('fh_cart_' + res.user.id)) || JSON.parse(localStorage.getItem('fh_cart')) || [];
+    state.cart = safeGetJson('fh_cart_' + res.user.id, null) || safeGetJson('fh_cart', []);
     state.customerProfile = {
       name: res.user.name || '',
       phone: res.user.phone || '',
       address: res.user.address || '',
       city: res.user.city || 'Dhangadhi'
     };
-    localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
+    safeSetJson('fh_customer_profile', state.customerProfile);
     updateChrome();
     showToast(welcomeMsg || `Welcome, ${res.user.name || 'Valued Customer'}!`, 'success');
 
@@ -339,7 +342,7 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
         updateCustomerProfile(res.user.id, details);
         state.customerUser = { ...state.customerUser, ...details };
         state.customerProfile = { ...state.customerProfile, ...details };
-        localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
+        safeSetJson('fh_customer_profile', state.customerProfile);
         updateChrome();
         showToast('Delivery details saved! Welcome to Furniture Hub Dhangadhi.', 'success');
       });

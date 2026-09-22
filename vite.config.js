@@ -7,5 +7,16 @@ export default defineConfig({
     watch: {
       ignored: ['**/.*/**', '**/*.png', '**/*.py', '**/supabase/**']
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-insights': ['@vercel/speed-insights']
+        }
+      }
+    }
   }
 });
+
