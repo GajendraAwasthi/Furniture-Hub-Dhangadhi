@@ -341,8 +341,9 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
       });
     }
 
-    if (window.location.hash.startsWith('#admin') || window.location.hash === '#login' || window.location.hash === '#account' || window.location.hash === '#profile') {
+    if (window.location.hash.includes('access_token=') || window.location.hash.startsWith('#admin') || window.location.hash === '#login' || window.location.hash === '#account' || window.location.hash === '#profile') {
       window.location.hash = '#customer/dashboard';
+      renderCurrentView();
     } else {
       renderCurrentView();
     }

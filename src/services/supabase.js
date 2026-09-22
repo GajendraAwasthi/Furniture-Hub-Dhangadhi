@@ -147,11 +147,13 @@ export async function checkIsSupabaseAdmin(user) {
       }
 
       // 2. Query Supabase 'store_admins' table
-      const { data, error } = await client
-        .from('store_admins')
-        .select('id, email, role')
-        .or(`email.eq.${email},user_id.eq.${userId}`)
-        .limit(1);
+      let query = client.from('store_admins').select('id, email, role');
+      if (userId) {
+        query = query.or(`email.eq.${email},user_id.eq.${userId}`);
+      } else {
+        query = query.eq('email', email);
+      }
+      const { data, error } = await query.limit(1);
 
       if (!error && data && data.length > 0) {
         return data[0].role === 'admin';
