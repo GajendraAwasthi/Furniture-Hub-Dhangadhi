@@ -194,60 +194,153 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
 
         <!-- TAB CONTENT 2: PROFILE & DELIVERY ADDRESS -->
         <div class="cust-dash-pane ${activeTab === 'profile' ? 'active' : ''}" id="cust-pane-profile">
-          <div class="cust-profile-card">
-            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--color-primary); margin-bottom: 6px;">
-              Verified Contact & Doorstep Delivery Address
-            </h3>
-            <p style="font-size: 0.85rem; color: var(--color-text-subtle); margin-bottom: 20px;">
-              Keep your WhatsApp number and delivery location accurate. All white-glove deliveries and notifications use this profile.
-            </p>
-
-            <form id="cust-profile-edit-form">
-              <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                <div class="form-group">
-                  <label class="form-label" style="font-weight: 700;">Full Name *</label>
-                  <input type="text" class="form-input" id="cp-name" required value="${customer.name || ''}" placeholder="e.g. Ram Bahadur Thapa">
+          <div class="cust-profile-card enhanced-profile-card">
+            <!-- Header with Luxury Badge -->
+            <div class="profile-card-header">
+              <div class="profile-header-left">
+                <div class="profile-header-icon-badge">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
                 </div>
-
-                <div class="form-group">
-                  <label class="form-label" style="font-weight: 700;">Email Address (Read Only)</label>
-                  <input type="email" class="form-input" id="cp-email" value="${customer.email || ''}" readonly style="background: rgba(18,45,37,0.04); cursor: not-allowed;">
+                <div>
+                  <h3 class="profile-card-title">Verified Contact & Doorstep Delivery Address</h3>
+                  <p class="profile-card-subtitle">
+                    Keep your WhatsApp number and delivery location accurate. All white-glove deliveries and notifications use this profile.
+                  </p>
                 </div>
               </div>
+              <div class="delivery-status-pill">
+                <span class="pulsing-green-dot"></span>
+                <span>White-Glove Doorstep Sync Active</span>
+              </div>
+            </div>
 
-              <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                <div class="form-group">
-                  <div class="form-label-row">
-                    <label class="form-label" style="font-weight: 700;">WhatsApp Mobile Number *</label>
-                    <span class="phone-hint-badge">🇳🇵 10 digits</span>
+            <form id="cust-profile-edit-form" class="enhanced-profile-form">
+              <!-- Section 1: Customer Identity -->
+              <div class="profile-form-section">
+                <div class="profile-section-label">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                  <span>Personal Credentials</span>
+                </div>
+                <div class="enhanced-form-grid">
+                  <!-- Full Name -->
+                  <div class="enhanced-field-group">
+                    <label class="enhanced-field-label" for="cp-name">
+                      <span>Full Name</span>
+                      <span class="required-star">*</span>
+                    </label>
+                    <div class="enhanced-input-wrap">
+                      <span class="field-icon">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                      </span>
+                      <input type="text" class="enhanced-input" id="cp-name" required value="${customer.name || ''}" placeholder="e.g. Gajendra Awasthi">
+                    </div>
                   </div>
-                  <input type="tel" class="form-input phone-highlight" id="cp-phone" required value="${customer.phone || ''}" placeholder="e.g. 9848123456">
-                </div>
 
-                <div class="form-group">
-                  <label class="form-label" style="font-weight: 700;">City / Delivery Region *</label>
-                  <select class="form-input checkout-select" id="cp-city">
-                    <option value="Dhangadhi" ${customer.city === 'Dhangadhi' || !customer.city ? 'selected' : ''}>Dhangadhi (Kailali)</option>
-                    <option value="Attariya" ${customer.city === 'Attariya' ? 'selected' : ''}>Attariya (Kailali)</option>
-                    <option value="Mahendranagar" ${customer.city === 'Mahendranagar' ? 'selected' : ''}>Mahendranagar (Kanchanpur)</option>
-                    <option value="Tikapur" ${customer.city === 'Tikapur' ? 'selected' : ''}>Tikapur (Kailali)</option>
-                    <option value="Dadeldhura" ${customer.city === 'Dadeldhura' ? 'selected' : ''}>Dadeldhura</option>
-                    <option value="Nepalgunj" ${customer.city === 'Nepalgunj' ? 'selected' : ''}>Nepalgunj</option>
-                    <option value="Kathmandu Valley" ${customer.city === 'Kathmandu Valley' ? 'selected' : ''}>Kathmandu Valley</option>
-                    <option value="Other Sudurpashchim Region" ${customer.city === 'Other Sudurpashchim Region' ? 'selected' : ''}>Other Sudurpashchim Region</option>
-                  </select>
+                  <!-- Email Address (Read Only) -->
+                  <div class="enhanced-field-group">
+                    <div class="label-with-badge">
+                      <label class="enhanced-field-label" for="cp-email">
+                        <span>Email Address</span>
+                        <span class="readonly-badge">Read Only</span>
+                      </label>
+                    </div>
+                    <div class="enhanced-input-wrap is-readonly">
+                      <span class="field-icon">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                      </span>
+                      <input type="email" class="enhanced-input" id="cp-email" value="${customer.email || ''}" readonly>
+                      <span class="lock-indicator" title="Linked to your Google OAuth login">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="form-group" style="margin-bottom: 20px;">
-                <label class="form-label" style="font-weight: 700;">Default Street Address / Ward *</label>
-                <input type="text" class="form-input" id="cp-address" required value="${customer.address || ''}" placeholder="e.g. Main Road, Ward 1, Dhangadhi">
+              <!-- Section 2: Doorstep & WhatsApp Details -->
+              <div class="profile-form-section">
+                <div class="profile-section-label">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                  <span>Dispatch & Doorstep Delivery Information</span>
+                </div>
+                
+                <div class="enhanced-form-grid">
+                  <!-- WhatsApp Mobile -->
+                  <div class="enhanced-field-group">
+                    <div class="label-with-badge">
+                      <label class="enhanced-field-label" for="cp-phone">
+                        <span>WhatsApp Mobile Number</span>
+                        <span class="required-star">*</span>
+                      </label>
+                      <span class="flag-badge">🇳🇵 10 Digits</span>
+                    </div>
+                    <div class="enhanced-input-wrap phone-wrap">
+                      <span class="phone-prefix">+977</span>
+                      <input type="tel" class="enhanced-input phone-input" id="cp-phone" required value="${customer.phone || ''}" placeholder="e.g. 9848123456" maxlength="10">
+                      <span class="wa-badge-icon" title="WhatsApp Delivery Tracking Enabled">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.19 8.19 0 0 1-5.82 2.42c-1.42 0-2.82-.37-4.06-1.07l-.29-.17-3.02.79.81-2.94-.19-.3a8.14 8.14 0 0 1-1.25-4.5c0-4.54 3.7-8.24 8.24-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.65.81-.8 1-.15.19-.3.21-.55.08-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.25-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.45.06-.69.32-.23.25-.9.88-.9 2.14 0 1.26.92 2.48 1.05 2.65.13.17 1.81 2.76 4.38 3.87.61.27 1.09.43 1.46.55.62.2 1.18.17 1.62.11.5-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.17-.48-.29z"/></svg>
+                      </span>
+                    </div>
+                    <span class="field-helper-text">Our logistics coordinator uses this number to send live transit updates.</span>
+                  </div>
+
+                  <!-- City / Delivery Region -->
+                  <div class="enhanced-field-group">
+                    <label class="enhanced-field-label" for="cp-city">
+                      <span>City / Delivery Region</span>
+                      <span class="required-star">*</span>
+                    </label>
+                    <div class="enhanced-input-wrap select-wrap">
+                      <span class="field-icon">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="12 8 8 12 12 16 12 8"></polygon></svg>
+                      </span>
+                      <select class="enhanced-input enhanced-select" id="cp-city">
+                        <option value="Dhangadhi" ${customer.city === 'Dhangadhi' || !customer.city ? 'selected' : ''}>Dhangadhi (Kailali)</option>
+                        <option value="Attariya" ${customer.city === 'Attariya' ? 'selected' : ''}>Attariya (Kailali)</option>
+                        <option value="Mahendranagar" ${customer.city === 'Mahendranagar' ? 'selected' : ''}>Mahendranagar (Kanchanpur)</option>
+                        <option value="Tikapur" ${customer.city === 'Tikapur' ? 'selected' : ''}>Tikapur (Kailali)</option>
+                        <option value="Dadeldhura" ${customer.city === 'Dadeldhura' ? 'selected' : ''}>Dadeldhura</option>
+                        <option value="Nepalgunj" ${customer.city === 'Nepalgunj' ? 'selected' : ''}>Nepalgunj</option>
+                        <option value="Kathmandu Valley" ${customer.city === 'Kathmandu Valley' ? 'selected' : ''}>Kathmandu Valley</option>
+                        <option value="Other Sudurpashchim Region" ${customer.city === 'Other Sudurpashchim Region' ? 'selected' : ''}>Other Sudurpashchim Region</option>
+                      </select>
+                      <span class="select-chevron">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      </span>
+                    </div>
+                    <span class="field-helper-text">Local doorstep assembly available across Sudurpashchim Province.</span>
+                  </div>
+                </div>
+
+                <!-- Default Street Address / Ward -->
+                <div class="enhanced-field-group full-width" style="margin-top: 14px;">
+                  <label class="enhanced-field-label" for="cp-address">
+                    <span>Default Street Address / Ward</span>
+                    <span class="required-star">*</span>
+                  </label>
+                  <div class="enhanced-input-wrap">
+                    <span class="field-icon">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    </span>
+                    <input type="text" class="enhanced-input" id="cp-address" required value="${customer.address || ''}" placeholder="e.g. Main Road, Ward 1, Dhangadhi (Near City Center)">
+                  </div>
+                  <span class="field-helper-text">Building name, house number, ward or prominent landmark for our delivery drivers.</span>
+                </div>
               </div>
 
-              <button type="submit" class="btn btn-primary" id="btn-save-cust-profile" style="padding: 13px 24px; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Save Profile Changes</span>
-              </button>
+              <!-- Form Action Footer -->
+              <div class="profile-form-footer">
+                <button type="submit" class="btn btn-primary enhanced-submit-btn" id="btn-save-cust-profile">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span>Save Profile Changes</span>
+                </button>
+                <span class="footer-guarantee-note">
+                  🔒 Encrypted and stored safely for white-glove logistics only.
+                </span>
+              </div>
             </form>
           </div>
         </div>
