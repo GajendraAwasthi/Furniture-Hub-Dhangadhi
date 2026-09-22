@@ -108,7 +108,9 @@ export async function signUpWithEmail(email, password) {
 const STORAGE_SUPABASE_ADMINS = 'fh_supabase_store_admins';
 
 const DEFAULT_SUPABASE_ADMINS = [
-  { id: 'admin-sb-01', email: 'admin@furniturehub.com', name: 'Store Administrator', role: 'admin', created_at: '2026-08-01T00:00:00Z' }
+  { id: 'admin-sb-01', email: 'admin@furniturehub.com', name: 'Store Administrator', role: 'admin', created_at: '2026-08-01T00:00:00Z' },
+  { id: 'cd44d9b4-9ece-4a01-82d8-40deb3f12015', user_id: 'admin123', email: 'gajendraawasthi123@gmail.com', name: 'Developer', role: 'admin', created_at: '2026-09-22T05:00:53+00:00' },
+  { id: 'admin-gajendra-506', email: 'gajendraawasthi506@gmail.com', name: 'Gajendra Awasthi (Admin)', role: 'admin', created_at: '2026-09-22T05:38:36+00:00' }
 ];
 
 export function getLocalSupabaseAdmins() {
@@ -116,7 +118,16 @@ export function getLocalSupabaseAdmins() {
     const raw = localStorage.getItem(STORAGE_SUPABASE_ADMINS);
     if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        // Merge with defaults so developer admins are never missing
+        const merged = [...parsed];
+        DEFAULT_SUPABASE_ADMINS.forEach(def => {
+          if (!merged.some(m => m.email?.toLowerCase() === def.email.toLowerCase() || m.id === def.id)) {
+            merged.push(def);
+          }
+        });
+        return merged;
+      }
     }
   } catch (e) {
     // ignore
@@ -125,13 +136,39 @@ export function getLocalSupabaseAdmins() {
 }
 
 export function saveLocalSupabaseAdmins(admins) {
-  localStorage.setItem(STORAGE_SUPABASE_ADMINS, JSON.stringify(admins));
+  if (Array.isArray(admins)) {
+    const merged = [...admins];
+    DEFAULT_SUPABASE_ADMINS.forEach(def => {
+      if (!merged.some(m => m.email?.toLowerCase() === def.email.toLowerCase() || m.id === def.id)) {
+        merged.push(def);
+      }
+    });
+    localStorage.setItem(STORAGE_SUPABASE_ADMINS, JSON.stringify(merged));
+  }
+}
+
+/**
+ * Fetch and sync the latest store_admins directly from Supabase Cloud
+ */
+export async function syncSupabaseAdminsCache() {
+  const client = getClient();
+  if (client) {
+    try {
+      const { data, error } = await client.from('store_admins').select('*');
+      if (!error && Array.isArray(data)) {
+        saveLocalSupabaseAdmins(data);
+        return data;
+      }
+    } catch (e) {
+      console.warn('Failed to sync store_admins cache:', e);
+    }
+  }
+  return getLocalSupabaseAdmins();
 }
 
 /**
  * Strict Supabase Admin Verification
  * Administrator role is validated directly from Supabase (app_metadata, user_metadata, or store_admins table).
- * Other people than admin are normal customers.
  */
 export async function checkIsSupabaseAdmin(user) {
   if (!user) return false;
@@ -141,32 +178,50 @@ export async function checkIsSupabaseAdmin(user) {
   const client = getClient();
   if (client) {
     try {
-      // 1. Check user metadata directly in Supabase
-      if (user.app_metadata?.role === 'admin' || user.user_metadata?.role === 'admin') {
+      // 1. Check user metadata directly in Supabase auth object
+      const metaRole = (user.app_metadata?.role || user.user_metadata?.role || '').replace(/['"]/g, '').trim().toLowerCase();
+      if (metaRole === 'admin') {
         return true;
       }
 
-      // 2. Query Supabase 'store_admins' table
-      let query = client.from('store_admins').select('id, email, role');
-      if (userId) {
-        query = query.or(`email.eq.${email},user_id.eq.${userId}`);
-      } else {
-        query = query.eq('email', email);
-      }
-      const { data, error } = await query.limit(1);
+      // 2. Query Supabase 'store_admins' table and sync cache
+      const { data, error } = await client.from('store_admins').select('*');
+      if (!error && Array.isArray(data) && data.length > 0) {
+        saveLocalSupabaseAdmins(data);
 
-      if (!error && data && data.length > 0) {
-        return data[0].role === 'admin';
+        const match = data.find(row => {
+          const rowRole = (row.role || '').replace(/['"]/g, '').trim().toLowerCase();
+          if (rowRole !== 'admin') return false;
+
+          const rowEmail = (row.email || '').trim().toLowerCase();
+          const rowId = (row.id || '').trim();
+          const rowUserId = (row.user_id || '').trim();
+
+          return (
+            (email && rowEmail === email) ||
+            (userId && (rowId === userId || rowUserId === userId))
+          );
+        });
+
+        if (match) return true;
       }
     } catch (e) {
       console.warn('Supabase admin role verification warning:', e);
     }
   }
 
-  // Local Supabase check: only accounts verified in the store_admins list are admins
+  // Local Supabase check: check cached and default admins
   const admins = getLocalSupabaseAdmins();
-  const found = admins.find(a => a.email.toLowerCase() === email || a.id === userId);
-  return Boolean(found && found.role === 'admin');
+  const found = admins.find(a => {
+    const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
+    if (r !== 'admin') return false;
+    const aEmail = (a.email || '').trim().toLowerCase();
+    const aId = (a.id || '').trim();
+    const aUserId = (a.user_id || '').trim();
+    return (email && aEmail === email) || (userId && (aId === userId || aUserId === userId));
+  });
+
+  return Boolean(found);
 }
 
 /**
@@ -177,7 +232,10 @@ export async function getSupabaseAdmins() {
   if (client) {
     try {
       const { data, error } = await client.from('store_admins').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) return data;
+      if (!error && data && data.length > 0) {
+        saveLocalSupabaseAdmins(data);
+        return data;
+      }
     } catch (e) {
       console.warn('Failed to load store_admins from Supabase:', e);
     }

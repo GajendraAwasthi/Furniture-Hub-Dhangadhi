@@ -23,7 +23,7 @@ import { renderAdminOrdersView } from './views/admin/admin-orders-view.js';
 import { renderAdminSettingsView } from './views/admin/admin-settings-view.js';
 import { renderCustomerDashboardView } from './views/customer/customer-dashboard-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
-import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, getClient } from './services/supabase.js';
+import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient } from './services/supabase.js';
 import { generateWhatsAppLink } from './services/whatsapp.js';
 import { 
   getCurrentCustomer, 
@@ -530,10 +530,20 @@ async function renderCurrentView() {
 
     // Strict Role-Based Security: Non-admins cannot access admin views or data
     if (!isCurrentAdmin()) {
+      // Asynchronously verify against Supabase cloud store_admins
+      const currentUser = state.customerUser || (await client?.auth?.getUser())?.data?.user;
+      if (currentUser) {
+        const isSb = await checkIsSupabaseAdmin(currentUser);
+        if (isSb) {
+          applyAuthenticatedSession({ role: 'admin', user: currentUser }, 'Administrator access verified.');
+          return;
+        }
+      }
+
       if (state.customerUser) {
         showToast('⛔ Access Denied: Administrator privileges required.', 'danger');
       } else {
-        showToast('🔒 Please sign in with administrator credentials.', 'info');
+        showToast('Please sign in with administrator credentials.', 'info');
         state.customerAuthTab = 'login';
         state.isCustomerAuthOpen = true;
       }
@@ -653,25 +663,52 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.products = [];
   }
 
+  // Sync verified Supabase cloud store_admins into local cache
+  try {
+    await syncSupabaseAdminsCache();
+  } catch (e) {
+    console.warn('Admin cache sync notice:', e);
+  }
+
+  // Auto-promote active customer session if their email/id was added to store_admins in Supabase
+  if (state.customerUser && !isCurrentAdmin()) {
+    try {
+      const isSb = await checkIsSupabaseAdmin(state.customerUser);
+      if (isSb) {
+        const adminSession = {
+          id: state.customerUser.id,
+          email: state.customerUser.email,
+          name: state.customerUser.name || 'Store Administrator',
+          role: 'admin',
+          avatar: state.customerUser.avatar || '/images/social-user.png',
+          provider: state.customerUser.provider || 'google'
+        };
+        localStorage.setItem('fh_demo_admin_user', JSON.stringify(adminSession));
+        localStorage.removeItem('fh_customer_session');
+        state.customerUser = null;
+      }
+    } catch (e) {
+      console.warn('Admin auto-promotion error:', e);
+    }
+  }
+
   // Handle real Supabase Google OAuth callback session
   const client = getClient();
   if (client) {
     try {
       const { data: { session } } = await client.auth.getSession();
-      if (session?.user && !state.customerUser && !isCurrentAdmin()) {
+      if (session?.user) {
         const u = session.user;
-        const res = await authenticateOAuthUser('google', {
-          id: u.id,
-          email: u.email,
-          name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
-          avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
-        });
-        applyAuthenticatedSession(res, 'Signed in successfully with Google.');
-      }
-
-      client.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user && !state.customerUser && !isCurrentAdmin()) {
-          const u = session.user;
+        const isSb = await checkIsSupabaseAdmin(u);
+        if (isSb && !isCurrentAdmin()) {
+          const res = await authenticateOAuthUser('google', {
+            id: u.id,
+            email: u.email,
+            name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
+            avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
+          });
+          applyAuthenticatedSession(res, 'Welcome back, Store Administrator!');
+        } else if (!state.customerUser && !isCurrentAdmin()) {
           const res = await authenticateOAuthUser('google', {
             id: u.id,
             email: u.email,
@@ -679,6 +716,30 @@ window.addEventListener('DOMContentLoaded', async () => {
             avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
           });
           applyAuthenticatedSession(res, 'Signed in successfully with Google.');
+        }
+      }
+
+      client.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const u = session.user;
+          const isSb = await checkIsSupabaseAdmin(u);
+          if (isSb && !isCurrentAdmin()) {
+            const res = await authenticateOAuthUser('google', {
+              id: u.id,
+              email: u.email,
+              name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
+              avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
+            });
+            applyAuthenticatedSession(res, 'Welcome back, Store Administrator!');
+          } else if (!state.customerUser && !isCurrentAdmin()) {
+            const res = await authenticateOAuthUser('google', {
+              id: u.id,
+              email: u.email,
+              name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
+              avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
+            });
+            applyAuthenticatedSession(res, 'Signed in successfully with Google.');
+          }
         }
       });
     } catch (e) {
@@ -712,7 +773,7 @@ document.addEventListener('submit', (e) => {
     const email = input ? input.value : '';
     if (email) {
       events.emit('toast', { 
-        message: `🎉 Thank you for subscribing, ${email}! Your 10% coupon code is HUB10.`, 
+        message: `Thank you for subscribing, ${email}!.`, 
         type: 'success' 
       });
       e.target.reset();

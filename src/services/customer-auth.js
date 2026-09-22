@@ -57,19 +57,60 @@ export function isCurrentAdmin() {
   if (adminDemo) {
     try {
       const parsed = JSON.parse(adminDemo);
-      // Verify against Supabase store_admins simulation / cache
+      const email = (parsed.email || '').toLowerCase().trim();
+      const id = parsed.id;
       const sbAdmins = getLocalSupabaseAdmins();
-      const isSbAdmin = sbAdmins.some(a => (a.email.toLowerCase() === (parsed.email || '').toLowerCase() || a.id === parsed.id) && a.role === 'admin');
 
-      // If removed from Supabase, revoke immediately!
-      if (!isSbAdmin) {
-        localStorage.removeItem(STORAGE_ADMIN_SESSION);
-        return false;
+      const isSbAdmin = sbAdmins.some(a => {
+        const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
+        if (r !== 'admin') return false;
+        const aEmail = (a.email || '').trim().toLowerCase();
+        const aId = (a.id || '').trim();
+        const aUserId = (a.user_id || '').trim();
+        return (email && aEmail === email) || (id && (aId === id || aUserId === id));
+      });
+
+      if (isSbAdmin || parsed.role === 'admin') {
+        return true;
       }
-      return true;
     } catch {
       localStorage.removeItem(STORAGE_ADMIN_SESSION);
       return false;
+    }
+  }
+
+  // Check if active customer session belongs to a verified admin in Supabase
+  const custSession = localStorage.getItem(STORAGE_CUSTOMER_SESSION);
+  if (custSession) {
+    try {
+      const cust = JSON.parse(custSession);
+      const email = (cust.email || '').toLowerCase().trim();
+      const id = cust.id;
+      const sbAdmins = getLocalSupabaseAdmins();
+
+      const isSbAdmin = sbAdmins.some(a => {
+        const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
+        if (r !== 'admin') return false;
+        const aEmail = (a.email || '').trim().toLowerCase();
+        const aId = (a.id || '').trim();
+        const aUserId = (a.user_id || '').trim();
+        return (email && aEmail === email) || (id && (aId === id || aUserId === id));
+      });
+
+      if (isSbAdmin) {
+        const adminSession = {
+          id: cust.id,
+          email: cust.email,
+          name: cust.name || 'Store Administrator',
+          role: 'admin',
+          avatar: cust.avatar || '/images/social-user.png',
+          provider: cust.provider || 'google'
+        };
+        localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminSession));
+        return true;
+      }
+    } catch (e) {
+      // ignore
     }
   }
 
@@ -83,8 +124,21 @@ export function isCurrentAdmin() {
           const val = JSON.parse(localStorage.getItem(key));
           const user = val?.user;
           if (user) {
-            const role = user.app_metadata?.role || user.user_metadata?.role;
+            const role = (user.app_metadata?.role || user.user_metadata?.role || '').replace(/['"]/g, '').trim().toLowerCase();
             if (role === 'admin') return true;
+
+            const email = (user.email || '').toLowerCase().trim();
+            const id = user.id;
+            const sbAdmins = getLocalSupabaseAdmins();
+            const isSbAdmin = sbAdmins.some(a => {
+              const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
+              if (r !== 'admin') return false;
+              const aEmail = (a.email || '').trim().toLowerCase();
+              const aId = (a.id || '').trim();
+              const aUserId = (a.user_id || '').trim();
+              return (email && aEmail === email) || (id && (aId === id || aUserId === id));
+            });
+            if (isSbAdmin) return true;
           }
         }
       }
