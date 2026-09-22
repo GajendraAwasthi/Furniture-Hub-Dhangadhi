@@ -1,8 +1,10 @@
 import { injectSpeedInsights } from '@vercel/speed-insights';
+import { inject as injectAnalytics } from '@vercel/analytics';
 import productsData from './data/products.json';
 
-// Initialize Vercel Speed Insights for real-user Core Web Vitals telemetry
+// Initialize Vercel Speed Insights & Real-User Analytics telemetry
 const speedInsights = injectSpeedInsights();
+const analytics = injectAnalytics();
 import { renderNavbar } from './components/navbar.js';
 import { renderCartDrawer } from './components/cart-drawer.js';
 import { renderUserProfileModal } from './components/user-profile-modal.js';

@@ -20,6 +20,7 @@
     "@electric-sql/pglite": "^0.5.8",
     "@node-rs/argon2": "^2.2.1",
     "@supabase/supabase-js": "^2.116.0",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "ioredis": "^5.11.1",
     "ioredis-mock": "^8.13.1",
