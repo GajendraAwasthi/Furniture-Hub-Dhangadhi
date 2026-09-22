@@ -95,15 +95,9 @@ export function isCurrentAdmin() {
     // ignore
   }
 
-  // If a verified Supabase JWT token exists, validate admin status
+  // If a Supabase session exists, validate strictly against authoritative store_admins database records
+  // Client-supplied app_metadata or user_metadata in localStorage is NEVER trusted!
   if (verifiedSbUser) {
-    // 1a. Server-side role check from verified token app_metadata
-    const appRole = (verifiedSbUser.app_metadata?.role || '').replace(/['"]/g, '').trim().toLowerCase();
-    if (appRole === 'admin') {
-      return true;
-    }
-
-    // 1b. Check against store_admins table cache
     const sbAdmins = getLocalSupabaseAdmins();
     if (Array.isArray(sbAdmins) && sbAdmins.length > 0) {
       const email = (verifiedSbUser.email || '').toLowerCase().trim();

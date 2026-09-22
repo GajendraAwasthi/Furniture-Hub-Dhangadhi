@@ -356,11 +356,18 @@ function getLocalProducts() {
     const stored = localStorage.getItem(STORAGE_LOCAL_PRODUCTS);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch { /* ignore */ }
-  localStorage.setItem(STORAGE_LOCAL_PRODUCTS, JSON.stringify([]));
-  return [];
+  const fallback = Array.isArray(initialProducts) && initialProducts.length > 0 
+    ? [...initialProducts] 
+    : [];
+  if (fallback.length > 0) {
+    try {
+      localStorage.setItem(STORAGE_LOCAL_PRODUCTS, JSON.stringify(fallback));
+    } catch { /* ignore */ }
+  }
+  return fallback;
 }
 
 function saveLocalProducts(products) {

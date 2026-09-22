@@ -7,9 +7,12 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * Generates a cryptographically secure CSRF token tied to a session ID or random salt.
  */
 export function generateCsrfToken(sessionId) {
+  const sid = (typeof sessionId === 'object' && sessionId !== null) 
+    ? (sessionId.id || sessionId.sessionId || 'anonymous') 
+    : (sessionId || 'anonymous');
   const salt = crypto.randomBytes(16).toString('hex');
   const hmac = crypto.createHmac('sha256', CSRF_SECRET);
-  hmac.update(`${sessionId || 'anonymous'}:${salt}`);
+  hmac.update(`${sid}:${salt}`);
   const signature = hmac.digest('hex');
   return `${salt}.${signature}`;
 }
@@ -20,6 +23,10 @@ export function generateCsrfToken(sessionId) {
 export function verifyCsrfToken(token, sessionId) {
   if (!token || typeof token !== 'string') return false;
 
+  const sid = (typeof sessionId === 'object' && sessionId !== null) 
+    ? (sessionId.id || sessionId.sessionId || 'anonymous') 
+    : (sessionId || 'anonymous');
+
   const parts = token.split('.');
   if (parts.length !== 2) return false;
 
@@ -27,7 +34,7 @@ export function verifyCsrfToken(token, sessionId) {
   if (!salt || !providedSignature) return false;
 
   const hmac = crypto.createHmac('sha256', CSRF_SECRET);
-  hmac.update(`${sessionId || 'anonymous'}:${salt}`);
+  hmac.update(`${sid}:${salt}`);
   const expectedSignature = hmac.digest('hex');
 
   const providedBuf = Buffer.from(providedSignature, 'utf8');
@@ -58,7 +65,7 @@ export function requireCsrf(req) {
                 req.body?._csrf || 
                 null;
 
-  const sessionId = req.session?.id || req.user?.id || 'anonymous';
+  const sessionId = req.session?.id || req.session?.sessionId || req.sessionId || req.user?.id || 'anonymous';
 
   if (!token || !verifyCsrfToken(token, sessionId)) {
     const error = new Error('Invalid or missing CSRF token.');

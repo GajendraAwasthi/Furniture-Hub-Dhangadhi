@@ -233,13 +233,14 @@ export async function addItemToCart(cartId, { productId, quantity = 1, color = '
 
     const currentQtyInCart = existingRes.rows.length > 0 ? parseInt(existingRes.rows[0].quantity, 10) : 0;
 
-    // Strict bounds: 1..min(99, availableStock)
+    // Strict bounds: 1..min(99, availableStock) on the aggregate cart item quantity
     const maxAllowed = Math.min(CART_CONFIG.maxQuantityPerItem, availableStock);
-    const qtyToAdd = Math.min(reqQty, maxAllowed);
-    if (qtyToAdd <= 0) {
-      throw new Error(`Cannot add more. You already have the maximum available quantity (${maxAllowed}) in your cart.`);
+    const allowedToAdd = Math.max(0, maxAllowed - currentQtyInCart);
+    if (allowedToAdd <= 0) {
+      throw new Error(`Cannot add more. You already have the maximum allowed quantity (${CART_CONFIG.maxQuantityPerItem}) in your cart.`);
     }
 
+    const qtyToAdd = Math.min(reqQty, allowedToAdd);
     const finalQty = currentQtyInCart + qtyToAdd;
 
     // Atomically reserve inventory under row lock
@@ -436,6 +437,18 @@ export async function mergeCartsOnLogin({ userId, signedSessionToken }) {
       if (userItemRes.rows.length > 0) {
         const existingQty = parseInt(userItemRes.rows[0].quantity, 10);
         const mergedQty = Math.min(CART_CONFIG.maxQuantityPerItem, existingQty + anonQty);
+        const excess = (existingQty + anonQty) - mergedQty;
+        if (excess > 0) {
+          // Release excess reserved inventory back to available stock
+          await db.query(
+            `UPDATE inventory 
+             SET available_quantity = available_quantity + $1, 
+                 reserved_quantity = reserved_quantity - $1, 
+                 updated_at = NOW() 
+             WHERE product_id = $2;`,
+            [excess, product_id]
+          );
+        }
         await db.query(
           `UPDATE cart_items SET quantity = $1, updated_at = NOW() WHERE id = $2;`,
           [mergedQty, userItemRes.rows[0].id]

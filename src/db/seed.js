@@ -185,7 +185,7 @@ export async function seedDatabase(db, options = {}) {
     );
   }
 
-  // 6. Seed 5,000 Orders with Frozen Snapshots
+  // 6. Seed 5,000 Orders with Frozen Snapshots & User-Owned Addresses
   console.log('[Seed] Inserting 5,000 orders and order items...');
   const orderBatchSize = 1000;
   for (let b = 0; b < 5000; b += orderBatchSize) {
@@ -193,19 +193,27 @@ export async function seedDatabase(db, options = {}) {
     const oParams = [];
     const oiValues = [];
     const oiParams = [];
+    const addrValues = [];
+    const addrParams = [];
 
     for (let i = 0; i < orderBatchSize; i++) {
       const idx = b + i + 1;
       const orderId = `ord-${idx}`;
       const orderRef = `FH-${String(idx + 10000)}`;
       const uid = `usr-${(idx % userCount) + 1}`;
+      const userAddrId = `addr-${uid}`;
       const subtotal = 1500000 + ((idx * 311) % 5000000);
       const delivery = subtotal > 2500000 ? 0 : 50000;
       const total = subtotal + delivery;
 
+      // Ensure address strictly belongs to this user
+      const aOffset = i * 9;
+      addrValues.push(`($${aOffset + 1}, $${aOffset + 2}, $${aOffset + 3}, $${aOffset + 4}, $${aOffset + 5}, $${aOffset + 6}, $${aOffset + 7}, $${aOffset + 8}, $${aOffset + 9})`);
+      addrParams.push(userAddrId, uid, `Customer ${uid}`, '+977 9848123456', `Main Road, Ward ${(idx % 19) + 1}`, 'Dhangadhi', 'Sudurpashchim', '10900', true);
+
       const oOffset = i * 8;
       oValues.push(`($${oOffset + 1}, $${oOffset + 2}, $${oOffset + 3}, $${oOffset + 4}, $${oOffset + 5}, $${oOffset + 6}, $${oOffset + 7}, $${oOffset + 8})`);
-      oParams.push(orderId, orderRef, uid, sampleAddressId, 'PLACED', subtotal, delivery, total);
+      oParams.push(orderId, orderRef, uid, userAddrId, 'PLACED', subtotal, delivery, total);
 
       const oiOffset = i * 8;
       oiValues.push(`($${oiOffset + 1}, $${oiOffset + 2}, $${oiOffset + 3}, $${oiOffset + 4}, $${oiOffset + 5}, $${oiOffset + 6}, $${oiOffset + 7}, $${oiOffset + 8})`);
@@ -220,6 +228,14 @@ export async function seedDatabase(db, options = {}) {
         subtotal
       );
     }
+
+    // Insert user-owned addresses first
+    await targetDb.query(
+      `INSERT INTO addresses (id, user_id, recipient_name, phone, address_line1, city, state, postal_code, is_default)
+       VALUES ${addrValues.join(',')}
+       ON CONFLICT (id) DO NOTHING;`,
+      addrParams
+    );
 
     await targetDb.query(
       `INSERT INTO orders (id, reference, user_id, shipping_address_id, status, subtotal_minor, delivery_fee_minor, total_minor) VALUES ${oValues.join(',')};`,

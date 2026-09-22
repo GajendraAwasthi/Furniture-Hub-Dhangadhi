@@ -39,8 +39,16 @@ if (process.argv[1] && process.argv[1].endsWith('migrate.js')) {
       await runMigrationUp(db);
       console.log('Migration UP complete.');
     }
-  })().catch(err => {
+    if (db && typeof db.close === 'function') {
+      await db.close();
+    }
+    process.exit(0);
+  })().catch(async (err) => {
     console.error('Migration failed:', err);
+    try {
+      const db = await getDb();
+      if (db && typeof db.close === 'function') await db.close();
+    } catch { /* ignore */ }
     process.exit(1);
   });
 }

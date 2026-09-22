@@ -85,6 +85,26 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     assert.equal(localStorage.getItem('fh_demo_admin_user'), null, 'Unverified admin session must be purged immediately');
   });
 
+  test('1c. Forged Token Bypass (C1): Injected sb-*-auth-token with fake app_metadata is rejected', () => {
+    // Attack: Attacker crafts fake Supabase token in localStorage claiming app_metadata: { role: 'admin' }
+    localStorage.setItem('sb-fake-auth-token', JSON.stringify({
+      access_token: 'not-a-jwt',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: {
+        id: 'attacker',
+        email: 'attacker@example.com',
+        app_metadata: { role: 'admin' }
+      }
+    }));
+
+    // Action: Check authorization
+    const adminCheck = isCurrentAdmin();
+
+    // Verification: Attack must fail because user is not an authoritative store_admin
+    assert.equal(adminCheck, false, 'Forged Supabase token with client-crafted app_metadata must be rejected');
+    assert.equal(localStorage.getItem('fh_demo_admin_user'), null, 'Rogue admin session must be purged');
+  });
+
   test('2. Credential Security: Passwords are salted/hashed and never stored in plaintext', async () => {
     const rawPassword = 'SuperSecretPassword@2026';
     const regResult = await customerRegister({
@@ -331,11 +351,13 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     assert.deepEqual(safeGetJson('fh_valid_key'), { safe: true });
   });
 
-  test('10. Catalog Fixture Integrity (HI-1): Default catalog delivers populated, valid storefront items', async () => {
-    const productsData = (await import('../src/data/products.json', { with: { type: 'json' } })).default;
-    assert.ok(Array.isArray(productsData), 'Products fixture must be an array');
-    assert.ok(productsData.length >= 9, 'Catalog fixture must contain default product inventory');
-    for (const item of productsData) {
+  test('10. Catalog Fixture Integrity (HI-1): Default catalog delivers populated, valid storefront items through fetchProducts()', async () => {
+    localStorage.clear();
+    const { fetchProducts } = await import('../src/services/supabase.js');
+    const fetched = await fetchProducts();
+    assert.ok(Array.isArray(fetched), 'fetchProducts() must return an array');
+    assert.ok(fetched.length >= 9, 'Catalog runtime must return default products on cold start');
+    for (const item of fetched) {
       assert.ok(item.id, 'Product item must have an id');
       assert.ok(item.name, 'Product item must have a name');
       assert.ok(typeof item.price === 'number' && item.price > 0, 'Product item must have a positive number price');
@@ -356,18 +378,20 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     const path = await import('node:path');
     const assetsDir = path.resolve(process.cwd(), 'dist/assets');
     
+    let files;
     try {
-      const files = await fs.readdir(assetsDir);
-      const jsFiles = files.filter(f => f.endsWith('.js'));
-      assert.ok(jsFiles.length >= 2, 'Application should produce multiple code-split chunks');
-
-      for (const file of jsFiles) {
-        const stats = await fs.stat(path.join(assetsDir, file));
-        const sizeKb = stats.size / 1024;
-        assert.ok(sizeKb < 500, `Chunk ${file} (${sizeKb.toFixed(2)} kB) must remain strictly under 500 kB budget`);
-      }
+      files = await fs.readdir(assetsDir);
     } catch (err) {
-      if (err.code !== 'ENOENT') throw err;
+      assert.fail(`Production dist/assets directory must exist to verify bundle budget. Run npm run build before testing: ${err.message}`);
+    }
+
+    const jsFiles = files.filter(f => f.endsWith('.js'));
+    assert.ok(jsFiles.length >= 2, 'Application should produce multiple code-split chunks');
+
+    for (const file of jsFiles) {
+      const stats = await fs.stat(path.join(assetsDir, file));
+      const sizeKb = stats.size / 1024;
+      assert.ok(sizeKb < 500, `Chunk ${file} (${sizeKb.toFixed(2)} kB) must remain strictly under 500 kB budget`);
     }
   });
 
@@ -486,6 +510,62 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     // Verify localStorage key fh_customer_session is synced
     const stored = JSON.parse(localStorage.getItem('fh_customer_session'));
     assert.equal(stored.email, 'customer.new@gmail.com');
+  });
+
+  test('17. Cart Quantity Cap (H2): Successive additions strictly clamp to maximum 99 units', async () => {
+    const { addItemToCart, getOrCreateCart } = await import('../src/cart/service.js');
+    const { getDb } = await import('../src/db/client.js');
+    const db = await getDb();
+
+    // Ensure test product & inventory exist
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, slug TEXT UNIQUE, name TEXT, description TEXT);
+      CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, slug TEXT UNIQUE, sku TEXT, name TEXT, category_id TEXT, description TEXT, price_minor BIGINT, compare_at_price_minor BIGINT, is_active BOOLEAN DEFAULT true);
+      CREATE TABLE IF NOT EXISTS inventory (id TEXT PRIMARY KEY, product_id TEXT UNIQUE, available_quantity INT, reserved_quantity INT, updated_at TIMESTAMPTZ DEFAULT NOW());
+      CREATE TABLE IF NOT EXISTS carts (id TEXT PRIMARY KEY, user_id TEXT, session_token TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+      CREATE TABLE IF NOT EXISTS cart_items (id TEXT PRIMARY KEY, cart_id TEXT, product_id TEXT, quantity INT, selected_color TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+    `);
+
+    await db.query(`INSERT INTO products (id, slug, sku, name, price_minor, is_active) VALUES ('test-prod-cap', 'test-prod-cap', 'SKU-CAP', 'Cap Test Chair', 500000, true) ON CONFLICT (id) DO NOTHING;`);
+    await db.query(`INSERT INTO inventory (id, product_id, available_quantity, reserved_quantity) VALUES ('inv-cap-1', 'test-prod-cap', 200, 0) ON CONFLICT (id) DO UPDATE SET available_quantity = 200, reserved_quantity = 0;`);
+
+    const { cart } = await getOrCreateCart({ userId: 'usr-test-cap' });
+
+    // Step 1: Add 80 units
+    const add1 = await addItemToCart(cart.id, { productId: 'test-prod-cap', quantity: 80 });
+    assert.equal(add1.clampedQty, 80);
+
+    // Step 2: Add 50 more units — must clamp to 99, never 130!
+    const add2 = await addItemToCart(cart.id, { productId: 'test-prod-cap', quantity: 50 });
+    assert.equal(add2.clampedQty, 99, 'Aggregate cart quantity must be clamped to 99 max');
+
+    // Step 3: Attempting to add further when already at 99 must throw
+    await assert.rejects(
+      async () => await addItemToCart(cart.id, { productId: 'test-prod-cap', quantity: 5 }),
+      /maximum allowed quantity/
+    );
+  });
+
+  test('18. CSRF Session Binding (H4): Validates tokens across both string and object session shapes', async () => {
+    const { generateCsrfToken, verifyCsrfToken, requireCsrf } = await import('../src/security/csrf.js');
+
+    // Test with string session
+    const tokenStr = generateCsrfToken('session-abc');
+    assert.equal(verifyCsrfToken(tokenStr, 'session-abc'), true);
+    assert.equal(verifyCsrfToken(tokenStr, 'session-wrong'), false);
+
+    // Test with object session shape { sessionId: 'session-123' }
+    const tokenObj = generateCsrfToken({ sessionId: 'session-123' });
+    assert.equal(verifyCsrfToken(tokenObj, { sessionId: 'session-123' }), true);
+    assert.equal(verifyCsrfToken(tokenObj, 'session-123'), true);
+
+    // Test requireCsrf middleware with req.session.sessionId
+    const req = {
+      method: 'POST',
+      headers: { 'x-csrf-token': tokenObj },
+      session: { sessionId: 'session-123' }
+    };
+    assert.equal(requireCsrf(req), true);
   });
 });
 

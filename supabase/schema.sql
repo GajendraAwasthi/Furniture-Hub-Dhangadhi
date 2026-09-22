@@ -139,14 +139,15 @@ CREATE POLICY "Admins can manage products" ON public.products FOR ALL USING (
   (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
 );
 
--- 2. Orders: checkout orders validation; customers view own orders; admins manage all
+-- 2. Orders: authenticated customers create own orders; customers view own orders; admins manage all
 CREATE POLICY "Customers can create orders" ON public.orders FOR INSERT WITH CHECK (
-  (auth.jwt() IS NULL OR customer_email = (auth.jwt()->>'email'))
+  auth.jwt() IS NOT NULL
+  AND customer_email = (auth.jwt()->>'email')
   AND total_amount >= 0
-  AND status IN ('Pending', 'Processing')
+  AND status = 'Pending'
 );
 CREATE POLICY "Customers view own orders" ON public.orders FOR SELECT USING (
-  customer_email = (auth.jwt()->>'email') 
+  (auth.jwt() IS NOT NULL AND customer_email = (auth.jwt()->>'email'))
   OR (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
 );
 CREATE POLICY "Admins can manage orders" ON public.orders FOR ALL USING (
@@ -171,8 +172,10 @@ CREATE POLICY "Admins can manage settings" ON public.store_settings FOR ALL USIN
   (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
 );
 
--- 5. Store Admins: anyone can check admin role; only existing admins can manage admins
-CREATE POLICY "Public can view admins" ON public.store_admins FOR SELECT USING (true);
+-- 5. Store Admins: verified admins view and manage admins (prevents public admin email enumeration)
+CREATE POLICY "Admins can view admins" ON public.store_admins FOR SELECT USING (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 CREATE POLICY "Admins can manage admins" ON public.store_admins FOR ALL USING (
   (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
 ) WITH CHECK (
@@ -181,19 +184,33 @@ CREATE POLICY "Admins can manage admins" ON public.store_admins FOR ALL USING (
 
 -- 6. Customer Profiles: Users can view and manage their own profiles; Admins can view all
 ALTER TABLE public.customer_profiles ENABLE ROW LEVEL SECURITY;
+
 DROP POLICY IF EXISTS "Users can view own profile" ON public.customer_profiles;
-CREATE POLICY "Users can view own profile" ON public.customer_profiles FOR SELECT USING (
-  true
-);
-
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.customer_profiles;
-CREATE POLICY "Users can insert own profile" ON public.customer_profiles FOR INSERT WITH CHECK (
-  true
+DROP POLICY IF EXISTS "Users can update own profile" ON public.customer_profiles;
+DROP POLICY IF EXISTS "Users can delete own profile" ON public.customer_profiles;
+
+CREATE POLICY "Users can view own profile" ON public.customer_profiles FOR SELECT USING (
+  (auth.uid() IS NOT NULL AND user_id = (auth.uid())::text)
+  OR (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
 );
 
-DROP POLICY IF EXISTS "Users can update own profile" ON public.customer_profiles;
+CREATE POLICY "Users can insert own profile" ON public.customer_profiles FOR INSERT WITH CHECK (
+  auth.uid() IS NOT NULL 
+  AND user_id = (auth.uid())::text
+);
+
 CREATE POLICY "Users can update own profile" ON public.customer_profiles FOR UPDATE USING (
-  true
+  auth.uid() IS NOT NULL 
+  AND user_id = (auth.uid())::text
+) WITH CHECK (
+  auth.uid() IS NOT NULL 
+  AND user_id = (auth.uid())::text
+);
+
+CREATE POLICY "Users can delete own profile" ON public.customer_profiles FOR DELETE USING (
+  (auth.uid() IS NOT NULL AND user_id = (auth.uid())::text)
+  OR (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
 );
 
 -- ==========================================================================

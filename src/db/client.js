@@ -12,10 +12,19 @@ export async function getDb(options = {}) {
     defaultDb = null;
   }
   if (!defaultDb) {
-    const dataDir = options.dataDir || undefined;
-    const db = new PGlite(dataDir);
-    await db.waitReady;
-    defaultDb = db;
+    // If running under Node.js with a mocked window environment (e.g. test runner),
+    // temporarily detach window so PGlite initializes Node.js filesystem wasm runtime
+    const isNode = typeof process !== 'undefined' && Boolean(process.versions?.node);
+    const mockWindow = isNode && typeof globalThis.window !== 'undefined' ? globalThis.window : undefined;
+    if (mockWindow) delete globalThis.window;
+
+    try {
+      const db = options.dataDir ? new PGlite(options.dataDir) : new PGlite();
+      await db.waitReady;
+      defaultDb = db;
+    } finally {
+      if (mockWindow) globalThis.window = mockWindow;
+    }
   }
   return defaultDb;
 }
