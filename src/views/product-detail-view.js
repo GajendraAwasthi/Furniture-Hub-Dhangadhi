@@ -186,11 +186,11 @@ export function renderProductDetailView(container, state, events, params) {
               </button>
             ` : `
               <button class="btn btn-primary" id="detail-add-to-cart-btn" style="width: 100%; justify-content: center; padding: 15px 28px; font-size: 1.05rem; font-weight: 700; border-radius: 12px; display: inline-flex; align-items: center; gap: 10px; background: linear-gradient(135deg, #122d25 0%, #1c4538 100%);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                 </svg>
-                <span>🔒 Sign In to Shop / Add to Cart</span>
+                <span>Sign In to Shop / Add to Cart</span>
               </button>
             `}
           </div>

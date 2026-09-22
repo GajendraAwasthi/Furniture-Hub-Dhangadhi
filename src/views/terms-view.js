@@ -34,11 +34,22 @@ export function renderTermsView(container, state, events) {
       
       <!-- NAVIGATION TABS -->
       <div style="display: flex; gap: 12px; border-bottom: 2px solid rgba(18, 45, 37, 0.1); margin-bottom: 36px;">
-        <button id="tab-terms-btn" class="terms-tab-btn active" style="padding: 12px 22px; font-weight: 800; font-size: 1.02rem; background: none; border: none; border-bottom: 3px solid var(--color-primary); color: var(--color-primary); cursor: pointer; margin-bottom: -2px;">
-          📜 Terms of Service
+        <button id="tab-terms-btn" class="terms-tab-btn active" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; font-weight: 800; font-size: 1.02rem; background: none; border: none; border-bottom: 3px solid var(--color-primary); color: var(--color-primary); cursor: pointer; margin-bottom: -2px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Terms of Service</span>
         </button>
-        <button id="tab-privacy-btn" class="terms-tab-btn" style="padding: 12px 22px; font-weight: 700; font-size: 1.02rem; background: none; border: none; border-bottom: 3px solid transparent; color: var(--color-text-subtle); cursor: pointer; margin-bottom: -2px;">
-          🔒 Privacy & Data Protection
+        <button id="tab-privacy-btn" class="terms-tab-btn" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; font-weight: 700; font-size: 1.02rem; background: none; border: none; border-bottom: 3px solid transparent; color: var(--color-text-subtle); cursor: pointer; margin-bottom: -2px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Privacy & Data Protection</span>
         </button>
       </div>
 
