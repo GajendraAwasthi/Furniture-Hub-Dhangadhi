@@ -1,4 +1,8 @@
+import { injectSpeedInsights } from '@vercel/speed-insights';
 import productsData from './data/products.json';
+
+// Initialize Vercel Speed Insights for real-user Core Web Vitals telemetry
+const speedInsights = injectSpeedInsights();
 import { renderNavbar } from './components/navbar.js';
 import { renderCartDrawer } from './components/cart-drawer.js';
 import { renderUserProfileModal } from './components/user-profile-modal.js';
@@ -694,6 +698,9 @@ events.on('products-updated', (updatedList) => {
 });
 
 window.addEventListener('hashchange', () => {
+  if (speedInsights?.setRoute) {
+    speedInsights.setRoute(window.location.hash || '#home');
+  }
   renderCurrentView();
 });
 
