@@ -256,9 +256,8 @@ button {
   background-color: var(--color-bg-light);
   min-height: calc(100vh - 68px);
   min-height: calc(100dvh - 68px);
-  height: calc(100vh - 68px);
-  height: calc(100dvh - 68px);
-  padding: clamp(14px, 2.5vh, 28px) 20px clamp(18px, 3.2vh, 32px);
+  height: auto;
+  padding: clamp(20px, 3vh, 36px) 20px clamp(28px, 4.5vh, 48px);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -360,6 +359,154 @@ button {
   color: var(--color-primary);
   border-color: #ffffff;
 }
+
+/* ==========================================================================
+   Hero Value Proposition Banner ("The Same Furniture You See Online...")
+   ========================================================================== */
+.fh-value-proposition-banner {
+  margin-top: clamp(24px, 4vh, 42px);
+  margin-bottom: clamp(6px, 1.5vh, 16px);
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid rgba(18, 45, 37, 0.08);
+  border-radius: 18px;
+  padding: clamp(18px, 2.6vh, 28px) clamp(20px, 3vw, 36px);
+  box-shadow: 0 4px 20px -2px rgba(18, 45, 37, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.fh-value-proposition-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px -4px rgba(18, 45, 37, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.fh-vp-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  flex: 1;
+}
+
+.fh-vp-title-row {
+  font-family: var(--font-heading);
+  font-size: clamp(1.2rem, 2.2vw, 1.85rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: #2b2825;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.fh-vp-highlight-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-heading);
+  font-size: clamp(1.2rem, 2.2vw, 1.85rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: #2b2825;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.fh-vp-flame {
+  display: inline-block;
+  font-size: clamp(1.25rem, 2.2vw, 1.85rem);
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(230, 81, 0, 0.3));
+  animation: fhPulseFlame 2.5s infinite ease-in-out;
+}
+
+@keyframes fhPulseFlame {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.12) rotate(-3deg); }
+}
+
+.fh-vp-badges {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 2.4vw, 32px);
+  flex-shrink: 0;
+}
+
+.fh-vp-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  transition: transform 0.25s ease;
+  cursor: default;
+}
+
+.fh-vp-badge:hover {
+  transform: translateY(-3px);
+}
+
+.fh-vp-icon-wrap {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b38842;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.fh-vp-badge:hover .fh-vp-icon-wrap {
+  color: #946d2c;
+  transform: scale(1.06);
+}
+
+.fh-vp-badge-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  color: #383431;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .fh-value-proposition-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 22px 18px;
+    gap: 20px;
+  }
+  .fh-vp-headline {
+    text-align: center;
+    align-items: center;
+  }
+  .fh-vp-badges {
+    width: 100%;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .fh-vp-badges {
+    gap: 16px;
+  }
+  .fh-vp-icon-wrap {
+    width: 44px;
+    height: 44px;
+  }
+  .fh-vp-badge-label {
+    font-size: 0.68rem;
+  }
+}
+
 
 /* ==========================================================================
    3. NEW ARRIVALS (Exact Match to Screenshot 2)

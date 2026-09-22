@@ -62,6 +62,80 @@ export function renderHomeView(container, state, events) {
             Shop Now
           </a>
         </div>
+
+        <!-- VALUE PROPOSITION HIGHLIGHT (Direct Import, No Middleman, Custom Production) -->
+        <div class="fh-value-proposition-banner" id="hero-value-proposition">
+          <div class="fh-vp-headline">
+            <div class="fh-vp-title-row">THE SAME FURNITURE</div>
+            <div class="fh-vp-title-row">YOU SEE ONLINE —</div>
+            <div class="fh-vp-highlight-row">
+              <span>AT A BETTER PRICE!</span>
+              <span class="fh-vp-flame" role="img" aria-label="hot deal">🔥</span>
+            </div>
+          </div>
+
+          <div class="fh-vp-badges">
+            <div class="fh-vp-badge">
+              <div class="fh-vp-icon-wrap" title="Direct Import">
+                <svg width="36" height="36" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <!-- Globe with longitude and latitude -->
+                  <circle cx="17" cy="18" r="12"></circle>
+                  <path d="M17 6c3 3 4.5 7.5 4.5 12s-1.5 9-4.5 12c-3-3-4.5-7.5-4.5-12s1.5-9 4.5-12z"></path>
+                  <path d="M5 18h24"></path>
+                  <!-- Circular import orbit arrow -->
+                  <path d="M26 8c3 2 4.5 5 5 8.5"></path>
+                  <polyline points="31 12 31 17 26 17"></polyline>
+                  <!-- Isometric parcel box in foreground -->
+                  <path d="M20 22l7-3.5 7 3.5-7 3.5-7-3.5z" fill="#ffffff"></path>
+                  <path d="M20 22v8l7 3.5v-8l-7-3.5z" fill="#ffffff"></path>
+                  <path d="M34 22v8l-7 3.5v-8l7-3.5z" fill="#ffffff"></path>
+                  <line x1="27" y1="25.5" x2="27" y2="33.5"></line>
+                </svg>
+              </div>
+              <span class="fh-vp-badge-label">DIRECT<br>IMPORT</span>
+            </div>
+
+            <div class="fh-vp-badge">
+              <div class="fh-vp-icon-wrap" title="No Middleman">
+                <svg width="36" height="36" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <!-- Outer circular badge -->
+                  <circle cx="20" cy="20" r="16"></circle>
+                  <!-- Dollar sign with middleman slash -->
+                  <path d="M20 8v7"></path>
+                  <path d="M22 9.5c0-.8-.7-1.3-1.8-1.3s-1.8.6-1.8 1.4c0 1.5 3.6 1.2 3.6 2.7 0 .9-.8 1.4-1.8 1.4s-1.8-.6-1.8-1.4"></path>
+                  <line x1="11" y1="10" x2="29" y2="21" stroke-width="1.8"></line>
+                  <!-- Handshake -->
+                  <path d="M10 24l5-3 5 3 4-2.5 5 3"></path>
+                  <path d="M13 27l3 2.5 5-2.5 3 2.5"></path>
+                  <path d="M10 21l-3 3 5 4"></path>
+                  <path d="M29 21l3 3-5 4"></path>
+                </svg>
+              </div>
+              <span class="fh-vp-badge-label">NO<br>MIDDLEMAN</span>
+            </div>
+
+            <div class="fh-vp-badge">
+              <div class="fh-vp-icon-wrap" title="Custom Production">
+                <svg width="36" height="36" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <!-- Mechanical precision gear -->
+                  <circle cx="24" cy="11" r="3"></circle>
+                  <path d="M24 5v2m0 8v2m-5-5h2m8 0h2m-4.5-3.5l1.4 1.4m-4.8 4.8l1.4 1.4m0-7.6l-1.4 1.4m4.8 4.8l-1.4 1.4"></path>
+                  <!-- Carpenter hand plane tool -->
+                  <path d="M9 30h23c1.5 0 2.5-1 2.5-2 0-2-1.5-3-3-3H16c-2 0-3.5 1-4.5 2.5L9 30z" fill="#ffffff"></path>
+                  <!-- Front knob -->
+                  <circle cx="13" cy="23.5" r="2" fill="#ffffff"></circle>
+                  <!-- Rear tote handle -->
+                  <path d="M28 25c0-3-1.5-5-3.5-5s-2 1.5-2 3"></path>
+                  <!-- Iron blade -->
+                  <line x1="18" y1="18" x2="22" y2="26" stroke-width="2"></line>
+                  <!-- Wood bench plane line -->
+                  <line x1="6" y1="33" x2="35" y2="33"></line>
+                </svg>
+              </div>
+              <span class="fh-vp-badge-label">CUSTOM<br>PRODUCTION</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
