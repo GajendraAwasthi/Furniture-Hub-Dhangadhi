@@ -336,31 +336,72 @@
   gap: 16px;
 }
 
-.db-status-pill {
+.db-live-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
-.db-status-pill.connected {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+.db-live-indicator:hover {
+  transform: scale(1.08);
+  background: rgba(34, 197, 94, 0.18);
 }
 
-.db-status-pill.local {
-  background-color: #fff8e1;
-  color: #b78103;
-}
-
-.db-status-dot {
+.db-live-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: currentColor;
+  background-color: #16a34a;
+  position: relative;
+  animation: db-pulse-dot 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes db-pulse-dot {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+.db-live-indicator.local {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.db-live-indicator.local .db-live-dot {
+  background-color: #d97706;
+  animation: db-pulse-amber 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes db-pulse-amber {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  50% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
 }
 
 .admin-content {

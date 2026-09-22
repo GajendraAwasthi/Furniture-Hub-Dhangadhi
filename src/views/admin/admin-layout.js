@@ -125,10 +125,9 @@ export async function renderAdminLayout(container, state, events, activeSubView,
               <span style="font-size: 0.72rem; text-decoration: underline; color: #122d25; opacity: 0.75;">(Edit)</span>
             </a>
 
-            <!-- Database Connection Status Badge -->
-            <div class="db-status-pill ${isConnected ? 'connected' : 'local'}" title="${isConnected ? 'Connected to live Supabase project' : 'Running in local storage fallback mode. Connect Supabase in Settings.'}">
-              <span class="db-status-dot"></span>
-              <span>${isConnected ? 'Supabase Connected' : 'Local Storage Mode'}</span>
+            <!-- Database Live Indicator (Blinking Green Dot) -->
+            <div class="db-live-indicator ${isConnected ? 'connected' : 'local'}" title="${isConnected ? 'Live Database Synchronized (Supabase)' : 'Local Storage Mode'}">
+              <span class="db-live-dot"></span>
             </div>
 
             <!-- Settings shortcut -->
