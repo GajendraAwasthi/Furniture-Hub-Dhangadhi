@@ -154,12 +154,9 @@ CREATE POLICY "Allow Deletes product-images" ON storage.objects
 FOR DELETE USING (bucket_id = 'product-images');
 
 -- ==========================================================================
--- SEED INITIAL STORE SETTINGS & DEFAULT COUPON
+-- SEED INITIAL STORE SETTINGS
+-- (Discounts & coupons start completely clean; add them anytime via Admin)
 -- ==========================================================================
-INSERT INTO public.coupons (code, discount_percent, min_order_amount, is_active)
-VALUES ('SOHO10', 10, 5000, true)
-ON CONFLICT (code) DO NOTHING;
-
 INSERT INTO public.store_settings (key, value)
 VALUES 
   ('general', '{"storeName": "Furniture Hub Dhangadhi", "contactEmail": "support@furniturehub.com.np", "phone": "+977 9841234567", "address": "Main Road, Dhangadhi, Kailali, Sudurpashchim Province, Nepal", "currency": "Rs.", "operatingHours": "Sun-Fri 9:00 AM - 7:00 PM"}'::jsonb),
