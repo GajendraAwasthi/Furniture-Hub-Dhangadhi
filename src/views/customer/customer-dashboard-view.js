@@ -116,9 +116,6 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
           <button type="button" class="cust-dash-tab-btn ${activeTab === 'wishlist' ? 'active' : ''}" data-tab="wishlist">
             <span>❤️ My Wishlist (${wishlistCount})</span>
           </button>
-          <button type="button" class="cust-dash-tab-btn ${activeTab === 'security' ? 'active' : ''}" data-tab="security">
-            <span>🛡️ Account Security</span>
-          </button>
         </div>
 
         <!-- TAB CONTENT 1: MY ORDERS (Strictly Isolated to Customer) -->
@@ -296,38 +293,6 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
               }).join('')}
             </div>
           `}
-        </div>
-
-        <!-- TAB CONTENT 4: ACCOUNT SECURITY -->
-        <div class="cust-dash-pane ${activeTab === 'security' ? 'active' : ''}" id="cust-pane-security">
-          <div class="cust-profile-card">
-            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--color-primary); margin-bottom: 6px;">
-              Account & Session Security
-            </h3>
-            <p style="font-size: 0.85rem; color: var(--color-text-subtle); margin-bottom: 20px;">
-              Your account is fortified with 256-bit role isolation. Only you have access to your orders and personal data.
-            </p>
-
-            <div style="background: rgba(18,45,37,0.04); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-                <span style="font-size: 1.2rem;">🛡️</span>
-                <strong style="color: var(--color-primary); font-size: 0.95rem;">Active Customer Session Isolated</strong>
-              </div>
-              <p style="font-size: 0.82rem; color: var(--color-text-subtle); margin: 0; line-height: 1.4;">
-                Authenticated as <strong>${customer.name}</strong> (<code style="background: rgba(18,45,37,0.06); padding: 1px 4px;">${customer.id}</code>). Administrative endpoints, databases, and other customer records are strictly blocked.
-              </p>
-            </div>
-
-            <div style="padding-top: 16px; border-top: 1px solid rgba(18,45,37,0.08); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-              <div>
-                <strong style="color: var(--color-primary); display: block;">Terminate Active Session</strong>
-                <span style="font-size: 0.8rem; color: var(--color-text-subtle);">Sign out from this device safely.</span>
-              </div>
-              <button type="button" id="cust-dash-signout-btn-2" class="btn btn-secondary" style="color: #d32f2f; border-color: rgba(211,47,47,0.3); font-weight: 700;">
-                <span>Sign Out of Furniture Hub Dhangadhi</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
