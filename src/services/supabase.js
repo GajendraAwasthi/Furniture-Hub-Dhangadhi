@@ -537,6 +537,17 @@ export async function fetchOrders() {
 
 export async function createOrder(order) {
   const client = getClient();
+  const initialHistory = Array.isArray(order.tracking_history) && order.tracking_history.length > 0
+    ? order.tracking_history
+    : [
+        {
+          status: order.status || 'Pending',
+          title: 'Order Received & Confirmed',
+          note: 'Your order has been recorded in the Furniture Hub system.',
+          location: 'Dhangadhi Hub, Kailali',
+          timestamp: order.created_at || new Date().toISOString()
+        }
+      ];
 
   if (client) {
     const { data, error } = await client.from('orders').insert({
@@ -548,7 +559,9 @@ export async function createOrder(order) {
       items: order.items,
       total_amount: order.total_amount || order.total,
       payment_method: order.payment_method || order.paymentMethod || 'Cash on Delivery',
-      status: order.status || 'Pending'
+      status: order.status || 'Pending',
+      notes: order.notes || null,
+      tracking_history: initialHistory
     });
 
     if (error) {
@@ -558,25 +571,125 @@ export async function createOrder(order) {
   }
 
   // Update local cache after successful persistence
+  const orderWithTracking = {
+    ...order,
+    tracking_history: initialHistory
+  };
   const local = getLocalOrders();
-  local.unshift(order);
+  local.unshift(orderWithTracking);
   saveLocalOrders(local);
 
-  return order;
+  return orderWithTracking;
+}
+
+export async function fetchOrderByReference(orderRef, phone = null) {
+  if (!orderRef) return null;
+  const cleanRef = String(orderRef).trim().replace(/^#/, '');
+  const cleanPhone = phone ? String(phone).trim() : null;
+
+  const client = getClient();
+  if (client) {
+    // 1. Try secure RPC function (accessible anonymously without leaking other orders)
+    try {
+      const { data, error } = await client.rpc('track_order', {
+        p_order_id: cleanRef,
+        p_phone: cleanPhone
+      });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data[0];
+      }
+    } catch (e) {
+      console.warn('RPC track_order lookup fallback:', e);
+    }
+
+    // 2. Direct table lookup attempt
+    try {
+      let query = client.from('orders').select('*').or(`id.eq.${cleanRef},id.eq.FH-${cleanRef}`);
+      if (cleanPhone) {
+        query = query.ilike('customer_phone', `%${cleanPhone}%`);
+      }
+      const { data, error } = await query.maybeSingle();
+      if (!error && data) {
+        return data;
+      }
+    } catch (e) {
+      console.warn('Supabase direct order fetch fallback:', e);
+    }
+  }
+
+  // 3. Fallback to local storage order records
+  const localOrders = getLocalOrders();
+  const foundLocal = localOrders.find(o => {
+    const idMatch = (o.id && (o.id.toLowerCase() === cleanRef.toLowerCase() || o.id.toLowerCase() === `fh-${cleanRef}`.toLowerCase())) ||
+      (o.reference && (o.reference.toLowerCase() === cleanRef.toLowerCase() || o.reference.toLowerCase() === `fh-${cleanRef}`.toLowerCase()));
+    const phoneMatch = !cleanPhone || (o.customer_phone && o.customer_phone.includes(cleanPhone)) || (o.phone && o.phone.includes(cleanPhone));
+    return idMatch && phoneMatch;
+  });
+  if (foundLocal) return foundLocal;
+
+  // 4. Fallback to customer profile saved orders
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const custOrders = JSON.parse(localStorage.getItem('fh_customer_orders') || '[]');
+      const foundCust = custOrders.find(o => {
+        const idMatch = (o.id && (o.id.toLowerCase() === cleanRef.toLowerCase() || o.id.toLowerCase() === `fh-${cleanRef}`.toLowerCase())) ||
+          (o.reference && (o.reference.toLowerCase() === cleanRef.toLowerCase() || o.reference.toLowerCase() === `fh-${cleanRef}`.toLowerCase()));
+        return idMatch;
+      });
+      if (foundCust) return foundCust;
+    } catch (_) {}
+  }
+
+  return null;
 }
 
 export async function updateOrderStatus(orderId, status) {
+  return await updateOrderTracking(orderId, { status });
+}
+
+export async function updateOrderTracking(orderId, { status, title, note, location }) {
   const client = getClient();
   const local = getLocalOrders();
   const order = local.find(o => o.id === orderId);
+
+  const defaultTitles = {
+    Pending: 'Order Received & Confirmed',
+    Processing: 'Quality Checked & Packed',
+    Shipped: 'Dispatched & Out for Delivery',
+    Delivered: 'Delivered to Customer',
+    Cancelled: 'Order Cancelled'
+  };
+
+  const newStatus = status || order?.status || 'Pending';
+  const milestone = {
+    status: newStatus,
+    title: title || defaultTitles[newStatus] || `Status updated to ${newStatus}`,
+    note: note || '',
+    location: location || 'Dhangadhi Hub, Kailali',
+    timestamp: new Date().toISOString()
+  };
+
+  let updatedHistory = [];
   if (order) {
-    order.status = status;
+    order.status = newStatus;
+    if (note) order.notes = note;
+    const history = Array.isArray(order.tracking_history) ? [...order.tracking_history] : [];
+    history.push(milestone);
+    order.tracking_history = history;
+    updatedHistory = history;
     saveLocalOrders(local);
   }
 
   if (client) {
-    await client.from('orders').update({ status }).eq('id', orderId);
+    const updatePayload = { status: newStatus };
+    if (note) updatePayload.notes = note;
+    if (updatedHistory.length > 0) {
+      updatePayload.tracking_history = updatedHistory;
+    }
+    await client.from('orders').update(updatePayload).eq('id', orderId);
   }
+
+  return order;
 }
 
 export async function deleteOrder(orderId) {

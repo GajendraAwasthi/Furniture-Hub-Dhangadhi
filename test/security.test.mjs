@@ -567,6 +567,60 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     };
     assert.equal(requireCsrf(req), true);
   });
+
+  test('19. Customer Order Tracking (Live Tracking & Milestone History)', async () => {
+    const { buildWhatsAppMessage } = await import('../src/services/whatsapp.js');
+    const { createOrder, fetchOrderByReference, updateOrderTracking } = await import('../src/services/supabase.js');
+
+    const testRef = 'FH-TRACK-TEST-001';
+    const orderData = {
+      id: testRef,
+      reference: testRef,
+      name: 'Ramesh Chaudhary',
+      phone: '9848123456',
+      address: 'Hasanpur, Dhangadhi',
+      total: 18500,
+      paymentMethod: 'Cash on Delivery',
+      status: 'Pending',
+      items: [{ name: 'Executive Desk', price: 18500, quantity: 1 }]
+    };
+
+    // 1. Verify WhatsApp confirmation link uses customer tracking URL instead of admin URL
+    const msg = buildWhatsAppMessage(orderData, orderData.items);
+    assert.ok(msg.includes('#track?ref=FH-TRACK-TEST-001'), 'WhatsApp message must provide public customer tracking link');
+    assert.ok(!msg.includes('#admin/orders'), 'WhatsApp message must never link customer to admin dashboard');
+
+    // 2. Create order and verify initial tracking milestone
+    const created = await createOrder(orderData);
+    assert.ok(Array.isArray(created.tracking_history), 'Order must have tracking_history array');
+    assert.ok(created.tracking_history.length >= 1, 'Initial milestone must be recorded');
+
+    // 3. Look up order by reference
+    const found = await fetchOrderByReference(testRef);
+    assert.ok(found, 'Order must be findable by reference ID');
+    assert.equal(found.id, testRef);
+
+    // 4. Admin updates tracking: e.g. Packed -> Shipped with dispatch notes
+    await updateOrderTracking(testRef, {
+      status: 'Processing',
+      title: 'Packed in Bubble Wrap & Inspected',
+      location: 'Dhangadhi Hub',
+      note: 'Checked for quality and packaged for delivery.'
+    });
+
+    await updateOrderTracking(testRef, {
+      status: 'Shipped',
+      title: 'Dispatched for Doorstep Delivery',
+      location: 'Dhangadhi Transit',
+      note: 'Driver assigned: Ramesh (9848123456)'
+    });
+
+    const updated = await fetchOrderByReference(testRef);
+    assert.equal(updated.status, 'Shipped');
+    assert.ok(updated.tracking_history.length >= 3);
+    assert.equal(updated.tracking_history[updated.tracking_history.length - 1].status, 'Shipped');
+    assert.ok(updated.tracking_history[updated.tracking_history.length - 1].note.includes('Ramesh'));
+  });
 });
 
 

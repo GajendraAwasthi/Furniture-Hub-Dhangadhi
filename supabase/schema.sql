@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS public.customer_profiles (
 -- Ensure schema migrations for pre-existing tables
 ALTER TABLE public.customer_profiles ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS tracking_history JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.store_admins ADD COLUMN IF NOT EXISTS user_id TEXT;
 
 
@@ -139,7 +140,7 @@ DROP POLICY IF EXISTS "Admins can view admins" ON public.store_admins;
 DROP POLICY IF EXISTS "Admins can manage admins" ON public.store_admins;
 
 -- ==========================================================================
--- HELPER FUNCTIONS FOR ROW LEVEL SECURITY (RLS)
+-- HELPER FUNCTIONS FOR ROW LEVEL SECURITY (RLS) & TRACKING
 -- ==========================================================================
 -- Security Definer function checks admin authorization without triggering infinite recursion on store_admins
 CREATE OR REPLACE FUNCTION public.is_admin()
@@ -154,6 +155,24 @@ AS $$
     WHERE email = (auth.jwt()->>'email')
       AND role = 'admin'
   );
+$$;
+
+-- Security Definer function to track a specific order by reference or phone without exposing the orders table
+CREATE OR REPLACE FUNCTION public.track_order(p_order_id text, p_phone text DEFAULT NULL)
+RETURNS SETOF public.orders
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT * FROM public.orders
+  WHERE (
+    id = p_order_id 
+    OR id = 'FH-' || p_order_id
+    OR id = REPLACE(p_order_id, '#', '')
+  )
+  AND (p_phone IS NULL OR customer_phone = p_phone OR customer_phone LIKE '%' || p_phone)
+  LIMIT 1;
 $$;
 
 -- 1. Products: anyone can browse; only verified admins can manage

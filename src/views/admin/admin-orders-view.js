@@ -1,4 +1,4 @@
-import { fetchOrders, updateOrderStatus, deleteOrder, fetchStoreSettings } from '../../services/supabase.js';
+import { fetchOrders, updateOrderStatus, updateOrderTracking, deleteOrder, fetchStoreSettings } from '../../services/supabase.js';
 import { escapeHtml } from '../../utils/security.js';
 import { getBrandLoaderHtml } from '../../components/brand-loader.js';
 
@@ -18,6 +18,7 @@ export async function renderAdminOrdersView(container, state, events) {
   let activeFilter = 'All';
   let searchQuery = '';
   let viewingOrder = null;
+  let trackingOrder = null;
 
   function getFilteredOrders() {
     return orders.filter(o => {
@@ -145,6 +146,14 @@ export async function renderAdminOrdersView(container, state, events) {
                     </td>
                     <td style="text-align: right;">
                       <div style="display: inline-flex; gap: 8px;">
+                        <button class="action-icon-btn btn-manage-tracking" data-id="${o.id}" title="Manage Tracking & Milestones" style="color: #122d25; background: rgba(18, 45, 37, 0.08);">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="1" y="3" width="15" height="13"></rect>
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                          </svg>
+                        </button>
                         <button class="action-icon-btn btn-view-receipt" data-id="${o.id}" title="View order receipt">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -241,6 +250,123 @@ export async function renderAdminOrdersView(container, state, events) {
             </div>
           ` : ''}
         </div>
+
+        <!-- Tracking & Fulfillment Modal -->
+        <div class="admin-modal-backdrop ${trackingOrder ? 'open' : ''}" id="tracking-modal">
+          ${trackingOrder ? `
+            <div class="admin-modal-card" style="max-width: 620px;">
+              <div class="admin-modal-header">
+                <div>
+                  <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--color-primary); margin: 0;">
+                    Manage Tracking: #${escapeHtml(trackingOrder.id)}
+                  </h3>
+                  <span style="font-size: 0.8rem; color: var(--color-text-subtle);">
+                    Customer: ${escapeHtml(trackingOrder.customer_name)} (${escapeHtml(trackingOrder.customer_phone || 'N/A')})
+                  </span>
+                </div>
+                <button class="btn-icon" id="btn-close-tracking" style="font-size: 1.2rem;">✕</button>
+              </div>
+
+              <div class="admin-modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Quick Tracking Link Box -->
+                <div style="background: var(--color-bg-light); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                  <div>
+                    <span style="font-size: 0.78rem; color: var(--color-text-subtle); display: block; font-weight: 700; text-transform: uppercase;">Customer Live Tracking URL</span>
+                    <code style="font-size: 0.82rem; color: #122d25; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px;">#track?ref=${escapeHtml(trackingOrder.id)}</code>
+                  </div>
+                  <div style="display: flex; gap: 8px;">
+                    <button type="button" class="btn btn-sm btn-secondary" id="btn-copy-tracking-link">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <span>Copy Link</span>
+                    </button>
+                    <a href="#track?ref=${encodeURIComponent(trackingOrder.id)}" target="_blank" class="btn btn-sm btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                      <span>Open Page</span>
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Add Milestone Form -->
+                <div style="border: 1px solid #e0e0e0; border-radius: 12px; padding: 18px; margin-bottom: 24px; background: #ffffff;">
+                  <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--color-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span>Update Status & Add Tracking Milestone</span>
+                  </h4>
+
+                  <form id="form-add-milestone" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                      <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-text-subtle); display: block; margin-bottom: 4px;">Order Status</label>
+                        <select id="milestone-status-select" class="settings-select" style="width: 100%;">
+                          <option value="Processing" ${trackingOrder.status === 'Processing' ? 'selected' : ''}>📦 Processing (Packed)</option>
+                          <option value="Shipped" ${trackingOrder.status === 'Shipped' ? 'selected' : ''}>🚚 Shipped (In Transit)</option>
+                          <option value="Delivered" ${trackingOrder.status === 'Delivered' ? 'selected' : ''}>✅ Delivered</option>
+                          <option value="Pending" ${trackingOrder.status === 'Pending' ? 'selected' : ''}>⏳ Pending</option>
+                          <option value="Cancelled" ${trackingOrder.status === 'Cancelled' ? 'selected' : ''}>❌ Cancelled</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-text-subtle); display: block; margin-bottom: 4px;">Milestone Title</label>
+                        <input type="text" id="milestone-title-input" class="settings-input" placeholder="e.g. Quality Checked & Packed" value="Quality Checked & Packed in Showroom" required>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-text-subtle); display: block; margin-bottom: 4px;">Location</label>
+                      <input type="text" id="milestone-location-input" class="settings-input" placeholder="e.g. Dhangadhi Main Hub, Kailali" value="Dhangadhi Hub, Kailali">
+                    </div>
+
+                    <div>
+                      <label style="font-size: 0.78rem; font-weight: 700; color: var(--color-text-subtle); display: block; margin-bottom: 4px;">Note / Dispatch Details</label>
+                      <input type="text" id="milestone-note-input" class="settings-input" placeholder="e.g. Courier: Sundar Paschim Cargo, Driver: Ramesh (9848xxxxxx)">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-sm" style="align-self: flex-start; margin-top: 4px; display: inline-flex; align-items: center; gap: 6px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      <span>Save & Publish Checkpoint</span>
+                    </button>
+                  </form>
+                </div>
+
+                <!-- Existing Milestones Timeline -->
+                <div>
+                  <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--color-primary); margin-bottom: 12px;">
+                    Order Milestones Timeline (${(trackingOrder.tracking_history || []).length})
+                  </h4>
+
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    ${Array.isArray(trackingOrder.tracking_history) && trackingOrder.tracking_history.length > 0 ? (
+                      trackingOrder.tracking_history.slice().reverse().map(m => `
+                        <div style="background: #fafafa; border: 1px solid #eeeeee; border-radius: 8px; padding: 10px 14px;">
+                          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <strong style="color: var(--color-primary); font-size: 0.9rem;">${escapeHtml(m.title || m.status)}</strong>
+                            <span style="font-size: 0.76rem; color: var(--color-text-subtle);">${new Date(m.timestamp).toLocaleString()}</span>
+                          </div>
+                          <div style="font-size: 0.8rem; color: var(--color-text-subtle); margin-top: 2px;">
+                            Stage: <span class="status-badge ${(m.status || 'Pending').toLowerCase()}">${m.status}</span> &bull; 📍 ${escapeHtml(m.location || 'Dhangadhi')}
+                          </div>
+                          ${m.note ? `
+                            <div style="font-size: 0.82rem; color: #333; margin-top: 6px; background: #fff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e0e0e0;">
+                              ${escapeHtml(m.note)}
+                            </div>
+                          ` : ''}
+                        </div>
+                      `).join('')
+                    ) : `
+                      <div style="color: var(--color-text-muted); font-size: 0.85rem; padding: 8px 0;">No milestones recorded yet.</div>
+                    `}
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="admin-modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-done-tracking">Close</button>
+              </div>
+            </div>
+          ` : ''}
+        </div>
       </div>
     `;
 
@@ -271,7 +397,7 @@ export async function renderAdminOrdersView(container, state, events) {
       });
     }
 
-    // Status change
+    // Status change from select dropdown in table
     container.querySelectorAll('.order-status-select').forEach(select => {
       select.addEventListener('change', async (e) => {
         const orderId = e.target.dataset.orderId;
@@ -279,6 +405,78 @@ export async function renderAdminOrdersView(container, state, events) {
         await updateOrderStatus(orderId, newStatus);
         events.emit('toast', { message: `Order #${orderId} marked as ${newStatus}`, type: 'success' });
         orders = await fetchOrders();
+        render();
+      });
+    });
+
+    // Manage Tracking modal open
+    container.querySelectorAll('.btn-manage-tracking').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const ord = orders.find(o => o.id === id);
+        if (ord) {
+          trackingOrder = ord;
+          render();
+        }
+      });
+    });
+
+    // Preset milestone titles when status changes in modal
+    const milestoneStatusSelect = container.querySelector('#milestone-status-select');
+    const milestoneTitleInput = container.querySelector('#milestone-title-input');
+    if (milestoneStatusSelect && milestoneTitleInput) {
+      milestoneStatusSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'Processing') milestoneTitleInput.value = 'Quality Checked & Packed in Showroom';
+        else if (val === 'Shipped') milestoneTitleInput.value = 'Dispatched with Courier / Delivery Van';
+        else if (val === 'Delivered') milestoneTitleInput.value = 'Delivered to Doorstep';
+        else if (val === 'Cancelled') milestoneTitleInput.value = 'Order Cancelled';
+        else if (val === 'Pending') milestoneTitleInput.value = 'Order Received & Confirmed';
+      });
+    }
+
+    // Add milestone form submit
+    const milestoneForm = container.querySelector('#form-add-milestone');
+    if (milestoneForm && trackingOrder) {
+      milestoneForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const status = container.querySelector('#milestone-status-select')?.value || 'Processing';
+        const title = container.querySelector('#milestone-title-input')?.value || 'Tracking Update';
+        const location = container.querySelector('#milestone-location-input')?.value || 'Dhangadhi Hub, Kailali';
+        const note = container.querySelector('#milestone-note-input')?.value || '';
+
+        await updateOrderTracking(trackingOrder.id, { status, title, note, location });
+        events.emit('toast', { message: `Checkpoint "${title}" saved!`, type: 'success' });
+
+        orders = await fetchOrders();
+        trackingOrder = orders.find(o => o.id === trackingOrder.id) || trackingOrder;
+        render();
+      });
+    }
+
+    // Copy tracking link in modal
+    const copyTrackingBtn = container.querySelector('#btn-copy-tracking-link');
+    if (copyTrackingBtn && trackingOrder) {
+      copyTrackingBtn.addEventListener('click', () => {
+        const url = `${window.location.origin}/#track?ref=${encodeURIComponent(trackingOrder.id)}`;
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(url).then(() => {
+            events.emit('toast', { message: 'Customer tracking link copied to clipboard!', type: 'success' });
+          }).catch(() => {
+            prompt('Copy tracking link:', url);
+          });
+        } else {
+          prompt('Copy tracking link:', url);
+        }
+      });
+    }
+
+    // Close tracking modal
+    const closeTracking = container.querySelector('#btn-close-tracking');
+    const doneTracking = container.querySelector('#btn-done-tracking');
+    [closeTracking, doneTracking].forEach(el => {
+      if (el) el.addEventListener('click', () => {
+        trackingOrder = null;
         render();
       });
     });

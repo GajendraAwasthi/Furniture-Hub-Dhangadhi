@@ -67,7 +67,7 @@ export function formatCurrency(amount) {
  */
 export function buildWhatsAppMessage(order, items = [], address = {}, options = {}) {
   const appBaseUrl = (typeof window !== 'undefined' && window.location ? window.location.origin : '') || 'https://furniturehub.com.np';
-  const adminOrderUrl = `${appBaseUrl}/#admin/orders?ref=${encodeURIComponent(order.reference || order.id)}`;
+  const trackOrderUrl = `${appBaseUrl}/#track?ref=${encodeURIComponent(order.reference || order.id)}`;
 
   const totalItemsCount = items.length;
   const shouldTruncate = totalItemsCount > WHATSAPP_CONFIG.maxItemsBeforeTruncate || options.forceTruncate;
@@ -109,7 +109,7 @@ export function buildWhatsAppMessage(order, items = [], address = {}, options = 
     `Deliver to:`,
     deliveryAddress,
     `Placed: ${placedIso}`,
-    `View full order: ${adminOrderUrl}`
+    `Track your order: ${trackOrderUrl}`
   ].join('\n');
 
   return msg;
@@ -172,7 +172,7 @@ export function generateWhatsAppLink(order, items = [], address = {}) {
     const customerPhone = order.phone || address.phone || '';
     const total = order.total || 0;
     const appBaseUrl = (typeof window !== 'undefined' && window.location ? window.location.origin : '') || 'https://furniturehub.com.np';
-    const adminOrderUrl = `${appBaseUrl}/#admin/orders?ref=${encodeURIComponent(order.reference || order.id)}`;
+    const trackOrderUrl = `${appBaseUrl}/#track?ref=${encodeURIComponent(order.reference || order.id)}`;
 
     message = [
       `New Order #${order.reference || order.id}`,
@@ -181,7 +181,7 @@ export function generateWhatsAppLink(order, items = [], address = {}) {
       ...compactItems,
       `TOTAL: ${formatCurrency(total)}`,
       `Deliver to: ${order.address || address.city || 'Kathmandu'}`,
-      `View full order: ${adminOrderUrl}`
+      `Track order live: ${trackOrderUrl}`
     ].join('\n');
   }
 

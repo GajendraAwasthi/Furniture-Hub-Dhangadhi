@@ -22,7 +22,7 @@ export function formatCurrency(minorUnits) {
  */
 export function buildWhatsAppMessage(order, items, address, options = {}) {
   const appBaseUrl = process.env.APP_BASE_URL || 'https://furniturehub.com.np';
-  const adminOrderUrl = `${appBaseUrl}/#admin/orders?ref=${encodeURIComponent(order.reference)}`;
+  const trackOrderUrl = `${appBaseUrl}/#track?ref=${encodeURIComponent(order.reference)}`;
 
   const totalItemsCount = items.length;
   const shouldTruncate = totalItemsCount > WHATSAPP_CONFIG.maxItemsBeforeTruncate || options.forceTruncate;
@@ -62,7 +62,7 @@ export function buildWhatsAppMessage(order, items, address, options = {}) {
     `Deliver to:`,
     ...addrLines,
     `Placed: ${placedIso}`,
-    `View full order: ${adminOrderUrl}`
+    `Track your order: ${trackOrderUrl}`
   ].join('\n');
 
   return msg;
@@ -121,7 +121,7 @@ export function generateWhatsAppDeepLink(order, items, address) {
 
     const placedIso = new Date(order.created_at).toISOString();
     const appBaseUrl = process.env.APP_BASE_URL || 'https://furniturehub.com.np';
-    const adminOrderUrl = `${appBaseUrl}/#admin/orders?ref=${encodeURIComponent(order.reference)}`;
+    const trackOrderUrl = `${appBaseUrl}/#track?ref=${encodeURIComponent(order.reference)}`;
 
     message = [
       `New Order #${order.reference}`,
@@ -131,7 +131,7 @@ export function generateWhatsAppDeepLink(order, items, address) {
       `TOTAL: ${formatCurrency(order.total_minor)}`,
       `Deliver to: ${address.city}`,
       `Placed: ${placedIso}`,
-      `View full order: ${adminOrderUrl}`
+      `Track order live: ${trackOrderUrl}`
     ].join('\n');
   }
 

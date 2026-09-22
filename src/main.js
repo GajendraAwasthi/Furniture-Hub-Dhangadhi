@@ -25,6 +25,7 @@ import { renderAdminOrdersView } from './views/admin/admin-orders-view.js';
 import { renderAdminSettingsView } from './views/admin/admin-settings-view.js';
 import { renderCustomerDashboardView } from './views/customer/customer-dashboard-view.js';
 import { renderOnboardingView } from './views/customer/customer-onboarding-view.js';
+import { renderTrackOrderView } from './views/track/track-order-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
 import { getBrandLoaderHtml, showGlobalBrandLoader, hideGlobalBrandLoader } from './components/brand-loader.js';
 import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient } from './services/supabase.js';
@@ -726,6 +727,8 @@ async function renderCurrentView() {
 
   if (route === '#shop') {
     renderShopView(appContainer, state, events, params);
+  } else if (route === '#track' || route === '#track-order' || route === '#order-tracking') {
+    renderTrackOrderView(appContainer, state, events, params);
   } else if (route === '#product-detail') {
     renderProductDetailView(appContainer, state, events, params);
   } else if (route === '#about') {
