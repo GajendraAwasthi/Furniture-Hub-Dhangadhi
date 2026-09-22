@@ -26,6 +26,7 @@ import { renderAdminSettingsView } from './views/admin/admin-settings-view.js';
 import { renderCustomerDashboardView } from './views/customer/customer-dashboard-view.js';
 import { renderOnboardingView } from './views/customer/customer-onboarding-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
+import { getBrandLoaderHtml, showGlobalBrandLoader, hideGlobalBrandLoader } from './components/brand-loader.js';
 import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient } from './services/supabase.js';
 import { generateWhatsAppLink } from './services/whatsapp.js';
 import { 
@@ -264,6 +265,7 @@ events.on('order-placed', async (orderData = {}) => {
 
   // Push order directly into Supabase / local database first (source of truth)
   try {
+    showGlobalBrandLoader('Finalizing order & preparing WhatsApp receipt...');
     await createOrder({
       id: orderPayload.id,
       customer_name: orderPayload.name,
@@ -297,6 +299,8 @@ events.on('order-placed', async (orderData = {}) => {
   } catch (err) {
     console.error('Error recording order to database:', err);
     showToast(`❌ Failed to place order: ${err.message || 'Please check your connection and try again.'}`, 'danger');
+  } finally {
+    hideGlobalBrandLoader();
   }
 });
 
@@ -874,7 +878,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   updateChrome();
-  renderCurrentView();
+  await renderCurrentView();
+
+  // Dismiss initial branded circular preloader
+  const preloader = document.getElementById('fh-initial-preloader');
+  if (preloader) {
+    preloader.classList.add('fh-preloader-fadeout');
+    setTimeout(() => {
+      preloader.remove();
+    }, 450);
+  }
+});
+
+events.on('show-brand-loader', (data) => {
+  showGlobalBrandLoader(data?.text || 'Loading Furniture Hub...');
+});
+
+events.on('hide-brand-loader', () => {
+  hideGlobalBrandLoader();
 });
 
 events.on('products-updated', (updatedList) => {

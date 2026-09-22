@@ -5007,5 +5007,240 @@ button {
   }
 }
 
+/* ==========================================================================
+   PREMIUM CIRCULAR LOGO LOADER (Furniture Hub Dhangadhi)
+   ========================================================================== */
+.fh-brand-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 40px 20px;
+  text-align: center;
+  box-sizing: border-box;
+}
 
+.fh-brand-loader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(249, 247, 245, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
+.fh-brand-loader-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fh-initial-preloader-root {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: #f9f7f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
+}
+
+.fh-initial-preloader-root.fh-preloader-fadeout {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.fh-loader-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.fh-size-sm {
+  width: 64px;
+  height: 64px;
+}
+
+.fh-size-md {
+  width: 96px;
+  height: 96px;
+}
+
+.fh-size-lg {
+  width: 130px;
+  height: 130px;
+}
+
+/* Pulsing Ambient Halo */
+.fh-loader-glow-ring {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(197, 168, 128, 0.35) 0%, rgba(18, 45, 37, 0.1) 60%, transparent 80%);
+  animation: fhGlowPulse 2.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Rotating SVG Spinner Rings */
+.fh-loader-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.fh-spinner-arc-primary {
+  animation: fhSpinPrimary 1.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  transform-origin: 50px 50px;
+}
+
+.fh-spinner-arc-gold {
+  animation: fhSpinGold 2.2s linear infinite reverse;
+  transform-origin: 50px 50px;
+}
+
+/* Centered Circular Logo Disc */
+.fh-loader-logo-circle {
+  position: relative;
+  width: 72%;
+  height: 72%;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 22px rgba(18, 45, 37, 0.12), inset 0 0 0 1px rgba(18, 45, 37, 0.08);
+  overflow: hidden;
+  animation: fhLogoBreathe 2.4s ease-in-out infinite;
+  z-index: 2;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.fh-loader-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.fh-loader-fallback-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+/* Typography & Subtitle */
+.fh-loader-title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #122d25;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+}
+
+.fh-loader-text {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #5c6b65;
+  margin: 0 0 4px 0;
+  max-width: 320px;
+}
+
+.fh-loader-subtext {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: #7a8a83;
+  margin: 0;
+}
+
+/* Shimmer Progress Track */
+.fh-loader-shimmer-bar {
+  width: 140px;
+  height: 3px;
+  background: rgba(18, 45, 37, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 14px;
+  position: relative;
+}
+
+.fh-loader-shimmer-thumb {
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #c5a880, #122d25, transparent);
+  border-radius: 4px;
+  animation: fhShimmer 1.6s infinite ease-in-out;
+}
+
+/* Keyframes */
+@keyframes fhSpinPrimary {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fhSpinGold {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fhLogoBreathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 22px rgba(18, 45, 37, 0.12), inset 0 0 0 1px rgba(18, 45, 37, 0.08);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 10px 28px rgba(197, 168, 128, 0.35), inset 0 0 0 1.5px #c5a880;
+  }
+}
+
+@keyframes fhGlowPulse {
+  0%, 100% {
+    transform: scale(0.94);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.85;
+  }
+}
+
+@keyframes fhShimmer {
+  0% {
+    left: -60%;
+  }
+  100% {
+    left: 140%;
+  }
+}

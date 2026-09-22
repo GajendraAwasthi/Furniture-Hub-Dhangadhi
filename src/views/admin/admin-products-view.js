@@ -1,8 +1,17 @@
 import { fetchProducts, saveProduct, deleteProduct, fetchStoreSettings } from '../../services/supabase.js';
 import { resolveCloudImageUrl, parseBulkImageUrls, uploadProductImage } from '../../utils/cloud-image-resolver.js';
 import { escapeHtml } from '../../utils/security.js';
+import { getBrandLoaderHtml } from '../../components/brand-loader.js';
 
 export async function renderAdminProductsView(container, state, events) {
+  container.innerHTML = getBrandLoaderHtml({
+    title: 'Products Inventory',
+    text: 'Loading furniture catalog & inventory items...',
+    subtext: 'Furniture Hub Dhangadhi Cloud Database',
+    size: 'md',
+    minHeight: '380px'
+  });
+
   let products = await fetchProducts();
   const settings = await fetchStoreSettings();
   const currency = settings.currency || 'Rs.';
@@ -565,22 +574,26 @@ export async function renderAdminProductsView(container, state, events) {
 
     async function handleFiles(files) {
       if (!files || files.length === 0) return;
-      events.emit('toast', { message: `Processing ${files.length} image files...`, type: 'info' });
+      events.emit('show-brand-loader', { text: `Processing & optimizing ${files.length} image files...` });
       
       const productId = container.querySelector('#form-p-id')?.value?.trim() || 'product';
       let addedCount = 0;
 
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith('image/')) continue;
-        try {
-          const uploaded = await uploadProductImage(file, productId);
-          if (uploaded?.url && !currentGallery.includes(uploaded.url)) {
-            currentGallery.push(uploaded.url);
-            addedCount++;
+      try {
+        for (const file of Array.from(files)) {
+          if (!file.type.startsWith('image/')) continue;
+          try {
+            const uploaded = await uploadProductImage(file, productId);
+            if (uploaded?.url && !currentGallery.includes(uploaded.url)) {
+              currentGallery.push(uploaded.url);
+              addedCount++;
+            }
+          } catch (err) {
+            console.warn('Error uploading image file:', err);
           }
-        } catch (err) {
-          console.warn('Error uploading image file:', err);
         }
+      } finally {
+        events.emit('hide-brand-loader');
       }
 
       renderGalleryPreview();

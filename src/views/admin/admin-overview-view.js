@@ -1,13 +1,16 @@
 import { fetchProducts, fetchOrders, fetchStoreSettings, updateOrderStatus } from '../../services/supabase.js';
 import { getSellerNumber } from '../../services/whatsapp.js';
 import { resolveCloudImageUrl } from '../../utils/cloud-image-resolver.js';
+import { getBrandLoaderHtml } from '../../components/brand-loader.js';
 
 export async function renderAdminOverviewView(container, state, events) {
-  container.innerHTML = `
-    <div style="display: flex; align-items: center; justify-content: center; min-height: 200px;">
-      <span style="color: var(--color-text-muted); font-weight: 600;">Loading live analytics & database records...</span>
-    </div>
-  `;
+  container.innerHTML = getBrandLoaderHtml({
+    title: 'Admin Intelligence Portal',
+    text: 'Loading live sales, orders & database records...',
+    subtext: 'Furniture Hub Dhangadhi Cloud Sync',
+    size: 'md',
+    minHeight: '380px'
+  });
 
   const [products, orders, settings] = await Promise.all([
     fetchProducts(),

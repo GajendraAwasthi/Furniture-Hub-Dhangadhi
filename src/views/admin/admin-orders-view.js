@@ -1,7 +1,16 @@
 import { fetchOrders, updateOrderStatus, deleteOrder, fetchStoreSettings } from '../../services/supabase.js';
 import { escapeHtml } from '../../utils/security.js';
+import { getBrandLoaderHtml } from '../../components/brand-loader.js';
 
 export async function renderAdminOrdersView(container, state, events) {
+  container.innerHTML = getBrandLoaderHtml({
+    title: 'Customer Orders',
+    text: 'Loading orders & sales transactions...',
+    subtext: 'Furniture Hub Dhangadhi Order Sync',
+    size: 'md',
+    minHeight: '380px'
+  });
+
   let orders = await fetchOrders();
   const settings = await fetchStoreSettings();
   const currency = settings.currency || 'Rs.';
