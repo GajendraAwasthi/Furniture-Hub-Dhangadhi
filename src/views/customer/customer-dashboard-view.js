@@ -211,10 +211,6 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
                   </p>
                 </div>
               </div>
-              <div class="delivery-status-pill">
-                <span class="pulsing-green-dot"></span>
-                <span>White-Glove Doorstep Sync Active</span>
-              </div>
             </div>
 
             <form id="cust-profile-edit-form" class="enhanced-profile-form">
