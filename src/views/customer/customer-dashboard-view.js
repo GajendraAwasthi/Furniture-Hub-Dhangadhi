@@ -337,9 +337,6 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                   <span>Save Profile Changes</span>
                 </button>
-                <span class="footer-guarantee-note">
-                  🔒 Encrypted and stored safely for white-glove logistics only.
-                </span>
               </div>
             </form>
           </div>
