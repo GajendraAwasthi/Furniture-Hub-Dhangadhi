@@ -174,7 +174,7 @@ export function renderNavbar(container, state, events) {
     <div class="mobile-nav-backdrop" id="mobile-nav-backdrop"></div>
     <div class="mobile-nav-drawer" id="mobile-nav-drawer">
       <div class="mobile-nav-header">
-        <img src="/images/furniture-hub-logo.png" alt="Furniture Hub Dhangadhi" style="height: 38px; width: auto;">
+        <img src="/images/furniture-hub-logo.png" alt="Furniture Hub Dhangadhi" style="height: 38px; width: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
         <button class="btn-icon" id="mobile-nav-close-btn" aria-label="Close menu">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>

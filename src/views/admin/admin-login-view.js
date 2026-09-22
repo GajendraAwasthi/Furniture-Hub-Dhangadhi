@@ -3,7 +3,7 @@ export function renderAdminLoginView(container, state, events) {
     <div class="admin-login-wrapper" style="min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 40px 20px;">
       <div class="admin-login-box" style="max-width: 480px; width: 100%; text-align: center; background: #ffffff; border-radius: 20px; padding: 40px 32px; box-shadow: 0 12px 36px rgba(18, 45, 37, 0.08); border: 1px solid rgba(18, 45, 37, 0.08);">
         <div class="login-brand-header" style="margin-bottom: 24px;">
-          <img src="/images/furniture-hub-logo.png" alt="Furniture Hub Dhangadhi" style="height: 48px; margin-bottom: 16px;">
+          <img src="/images/furniture-hub-logo.png" alt="Furniture Hub Dhangadhi" style="height: 52px; margin-bottom: 16px; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
           <h2 style="font-family: var(--font-heading); color: var(--color-primary); font-size: 1.6rem; margin-bottom: 8px;">
             Sign In Portal
           </h2>

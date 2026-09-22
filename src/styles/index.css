@@ -102,6 +102,8 @@ button {
   height: clamp(38px, 4.5vh, 46px);
   width: auto;
   object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
 .figma-nav-center {
@@ -5117,25 +5119,25 @@ button {
 /* Centered Circular Logo Disc */
 .fh-loader-logo-circle {
   position: relative;
-  width: 72%;
-  height: 72%;
+  width: 76%;
+  height: 76%;
   border-radius: 50%;
-  background: #ffffff;
+  background: #181919;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 22px rgba(18, 45, 37, 0.12), inset 0 0 0 1px rgba(18, 45, 37, 0.08);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35), inset 0 0 0 2px rgba(197, 168, 128, 0.6);
   overflow: hidden;
   animation: fhLogoBreathe 2.4s ease-in-out infinite;
   z-index: 2;
-  padding: 8px;
+  padding: 0;
   box-sizing: border-box;
 }
 
 .fh-loader-logo-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
   user-select: none;
   -webkit-user-drag: none;
@@ -5217,11 +5219,11 @@ button {
 @keyframes fhLogoBreathe {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 6px 22px rgba(18, 45, 37, 0.12), inset 0 0 0 1px rgba(18, 45, 37, 0.08);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35), inset 0 0 0 2px rgba(197, 168, 128, 0.5);
   }
   50% {
     transform: scale(1.05);
-    box-shadow: 0 10px 28px rgba(197, 168, 128, 0.35), inset 0 0 0 1.5px #c5a880;
+    box-shadow: 0 12px 36px rgba(197, 168, 128, 0.45), inset 0 0 0 2.5px #ffcd29;
   }
 }
 

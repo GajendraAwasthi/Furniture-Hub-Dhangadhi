@@ -15,7 +15,7 @@ export function renderCustomerAuthModal(container, state, events) {
 
         <!-- Brand Header -->
         <div style="margin-bottom: 28px;">
-          <img src="/images/furniture-hub-logo.png" alt="Furniture Hub Dhangadhi" style="height: 48px; width: auto; margin: 0 auto 16px auto; display: block;">
+          <img src="/images/furniture-hub-logo.png" alt="Furniture Hub Dhangadhi" style="height: 52px; width: auto; margin: 0 auto 16px auto; display: block; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);">
           <h3 style="font-size: 1.45rem; font-weight: 800; color: var(--color-primary); margin-bottom: 8px;">
             Sign In to Furniture Hub
           </h3>
