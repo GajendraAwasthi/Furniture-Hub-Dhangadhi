@@ -22,6 +22,7 @@ import { renderAdminProductsView } from './views/admin/admin-products-view.js';
 import { renderAdminOrdersView } from './views/admin/admin-orders-view.js';
 import { renderAdminSettingsView } from './views/admin/admin-settings-view.js';
 import { renderCustomerDashboardView } from './views/customer/customer-dashboard-view.js';
+import { renderOnboardingView } from './views/customer/customer-onboarding-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
 import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient } from './services/supabase.js';
 import { generateWhatsAppLink } from './services/whatsapp.js';
@@ -319,7 +320,7 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
   if (res.role === 'admin') {
     state.customerUser = null;
     updateChrome();
-    showToast(welcomeMsg || '🛡️ Welcome back, Store Administrator!', 'success');
+    showToast(welcomeMsg || 'Welcome back, Store Administrator!', 'success');
     window.location.hash = '#admin/overview';
     renderCurrentView();
   } else {
@@ -335,27 +336,37 @@ function applyAuthenticatedSession(res, welcomeMsg = null) {
     updateChrome();
     showToast(welcomeMsg || `Welcome, ${res.user.name || 'Valued Customer'}!`, 'success');
 
-    // Post-Login Mandatory Location and Mobile Number Dialog
+    // Consume any pending destination saved before the auth guard redirected
+    const pendingTab = sessionStorage.getItem('fh_pending_tab');
+    sessionStorage.removeItem('fh_pending_tab');
+
+    // Persistent Onboarding: If customer hasn't provided mandatory delivery details, route to #onboarding
     const isMissingDetails = !res.user.phone || !res.user.address;
     if (isMissingDetails) {
-      openPostLoginOnboardingModal(res.user, (details) => {
-        updateCustomerProfile(res.user.id, details);
-        state.customerUser = { ...state.customerUser, ...details };
-        state.customerProfile = { ...state.customerProfile, ...details };
-        safeSetJson('fh_customer_profile', state.customerProfile);
-        updateChrome();
-        showToast('Delivery details saved! Welcome to Furniture Hub Dhangadhi.', 'success');
-      });
-    }
-
-    if (window.location.hash.includes('access_token=') || window.location.hash.startsWith('#admin') || window.location.hash === '#login' || window.location.hash === '#account' || window.location.hash === '#profile') {
-      window.location.hash = '#customer/dashboard';
+      // Carry the pending tab through onboarding so it is restored afterwards
+      if (pendingTab) sessionStorage.setItem('fh_pending_tab', pendingTab);
+      window.location.hash = '#onboarding';
       renderCurrentView();
     } else {
+      const needsRedirect =
+        window.location.hash.includes('access_token=') ||
+        window.location.hash.startsWith('#admin') ||
+        window.location.hash === '#login' ||
+        window.location.hash === '#account' ||
+        window.location.hash === '#profile' ||
+        window.location.hash === '#home' ||
+        window.location.hash === '' ||
+        window.location.hash === '#';
+      if (needsRedirect) {
+        window.location.hash = pendingTab
+          ? `#customer/dashboard?tab=${pendingTab}`
+          : '#customer/dashboard';
+      }
       renderCurrentView();
     }
   }
 }
+
 
 // Google OAuth Login Handler (Real Google Sign-In Only)
 events.on('oauth-login', async ({ provider = 'google' }) => {
@@ -616,6 +627,30 @@ async function renderCurrentView() {
     return;
   }
 
+  // Customer Onboarding / Details Setup Route (#onboarding, #complete-profile)
+  if (route === '#onboarding' || route === '#complete-profile') {
+    if (isCurrentAdmin()) {
+      window.location.hash = '#admin/overview';
+      return;
+    }
+    if (!state.customerUser) {
+      showToast('Please sign in to complete your delivery details.', 'info');
+      state.customerAuthTab = 'login';
+      state.isCustomerAuthOpen = true;
+      updateChrome();
+      window.location.hash = '#home';
+      return;
+    }
+    // If user already has contact and address details filled, route to dashboard
+    if (state.customerUser.phone && state.customerUser.address) {
+      window.location.hash = '#customer/dashboard';
+      return;
+    }
+    updateChrome();
+    renderOnboardingView(appContainer, state, events);
+    return;
+  }
+
   // Customer Dashboard Routes (Strict Customer Isolation)
   if (route === '#customer/dashboard' || route === '#customer-dashboard' || route === '#account' || route === '#profile' || route === '#dashboard') {
     if (isCurrentAdmin()) {
@@ -623,15 +658,37 @@ async function renderCurrentView() {
       return;
     }
     if (!state.customerUser) {
-      showToast('🔒 Please sign in to access your customer dashboard.', 'danger');
+      // Persist the intended tab so it survives the redirect to #home and login flow
+      const intendedTab = route === '#profile'
+        ? 'profile'
+        : (['orders', 'profile', 'wishlist'].includes(params.get('tab')) ? params.get('tab') : null);
+      if (intendedTab) {
+        sessionStorage.setItem('fh_pending_tab', intendedTab);
+      } else {
+        // Clear any stale pending tab so a plain #customer/dashboard request
+        // is not hijacked by a previously saved value (e.g. wishlist)
+        sessionStorage.removeItem('fh_pending_tab');
+      }
+
+      showToast('Please sign in to access your customer dashboard.', 'danger');
       state.customerAuthTab = 'login';
       state.isCustomerAuthOpen = true;
       updateChrome();
       window.location.hash = '#home';
       return;
     }
+    // If customer is missing phone or delivery address, redirect to onboarding page
+    if (!state.customerUser.phone || !state.customerUser.address) {
+      window.location.hash = '#onboarding';
+      return;
+    }
     updateChrome();
-    renderCustomerDashboardView(appContainer, state, events);
+    // Whitelist tab parameter to prevent unknown-pane rendering
+    const requestedTab = params.get('tab');
+    const activeTab = ['orders', 'profile', 'wishlist'].includes(requestedTab)
+      ? requestedTab
+      : (route === '#profile' ? 'profile' : 'orders');
+    renderCustomerDashboardView(appContainer, state, events, activeTab);
     return;
   }
 
@@ -736,7 +793,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
 
       client.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
           const u = session.user;
           const isSb = await checkIsSupabaseAdmin(u);
           if (isSb && !isCurrentAdmin()) {
@@ -747,14 +804,29 @@ window.addEventListener('DOMContentLoaded', async () => {
               avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
             });
             applyAuthenticatedSession(res, 'Welcome back, Store Administrator!');
-          } else if (!state.customerUser && !isCurrentAdmin()) {
-            const res = await authenticateOAuthUser('google', {
-              id: u.id,
-              email: u.email,
-              name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
-              avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
-            });
-            applyAuthenticatedSession(res, 'Signed in successfully with Google.');
+          } else if (!isCurrentAdmin()) {
+            if (!state.customerUser) {
+              // First-time session restore — authenticate and route
+              const res = await authenticateOAuthUser('google', {
+                id: u.id,
+                email: u.email,
+                name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
+                avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
+              });
+              applyAuthenticatedSession(res, 'Signed in successfully with Google.');
+            } else {
+              // Session already recovered from JWT — just ensure the view is rendered correctly
+              // (covers the refresh-on-#onboarding case)
+              renderCurrentView();
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          state.customerUser = null;
+          updateChrome();
+          if (window.location.hash.startsWith('#admin') || window.location.hash.startsWith('#customer') || window.location.hash === '#onboarding') {
+            window.location.hash = '#home';
+          } else {
+            renderCurrentView();
           }
         }
       });

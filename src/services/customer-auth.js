@@ -126,7 +126,13 @@ export function isCurrentAdmin() {
 }
 
 /**
- * Get the currently logged-in customer session
+ * Get the currently logged-in customer session.
+ * Primary:  reads app-owned fh_customer_session from localStorage.
+ * Fallback: recovers from a Supabase JWT only when:
+ *   - The token has NOT expired (checked via expires_at Unix timestamp).
+ *   - The local admin cache is populated, confirming the user is not an admin.
+ *     If the cache is empty (cold start before sync), we return null and let
+ *     the async DOMContentLoaded handler perform SDK-validated authentication.
  */
 export function getCurrentCustomer() {
   const session = localStorage.getItem(STORAGE_CUSTOMER_SESSION);
@@ -137,9 +143,89 @@ export function getCurrentCustomer() {
         return parsed;
       }
     } catch {
-      return null;
+      // ignore
     }
   }
+
+  // Fallback: recover from Supabase JWT stored in localStorage
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const val = JSON.parse(raw);
+
+        // Require a well-formed token object
+        if (!val?.access_token || !val?.user || typeof val.user !== 'object') continue;
+
+        // Reject expired tokens — expires_at is a Unix timestamp (seconds)
+        const expiresAt = typeof val.expires_at === 'number' ? val.expires_at : null;
+        if (expiresAt !== null && expiresAt < Math.floor(Date.now() / 1000)) {
+          localStorage.removeItem(key); // evict stale token
+          continue;
+        }
+
+        const u = val.user;
+        const email = (u.email || '').toLowerCase().trim();
+        const id = (u.id || '').trim();
+
+        // Only recover when the admin cache is populated. An empty cache means
+        // admins haven't been synced yet — we cannot safely rule out an admin
+        // role, so defer to the async SDK-validated path.
+        const sbAdmins = getLocalSupabaseAdmins();
+        if (!Array.isArray(sbAdmins) || sbAdmins.length === 0) return null;
+
+        const isSbAdmin = sbAdmins.some(a => {
+          const r = (a.role || '').replace(/['"][g]/g, '').trim().toLowerCase();
+          if (r !== 'admin') return false;
+          const aEmail = (a.email || '').trim().toLowerCase();
+          const aId = (a.id || '').trim();
+          const aUserId = (a.user_id || '').trim();
+          return (email && aEmail === email) || (id && (aId === id || aUserId === id));
+        });
+
+        if (!isSbAdmin) {
+          const accounts = getStoredAccounts();
+          let customerAccount = accounts.find(a => a.email && a.email.toLowerCase() === email);
+          if (!customerAccount) {
+            customerAccount = {
+              id: u.id,
+              name: sanitizeInput(u.user_metadata?.full_name || u.user_metadata?.name || email.split('@')[0]),
+              email: email,
+              phone: sanitizeInput(u.user_metadata?.phone || ''),
+              address: sanitizeInput(u.user_metadata?.address || ''),
+              city: sanitizeInput(u.user_metadata?.city || 'Dhangadhi'),
+              avatar: u.user_metadata?.avatar_url || '/images/social-user.png',
+              role: 'customer',
+              provider: u.app_metadata?.provider || 'google',
+              created_at: new Date().toISOString()
+            };
+            accounts.push(customerAccount);
+            saveStoredAccounts(accounts);
+          }
+
+          const customerSession = {
+            id: customerAccount.id,
+            name: customerAccount.name,
+            email: customerAccount.email,
+            phone: customerAccount.phone,
+            address: customerAccount.address,
+            city: customerAccount.city,
+            avatar: customerAccount.avatar,
+            role: 'customer',
+            provider: u.app_metadata?.provider || 'google'
+          };
+
+          localStorage.setItem(STORAGE_CUSTOMER_SESSION, JSON.stringify(customerSession));
+          return customerSession;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   return null;
 }
 

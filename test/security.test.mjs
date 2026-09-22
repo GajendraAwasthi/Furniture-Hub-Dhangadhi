@@ -43,7 +43,8 @@ const {
   hashPassword,
   generateSalt,
   sanitizeInput,
-  logoutUser
+  logoutUser,
+  getCurrentCustomer
 } = await import('../src/services/customer-auth.js');
 
 describe('Security Verification & Adversarial Audit Suite', () => {
@@ -452,6 +453,39 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     assert.ok(headerMap['Content-Security-Policy'].includes("default-src 'self'"));
     assert.ok(headerMap['Content-Security-Policy'].includes("frame-ancestors 'none'"));
     assert.ok(headerMap['Content-Security-Policy'].includes("https://*.supabase.co"));
+  });
+
+  test('16. Session Resilience: Synchronously recovers customer session on refresh from Supabase token', async () => {
+    // Simulate user logging in via Google OAuth where Supabase wrote its auth token into localStorage
+    const googleUser = {
+      id: 'sb-google-user-99',
+      email: 'customer.new@gmail.com',
+      user_metadata: {
+        full_name: 'Gajendra Customer',
+        avatar_url: '/images/social-user.png'
+      }
+    };
+
+    localStorage.setItem('sb-app-auth-token', JSON.stringify({
+      access_token: 'valid-google-oauth-jwt',
+      user: googleUser
+    }));
+
+    // Explicitly simulate refreshed browser state where fh_customer_session has not yet been set in memory
+    localStorage.removeItem('fh_customer_session');
+
+    // Action: Call getCurrentCustomer() on initial page load / refresh
+    const recoveredCustomer = getCurrentCustomer();
+
+    // Verification: Session must be immediately recovered without kicking the user out
+    assert.ok(recoveredCustomer, 'Customer session must be recovered from active Supabase token');
+    assert.equal(recoveredCustomer.email, 'customer.new@gmail.com');
+    assert.equal(recoveredCustomer.name, 'Gajendra Customer');
+    assert.equal(recoveredCustomer.role, 'customer');
+
+    // Verify localStorage key fh_customer_session is synced
+    const stored = JSON.parse(localStorage.getItem('fh_customer_session'));
+    assert.equal(stored.email, 'customer.new@gmail.com');
   });
 });
 
