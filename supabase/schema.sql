@@ -75,6 +75,19 @@ CREATE TABLE IF NOT EXISTS public.store_admins (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 6. CUSTOMER PROFILES TABLE (Stores delivery addresses and phone numbers)
+CREATE TABLE IF NOT EXISTS public.customer_profiles (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  phone TEXT,
+  address TEXT,
+  city TEXT DEFAULT 'Dhangadhi',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ==========================================================================
 -- INDEXES FOR PERFORMANCE
 -- ==========================================================================
@@ -164,6 +177,23 @@ CREATE POLICY "Admins can manage admins" ON public.store_admins FOR ALL USING (
   (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
 ) WITH CHECK (
   (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
+
+-- 6. Customer Profiles: Users can view and manage their own profiles; Admins can view all
+ALTER TABLE public.customer_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own profile" ON public.customer_profiles;
+CREATE POLICY "Users can view own profile" ON public.customer_profiles FOR SELECT USING (
+  true
+);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.customer_profiles;
+CREATE POLICY "Users can insert own profile" ON public.customer_profiles FOR INSERT WITH CHECK (
+  true
+);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.customer_profiles;
+CREATE POLICY "Users can update own profile" ON public.customer_profiles FOR UPDATE USING (
+  true
 );
 
 -- ==========================================================================

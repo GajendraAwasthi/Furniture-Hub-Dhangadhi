@@ -617,7 +617,49 @@ export function updateCustomerProfile(param1, param2) {
     saveStoredAccounts(accounts);
   }
 
+  // Asynchronously sync profile changes (phone, address, city, name) directly to Supabase
+  syncCustomerProfileToSupabase(sanitized).catch(() => {});
+
   return sanitized;
+}
+
+/**
+ * Synchronize customer profile (phone, address, city, name) to Supabase Cloud
+ */
+export async function syncCustomerProfileToSupabase(customer) {
+  if (!customer || !customer.email) return;
+  const client = getClient();
+  if (!client) return;
+
+  // 1. Update Supabase Auth user_metadata
+  try {
+    await client.auth.updateUser({
+      data: {
+        full_name: customer.name,
+        name: customer.name,
+        phone: customer.phone,
+        address: customer.address,
+        city: customer.city
+      }
+    });
+  } catch (err) {
+    console.warn('Supabase auth.updateUser note:', err?.message || err);
+  }
+
+  // 2. Upsert into public.customer_profiles table in Supabase
+  try {
+    await client.from('customer_profiles').upsert({
+      id: customer.id || customer.email,
+      email: customer.email,
+      name: customer.name,
+      phone: customer.phone,
+      address: customer.address,
+      city: customer.city || 'Dhangadhi',
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'email' });
+  } catch (err) {
+    console.warn('Supabase customer_profiles table upsert note:', err?.message || err);
+  }
 }
 
 /**
