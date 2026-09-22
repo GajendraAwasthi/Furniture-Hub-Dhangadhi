@@ -64,72 +64,85 @@ export function renderHomeView(container, state, events) {
         </div>
 
         <!-- VALUE PROPOSITION HIGHLIGHT (Direct Import, No Middleman, Custom Production) -->
+        <!-- VALUE PROPOSITION HIGHLIGHT (Direct Import, No Middleman, Custom Production) -->
         <div class="fh-value-proposition-banner" id="hero-value-proposition">
           <div class="fh-vp-headline">
-            <div class="fh-vp-title-row">THE SAME FURNITURE</div>
-            <div class="fh-vp-title-row">YOU SEE ONLINE —</div>
-            <div class="fh-vp-highlight-row">
+            <div class="fh-vp-title-line">THE SAME FURNITURE</div>
+            <div class="fh-vp-title-line">YOU SEE ONLINE —</div>
+            <div class="fh-vp-title-line fh-vp-price-line">
               <span>AT A BETTER PRICE!</span>
-              <span class="fh-vp-flame" role="img" aria-label="hot deal">🔥</span>
+              <span class="fh-vp-flame" role="img" aria-label="deal">🔥</span>
             </div>
           </div>
 
           <div class="fh-vp-badges">
+            <!-- Direct Import -->
             <div class="fh-vp-badge">
               <div class="fh-vp-icon-wrap" title="Direct Import">
-                <svg width="36" height="36" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <!-- Globe with longitude and latitude -->
-                  <circle cx="17" cy="18" r="12"></circle>
-                  <path d="M17 6c3 3 4.5 7.5 4.5 12s-1.5 9-4.5 12c-3-3-4.5-7.5-4.5-12s1.5-9 4.5-12z"></path>
-                  <path d="M5 18h24"></path>
-                  <!-- Circular import orbit arrow -->
-                  <path d="M26 8c3 2 4.5 5 5 8.5"></path>
-                  <polyline points="31 12 31 17 26 17"></polyline>
-                  <!-- Isometric parcel box in foreground -->
-                  <path d="M20 22l7-3.5 7 3.5-7 3.5-7-3.5z" fill="#ffffff"></path>
-                  <path d="M20 22v8l7 3.5v-8l-7-3.5z" fill="#ffffff"></path>
-                  <path d="M34 22v8l-7 3.5v-8l7-3.5z" fill="#ffffff"></path>
-                  <line x1="27" y1="25.5" x2="27" y2="33.5"></line>
+                <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <!-- Globe -->
+                  <circle cx="17" cy="19" r="13"></circle>
+                  <path d="M17 6c3.6 3.6 5.5 8.2 5.5 13s-1.9 9.4-5.5 13c-3.6-3.6-5.5-8.2-5.5-13s1.9-9.4 5.5-13z"></path>
+                  <path d="M4 19h26"></path>
+                  <path d="M6.5 12.5c3-1.6 6.5-2.5 10.5-2.5s7.5.9 10.5 2.5"></path>
+                  <!-- Curved orbit arrow -->
+                  <path d="M21 5.5c5.5.8 10 4.2 11.5 9.5"></path>
+                  <polyline points="33.5 10 33.5 15.5 28 14.5"></polyline>
+                  <!-- Isometric parcel box in foreground with background masking -->
+                  <path d="M21 24l8-4 8 4-8 4-8-4z" fill="var(--color-bg-light)"></path>
+                  <path d="M25 22l8 4"></path>
+                  <path d="M21 24v10.5l8 4v-10.5l-8-4z" fill="var(--color-bg-light)"></path>
+                  <path d="M37 24v10.5l-8 4v-10.5l8-4z" fill="var(--color-bg-light)"></path>
+                  <line x1="29" y1="28" x2="29" y2="38.5"></line>
+                  <line x1="33" y1="26" x2="33" y2="29.5"></line>
                 </svg>
               </div>
               <span class="fh-vp-badge-label">DIRECT<br>IMPORT</span>
             </div>
 
+            <!-- No Middleman -->
             <div class="fh-vp-badge">
               <div class="fh-vp-icon-wrap" title="No Middleman">
-                <svg width="36" height="36" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <!-- Outer circular badge -->
-                  <circle cx="20" cy="20" r="16"></circle>
-                  <!-- Dollar sign with middleman slash -->
-                  <path d="M20 8v7"></path>
-                  <path d="M22 9.5c0-.8-.7-1.3-1.8-1.3s-1.8.6-1.8 1.4c0 1.5 3.6 1.2 3.6 2.7 0 .9-.8 1.4-1.8 1.4s-1.8-.6-1.8-1.4"></path>
-                  <line x1="11" y1="10" x2="29" y2="21" stroke-width="1.8"></line>
+                <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <!-- Outer circle -->
+                  <circle cx="22" cy="22" r="19"></circle>
+                  <!-- Dollar Sign -->
+                  <line x1="22" y1="7.5" x2="22" y2="17.5"></line>
+                  <path d="M24.5 10.2c0-1.1-.9-1.7-2.3-1.7s-2.3.7-2.3 1.5c0 1.8 4.6 1.3 4.6 3.2 0 1.1-.9 1.8-2.3 1.8s-2.3-.7-2.3-1.7"></path>
                   <!-- Handshake -->
-                  <path d="M10 24l5-3 5 3 4-2.5 5 3"></path>
-                  <path d="M13 27l3 2.5 5-2.5 3 2.5"></path>
-                  <path d="M10 21l-3 3 5 4"></path>
-                  <path d="M29 21l3 3-5 4"></path>
+                  <path d="M7 23.5l4-2.5v5l-4-2.5z"></path>
+                  <path d="M37 23.5l-4-2.5v5l4-2.5z"></path>
+                  <path d="M11 23.5l5 3 4-1.5"></path>
+                  <path d="M33 23.5l-5 3-4-1.5"></path>
+                  <path d="M16.5 28l4.5 3.5 4.5-3.5"></path>
+                  <path d="M18.5 32.5l2.5 2 2.5-2"></path>
+                  <!-- Restriction Slash across circle from top-right to bottom-left -->
+                  <line x1="35.5" y1="8.5" x2="8.5" y2="35.5" stroke-width="1.8"></line>
                 </svg>
               </div>
               <span class="fh-vp-badge-label">NO<br>MIDDLEMAN</span>
             </div>
 
+            <!-- Custom Production -->
             <div class="fh-vp-badge">
               <div class="fh-vp-icon-wrap" title="Custom Production">
-                <svg width="36" height="36" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <!-- Mechanical precision gear -->
-                  <circle cx="24" cy="11" r="3"></circle>
-                  <path d="M24 5v2m0 8v2m-5-5h2m8 0h2m-4.5-3.5l1.4 1.4m-4.8 4.8l1.4 1.4m0-7.6l-1.4 1.4m4.8 4.8l-1.4 1.4"></path>
-                  <!-- Carpenter hand plane tool -->
-                  <path d="M9 30h23c1.5 0 2.5-1 2.5-2 0-2-1.5-3-3-3H16c-2 0-3.5 1-4.5 2.5L9 30z" fill="#ffffff"></path>
-                  <!-- Front knob -->
-                  <circle cx="13" cy="23.5" r="2" fill="#ffffff"></circle>
+                <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <!-- Mechanical gear in top-left background -->
+                  <path d="M23 4.5h2v2h-2z M23 16.5h2v2h-2z M17 10.5h2v2h-2z M29 10.5h2v2h-2z M18.5 6l1.4 1.4-1.4 1.4-1.4-1.4z M27 14.5l1.4 1.4-1.4 1.4-1.4-1.4z M18.5 15l1.4-1.4 1.4 1.4-1.4 1.4z M27 6.5l1.4-1.4 1.4 1.4-1.4 1.4z" fill="currentColor"></path>
+                  <circle cx="24" cy="11.5" r="5.5"></circle>
+                  <circle cx="24" cy="11.5" r="2.5"></circle>
+                  <!-- Bench plane sole/workpiece line -->
+                  <line x1="6" y1="36" x2="38" y2="36" stroke-width="1.6"></line>
+                  <!-- Front wooden knob -->
+                  <circle cx="11.5" cy="27" r="2.2" fill="var(--color-bg-light)"></circle>
+                  <path d="M10.2 29l-1 4h4.6l-1-4" fill="var(--color-bg-light)"></path>
+                  <!-- Plane body -->
+                  <path d="M14 33c2-2 4.5-3 7.5-3 3 0 5 1 7 3h6c1 0 1.8-.8 1.8-1.8 0-1.8-1.2-3.2-3-3.2h-5" fill="var(--color-bg-light)"></path>
+                  <!-- Angled cutting blade / iron -->
+                  <line x1="22" y1="20" x2="28" y2="33" stroke-width="2.2"></line>
+                  <line x1="23.5" y1="22.5" x2="28.5" y2="32.5" stroke-width="1.4"></line>
                   <!-- Rear tote handle -->
-                  <path d="M28 25c0-3-1.5-5-3.5-5s-2 1.5-2 3"></path>
-                  <!-- Iron blade -->
-                  <line x1="18" y1="18" x2="22" y2="26" stroke-width="2"></line>
-                  <!-- Wood bench plane line -->
-                  <line x1="6" y1="33" x2="35" y2="33"></line>
+                  <path d="M31.5 28c1-2.5 2.5-4.5 4.5-4.5 2 0 3 1.5 3 4.5 0 2.2-1 3.5-2.5 3.5h-1.5"></path>
                 </svg>
               </div>
               <span class="fh-vp-badge-label">CUSTOM<br>PRODUCTION</span>
