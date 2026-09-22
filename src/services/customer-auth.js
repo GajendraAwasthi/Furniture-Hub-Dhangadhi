@@ -170,13 +170,12 @@ export function getCurrentCustomer() {
         const email = (u.email || '').toLowerCase().trim();
         const id = (u.id || '').trim();
 
-        // Only recover when the admin cache is populated. An empty cache means
-        // admins haven't been synced yet — we cannot safely rule out an admin
-        // role, so defer to the async SDK-validated path.
-        const sbAdmins = getLocalSupabaseAdmins();
-        if (!Array.isArray(sbAdmins) || sbAdmins.length === 0) return null;
+        // If app_metadata specifies admin, reject customer recovery
+        const appRole = (u.app_metadata?.role || '').replace(/['"]/g, '').trim().toLowerCase();
+        if (appRole === 'admin') return null;
 
-        const isSbAdmin = sbAdmins.some(a => {
+        const sbAdmins = getLocalSupabaseAdmins();
+        const isSbAdmin = Array.isArray(sbAdmins) && sbAdmins.some(a => {
           const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
           if (r !== 'admin') return false;
           const aEmail = (a.email || '').trim().toLowerCase();
@@ -513,20 +512,54 @@ export async function customerRegister({ name, phone, email, address, city, pass
   return { success: true, role: 'customer', customer: sessionData };
 }
 
+let isLoggingOut = false;
+
 /**
- * Log out any active session (Customer or Admin)
+ * Log out any active session (Customer or Admin) safely and instantly without hanging or crashing.
  */
 export async function logoutUser() {
-  const client = getClient();
-  if (client) {
+  if (isLoggingOut) return { success: true };
+  isLoggingOut = true;
+
+  try {
+    const client = getClient();
+    if (client) {
+      try {
+        // Use scope: 'local' and timeout so slow network requests never freeze the main thread
+        await Promise.race([
+          client.auth.signOut({ scope: 'local' }),
+          new Promise(r => setTimeout(r, 600))
+        ]);
+      } catch {
+        // ignore
+      }
+    }
+
+    // Purge real application session states
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
+      localStorage.removeItem(STORAGE_ADMIN_SESSION);
+      localStorage.removeItem('fh_cart');
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('fh_pending_tab');
+    }
+
+    // Purge any Supabase token keys so subsequent refresh cannot re-hydrate stale sessions
     try {
-      await client.auth.signOut();
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('sb-') && k.endsWith('-auth-token')) {
+          localStorage.removeItem(k);
+        }
+      }
     } catch {
       // ignore
     }
+  } finally {
+    isLoggingOut = false;
   }
-  localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
-  localStorage.removeItem(STORAGE_ADMIN_SESSION);
+
   return { success: true };
 }
 

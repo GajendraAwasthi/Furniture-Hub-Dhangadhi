@@ -168,8 +168,9 @@ export async function renderAdminLayout(container, state, events, activeSubView,
   // Logout handler
   const logoutBtn = container.querySelector('#admin-logout-btn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await logout();
+    logoutBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      logoutBtn.disabled = true;
       await logoutUser();
       events.emit('toast', { message: 'Logged out of Admin Portal. See you soon!', type: 'info' });
       window.location.hash = '#home';

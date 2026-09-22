@@ -833,10 +833,13 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
           }
         } else if (event === 'SIGNED_OUT') {
-          // Clear both in-memory state and the persisted fh_customer_session so a
-          // page refresh cannot restore the signed-out customer via getCurrentCustomer()
-          await logoutUser();
+          // User is already signed out in Supabase.
+          // Do NOT call client.auth.signOut() or logoutUser() here to avoid recursive infinite loop!
           state.customerUser = null;
+          state.cart = [];
+          localStorage.removeItem('fh_customer_session');
+          localStorage.removeItem('fh_demo_admin_user');
+          localStorage.removeItem('fh_cart');
           sessionStorage.removeItem('fh_pending_tab');
           updateChrome();
           if (window.location.hash.startsWith('#admin') || window.location.hash.startsWith('#customer') || window.location.hash === '#onboarding') {

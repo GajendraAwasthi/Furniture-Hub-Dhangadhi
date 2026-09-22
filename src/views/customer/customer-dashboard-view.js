@@ -433,7 +433,10 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
   const signout1 = container.querySelector('#cust-dash-signout-btn');
   const signout2 = container.querySelector('#cust-dash-signout-btn-2');
 
-  function handleSignOut() {
+  function handleSignOut(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (signout1) signout1.disabled = true;
+    if (signout2) signout2.disabled = true;
     events.emit('customer-logout');
   }
 
