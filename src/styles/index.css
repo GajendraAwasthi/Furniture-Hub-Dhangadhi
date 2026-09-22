@@ -3475,15 +3475,62 @@ button {
 }
 
 .cust-stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: rgba(18, 45, 37, 0.05);
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
   flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
+}
+
+.cust-stat-card:hover .cust-stat-icon {
+  transform: translateY(-2px) scale(1.06);
+}
+
+.cust-stat-icon.stat-orders {
+  background: rgba(18, 45, 37, 0.07);
+  color: var(--color-primary);
+  border-color: rgba(18, 45, 37, 0.12);
+}
+
+.cust-stat-icon.stat-transit {
+  background: rgba(198, 138, 76, 0.12);
+  color: #b06f2c;
+  border-color: rgba(198, 138, 76, 0.22);
+}
+
+.cust-stat-icon.stat-investment {
+  background: rgba(27, 77, 62, 0.1);
+  color: #124233;
+  border-color: rgba(27, 77, 62, 0.18);
+}
+
+.cust-stat-icon.stat-wishlist {
+  background: rgba(225, 29, 72, 0.08);
+  color: #e11d48;
+  border-color: rgba(225, 29, 72, 0.18);
+}
+
+.cust-empty-icon-wrap {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto 16px auto;
+  border-radius: 22px;
+  background: rgba(18, 45, 37, 0.05);
+  border: 1px solid rgba(18, 45, 37, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+}
+
+.cust-dash-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .cust-stat-content {

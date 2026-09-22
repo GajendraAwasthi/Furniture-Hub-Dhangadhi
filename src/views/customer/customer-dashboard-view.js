@@ -4,7 +4,7 @@ import { resolveCloudImageUrl } from '../../utils/cloud-image-resolver.js';
 export function renderCustomerDashboardView(container, state, events, activeTab = 'orders') {
   const customer = state.customerUser;
   if (!customer) {
-    events.emit('toast', { message: '🔒 Please sign in to access your customer dashboard.', type: 'danger' });
+    events.emit('toast', { message: 'Please sign in to access your customer dashboard.', type: 'danger' });
     events.emit('open-customer-auth');
     window.location.hash = '#home';
     return;
@@ -73,7 +73,13 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
         <!-- 4 Summary Metrics Cards (Isolated to this customer) -->
         <div class="cust-dash-stats-grid">
           <div class="cust-stat-card">
-            <div class="cust-stat-icon">📦</div>
+            <div class="cust-stat-icon stat-orders">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
             <div class="cust-stat-content">
               <span class="cust-stat-label">Total Orders</span>
               <strong class="cust-stat-val">${customerOrders.length}</strong>
@@ -81,7 +87,14 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
           </div>
 
           <div class="cust-stat-card">
-            <div class="cust-stat-icon">🚚</div>
+            <div class="cust-stat-icon stat-transit">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+            </div>
             <div class="cust-stat-content">
               <span class="cust-stat-label">In-Transit / Active</span>
               <strong class="cust-stat-val">${activeDeliveries}</strong>
@@ -89,7 +102,13 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
           </div>
 
           <div class="cust-stat-card">
-            <div class="cust-stat-icon">💰</div>
+            <div class="cust-stat-icon stat-investment">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"></path>
+                <circle cx="16" cy="14" r="2"></circle>
+                <path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </div>
             <div class="cust-stat-content">
               <span class="cust-stat-label">Total Investment</span>
               <strong class="cust-stat-val">Rs. ${totalSpent.toLocaleString()}/-</strong>
@@ -97,7 +116,11 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
           </div>
 
           <div class="cust-stat-card">
-            <div class="cust-stat-icon">❤️</div>
+            <div class="cust-stat-icon stat-wishlist">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </div>
             <div class="cust-stat-content">
               <span class="cust-stat-label">Saved Wishlist</span>
               <strong class="cust-stat-val">${wishlistCount} items</strong>
@@ -108,13 +131,16 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
         <!-- Navigation Tabs -->
         <div class="cust-dash-tabs-bar">
           <button type="button" class="cust-dash-tab-btn ${activeTab === 'orders' ? 'active' : ''}" data-tab="orders">
-            <span>📦 My Orders (${customerOrders.length})</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            <span>My Orders (${customerOrders.length})</span>
           </button>
           <button type="button" class="cust-dash-tab-btn ${activeTab === 'profile' ? 'active' : ''}" data-tab="profile">
-            <span>👤 Delivery Address & WhatsApp</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <span>Delivery Address & WhatsApp</span>
           </button>
           <button type="button" class="cust-dash-tab-btn ${activeTab === 'wishlist' ? 'active' : ''}" data-tab="wishlist">
-            <span>❤️ My Wishlist (${wishlistCount})</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            <span>My Wishlist (${wishlistCount})</span>
           </button>
         </div>
 
@@ -122,7 +148,13 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
         <div class="cust-dash-pane ${activeTab === 'orders' ? 'active' : ''}" id="cust-pane-orders">
           ${customerOrders.length === 0 ? `
             <div class="cust-empty-box">
-              <div style="font-size: 3rem; margin-bottom: 12px;">🛋️</div>
+              <div class="cust-empty-icon-wrap">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+              </div>
               <h3 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 6px;">
                 No Orders Placed Yet
               </h3>
@@ -271,7 +303,7 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
                         <span>WhatsApp Mobile Number</span>
                         <span class="required-star">*</span>
                       </label>
-                      <span class="flag-badge">🇳🇵 10 Digits</span>
+                      <span class="flag-badge">NP &bull; 10 Digits</span>
                     </div>
                     <div class="enhanced-input-wrap phone-wrap">
                       <span class="phone-prefix">+977</span>
@@ -342,7 +374,11 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
         <div class="cust-dash-pane ${activeTab === 'wishlist' ? 'active' : ''}" id="cust-pane-wishlist">
           ${wishlistCount === 0 ? `
             <div class="cust-empty-box">
-              <div style="font-size: 3rem; margin-bottom: 12px;">❤️</div>
+              <div class="cust-empty-icon-wrap" style="color: #e11d48; background: rgba(225, 29, 72, 0.08); border: 1px solid rgba(225, 29, 72, 0.15);">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+              </div>
               <h3 style="font-family: var(--font-heading); color: var(--color-primary); margin-bottom: 6px;">
                 Your Wishlist is Empty
               </h3>
@@ -435,7 +471,7 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
           city: updated.city
         };
         localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
-        events.emit('toast', { message: `✅ Delivery profile updated for ${updated.name}!`, type: 'success' });
+        events.emit('toast', { message: `Delivery profile updated for ${updated.name}!`, type: 'success' });
         renderCustomerDashboardView(container, state, events, 'profile');
       }
     });

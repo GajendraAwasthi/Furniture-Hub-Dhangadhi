@@ -381,8 +381,14 @@ export function renderCartDrawer(container, state, events) {
               </div>
             </div>
 
-            <div class="receipt-delivery-banner">
-              🚚 <strong>Delivery Timeline:</strong> 1-3 Business Days within Dhangadhi & Sudurpashchim. Professional delivery and packaging handling included.
+            <div class="receipt-delivery-banner" style="display: flex; align-items: center; gap: 8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+              <span><strong>Delivery Timeline:</strong> 1-3 Business Days within Dhangadhi & Sudurpashchim. Professional delivery and packaging handling included.</span>
             </div>
           ` : ''}
 
