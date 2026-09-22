@@ -1,7 +1,11 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /cart
+Disallow: /checkout
+Disallow: /account
 
-# Allow all major search engines
+# Major Search Engines
 User-agent: Googlebot
 Allow: /
 
@@ -14,10 +18,19 @@ Allow: /
 User-agent: DuckDuckBot
 Allow: /
 
+User-agent: Baiduspider
+Allow: /
+
 User-agent: YandexBot
 Allow: /
 
-# Allow AI crawlers (ChatGPT, Perplexity, Claude, etc.)
+User-agent: NaverBot
+Allow: /
+
+User-agent: SogouSpider
+Allow: /
+
+# AI Search & LLM Crawlers
 User-agent: GPTBot
 Allow: /
 
@@ -33,14 +46,42 @@ Allow: /
 User-agent: anthropic-ai
 Allow: /
 
-User-agent: cohere-ai
+User-agent: Google-Extended
 Allow: /
 
 User-agent: CCBot
 Allow: /
 
-# Sitemap location
-Sitemap: https://www.furniturehubdhangadhi.com/sitemap.xml
+User-agent: Diffbot
+Allow: /
 
-# Host
+User-agent: cohere-ai
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
+# Block Aggressive Scrapers & Spiders
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+Sitemap: https://www.furniturehubdhangadhi.com/sitemap.xml
 Host: https://www.furniturehubdhangadhi.com
