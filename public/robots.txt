@@ -40,7 +40,7 @@ User-agent: CCBot
 Allow: /
 
 # Sitemap location
-Sitemap: https://furniture-hub-dhangadhi.vercel.app/sitemap.xml
+Sitemap: https://www.furniturehubdhangadhi.com/sitemap.xml
 
 # Host
-Host: https://furniture-hub-dhangadhi.vercel.app
+Host: https://www.furniturehubdhangadhi.com
