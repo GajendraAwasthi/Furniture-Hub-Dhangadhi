@@ -135,57 +135,82 @@ DROP POLICY IF EXISTS "Admins can manage settings" ON public.store_settings;
 
 DROP POLICY IF EXISTS "Public can view admins" ON public.store_admins;
 DROP POLICY IF EXISTS "Public can manage admins" ON public.store_admins;
+DROP POLICY IF EXISTS "Admins can view admins" ON public.store_admins;
 DROP POLICY IF EXISTS "Admins can manage admins" ON public.store_admins;
+
+-- ==========================================================================
+-- HELPER FUNCTIONS FOR ROW LEVEL SECURITY (RLS)
+-- ==========================================================================
+-- Security Definer function checks admin authorization without triggering infinite recursion on store_admins
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.store_admins
+    WHERE email = (auth.jwt()->>'email')
+      AND role = 'admin'
+  );
+$$;
 
 -- 1. Products: anyone can browse; only verified admins can manage
 CREATE POLICY "Public can view products" ON public.products FOR SELECT USING (true);
 CREATE POLICY "Admins can manage products" ON public.products FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 ) WITH CHECK (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 );
 
--- 2. Orders: authenticated customers create own orders; customers view own orders; admins manage all
+-- 2. Orders: customers create own orders; customers view own orders; admins manage all
 CREATE POLICY "Customers can create orders" ON public.orders FOR INSERT WITH CHECK (
-  auth.jwt() IS NOT NULL
-  AND customer_email = (auth.jwt()->>'email')
+  (
+    (auth.jwt() IS NOT NULL AND (customer_email = (auth.jwt()->>'email') OR customer_email IS NULL))
+    OR auth.role() = 'anon'
+    OR auth.jwt() IS NULL
+  )
+  AND customer_phone IS NOT NULL
+  AND customer_name IS NOT NULL
+  AND delivery_address IS NOT NULL
   AND total_amount >= 0
   AND status = 'Pending'
 );
 CREATE POLICY "Customers view own orders" ON public.orders FOR SELECT USING (
   (auth.jwt() IS NOT NULL AND customer_email = (auth.jwt()->>'email'))
-  OR (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  OR public.is_admin()
 );
 CREATE POLICY "Admins can manage orders" ON public.orders FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 ) WITH CHECK (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 );
 
 -- 3. Coupons: anyone can view coupons for validation; admins can manage
 CREATE POLICY "Public can view coupons" ON public.coupons FOR SELECT USING (true);
 CREATE POLICY "Admins can manage coupons" ON public.coupons FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 ) WITH CHECK (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 );
 
 -- 4. Store Settings: anyone can read configuration; admins can update
 CREATE POLICY "Public can view settings" ON public.store_settings FOR SELECT USING (true);
 CREATE POLICY "Admins can manage settings" ON public.store_settings FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 ) WITH CHECK (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 );
 
 -- 5. Store Admins: verified admins view and manage admins (prevents public admin email enumeration)
 CREATE POLICY "Admins can view admins" ON public.store_admins FOR SELECT USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 );
 CREATE POLICY "Admins can manage admins" ON public.store_admins FOR ALL USING (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 ) WITH CHECK (
-  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  public.is_admin()
 );
 
 -- 6. Customer Profiles: Users can view and manage their own profiles; Admins can view all
@@ -198,7 +223,7 @@ DROP POLICY IF EXISTS "Users can delete own profile" ON public.customer_profiles
 
 CREATE POLICY "Users can view own profile" ON public.customer_profiles FOR SELECT USING (
   (auth.uid() IS NOT NULL AND user_id = (auth.uid())::text)
-  OR (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  OR public.is_admin()
 );
 
 CREATE POLICY "Users can insert own profile" ON public.customer_profiles FOR INSERT WITH CHECK (
@@ -216,7 +241,7 @@ CREATE POLICY "Users can update own profile" ON public.customer_profiles FOR UPD
 
 CREATE POLICY "Users can delete own profile" ON public.customer_profiles FOR DELETE USING (
   (auth.uid() IS NOT NULL AND user_id = (auth.uid())::text)
-  OR (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  OR public.is_admin()
 );
 
 -- ==========================================================================
@@ -238,19 +263,19 @@ FOR SELECT USING (bucket_id = 'product-images');
 CREATE POLICY "Allow Uploads product-images" ON storage.objects
 FOR INSERT WITH CHECK (
   bucket_id = 'product-images'
-  AND (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  AND public.is_admin()
 );
 
 CREATE POLICY "Allow Updates product-images" ON storage.objects
 FOR UPDATE USING (
   bucket_id = 'product-images'
-  AND (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  AND public.is_admin()
 );
 
 CREATE POLICY "Allow Deletes product-images" ON storage.objects
 FOR DELETE USING (
   bucket_id = 'product-images'
-  AND (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+  AND public.is_admin()
 );
 
 -- ==========================================================================
