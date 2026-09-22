@@ -542,8 +542,9 @@ async function renderCurrentView() {
       return;
     }
 
-    // Strict Role-Based Security: Non-admins cannot access admin views or data
-    if (!isCurrentAdmin()) {
+    // Strict Role-Based Security: Verify administrator privileges
+    let hasAdminAccess = isCurrentAdmin();
+    if (!hasAdminAccess) {
       // Asynchronously verify against server-side Supabase authentication
       const client = getClient();
       let verifiedUser = null;
@@ -559,11 +560,27 @@ async function renderCurrentView() {
       if (verifiedUser) {
         const isSb = await checkIsSupabaseAdmin(verifiedUser);
         if (isSb) {
-          applyAuthenticatedSession({ role: 'admin', user: verifiedUser }, 'Administrator access verified.');
-          return;
+          hasAdminAccess = true;
+          const adminObj = {
+            id: verifiedUser.id,
+            email: verifiedUser.email,
+            name: verifiedUser.user_metadata?.full_name || verifiedUser.email.split('@')[0],
+            role: 'admin'
+          };
+          localStorage.setItem('fh_demo_admin_user', JSON.stringify(adminObj));
+          try {
+            const curAdmins = getLocalSupabaseAdmins();
+            if (!curAdmins.some(a => (a.email || '').toLowerCase() === (verifiedUser.email || '').toLowerCase())) {
+              localStorage.setItem('fh_supabase_store_admins', JSON.stringify([...curAdmins, adminObj]));
+            }
+          } catch {
+            // ignore
+          }
         }
       }
+    }
 
+    if (!hasAdminAccess) {
       if (state.customerUser) {
         showToast('⛔ Access Denied: Administrator privileges required.', 'danger');
       } else {

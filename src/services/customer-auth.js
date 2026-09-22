@@ -76,12 +76,6 @@ function saveAllOrdersToStorage(orders) {
  * Client-modifiable role fields or arbitrary localStorage objects are NEVER trusted.
  */
 export function isCurrentAdmin() {
-  const sbAdmins = getLocalSupabaseAdmins();
-  if (!Array.isArray(sbAdmins) || sbAdmins.length === 0) {
-    localStorage.removeItem(STORAGE_ADMIN_SESSION);
-    return false;
-  }
-
   // 1. Verify active Supabase cryptographic JWT token in localStorage
   let verifiedSbUser = null;
   try {
@@ -101,26 +95,36 @@ export function isCurrentAdmin() {
     // ignore
   }
 
-  // If a verified Supabase JWT token exists, validate against store_admins
+  // If a verified Supabase JWT token exists, validate admin status
   if (verifiedSbUser) {
-    const email = (verifiedSbUser.email || '').toLowerCase().trim();
-    const id = (verifiedSbUser.id || '').trim();
-
-    const isSbAdmin = sbAdmins.some(a => {
-      const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
-      if (r !== 'admin') return false;
-      const aEmail = (a.email || '').trim().toLowerCase();
-      const aId = (a.id || '').trim();
-      const aUserId = (a.user_id || '').trim();
-      return (email && aEmail === email) || (id && (aId === id || aUserId === id));
-    });
-
-    if (isSbAdmin) {
+    // 1a. Server-side role check from verified token app_metadata
+    const appRole = (verifiedSbUser.app_metadata?.role || '').replace(/['"]/g, '').trim().toLowerCase();
+    if (appRole === 'admin') {
       return true;
+    }
+
+    // 1b. Check against store_admins table cache
+    const sbAdmins = getLocalSupabaseAdmins();
+    if (Array.isArray(sbAdmins) && sbAdmins.length > 0) {
+      const email = (verifiedSbUser.email || '').toLowerCase().trim();
+      const id = (verifiedSbUser.id || '').trim();
+
+      const isSbAdmin = sbAdmins.some(a => {
+        const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
+        if (r !== 'admin') return false;
+        const aEmail = (a.email || '').trim().toLowerCase();
+        const aId = (a.id || '').trim();
+        const aUserId = (a.user_id || '').trim();
+        return (email && aEmail === email) || (id && (aId === id || aUserId === id));
+      });
+
+      if (isSbAdmin) {
+        return true;
+      }
     }
   }
 
-  // If Supabase is configured or unauthenticated, wipe any rogue admin session
+  // If unauthenticated or not verified as admin, wipe any rogue admin session
   localStorage.removeItem(STORAGE_ADMIN_SESSION);
   return false;
 }
@@ -357,6 +361,22 @@ export async function authenticateUser(identifier, password) {
           };
           localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminUser));
           localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
+
+          // Ensure local admin cache contains this verified admin
+          try {
+            const curAdmins = getLocalSupabaseAdmins();
+            if (!curAdmins.some(a => (a.email || '').toLowerCase() === (data.user.email || '').toLowerCase())) {
+              localStorage.setItem('fh_supabase_store_admins', JSON.stringify([...curAdmins, {
+                id: data.user.id,
+                email: data.user.email,
+                name: adminUser.name,
+                role: 'admin'
+              }]));
+            }
+          } catch {
+            // ignore
+          }
+
           return { success: true, role: 'admin', user: adminUser };
         } else {
           const custUser = {
