@@ -88,6 +88,12 @@ CREATE TABLE IF NOT EXISTS public.customer_profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure schema migrations for pre-existing tables
+ALTER TABLE public.customer_profiles ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE public.store_admins ADD COLUMN IF NOT EXISTS user_id TEXT;
+
+
 -- ==========================================================================
 -- INDEXES FOR PERFORMANCE
 -- ==========================================================================
