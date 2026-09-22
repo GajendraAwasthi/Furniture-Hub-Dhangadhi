@@ -5,9 +5,32 @@ const STORAGE_ADMIN_SESSION = 'fh_demo_admin_user';
 const STORAGE_CUSTOMER_ACCOUNTS = 'fh_customer_accounts';
 const STORAGE_CUSTOMER_ORDERS = 'fh_customer_orders';
 
-// Clean Customer Accounts & Orders Storage
-const DEFAULT_ACCOUNTS = [];
-const DEFAULT_ORDERS = [];
+const ALLOWED_PROFILE_KEYS = ['name', 'phone', 'address', 'city', 'avatar'];
+
+/**
+ * Sanitize string input to prevent stored injection and malformed characters
+ */
+export function sanitizeInput(str) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[<>]/g, '').trim();
+}
+
+/**
+ * Cryptographically hash a password using SHA-256 and a random salt
+ */
+export async function hashPassword(password, salt) {
+  if (!password || typeof password !== 'string') return '';
+  const enc = new TextEncoder();
+  const data = enc.encode(`${salt}:${password}`);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function generateSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 function getStoredAccounts() {
   const stored = localStorage.getItem(STORAGE_CUSTOMER_ACCOUNTS);
@@ -48,88 +71,61 @@ function saveAllOrdersToStorage(orders) {
 }
 
 /**
- * Check if the currently active session has verified administrator privileges
- * Administrator status is governed strictly by Supabase:
- * If an admin was removed from Supabase, their admin privileges are immediately revoked on the client.
+ * Check if the currently active session has verified administrator privileges.
+ * Administrator status is governed strictly by Supabase server-side records.
+ * Client-modifiable role fields or arbitrary localStorage objects are NEVER trusted.
  */
 export function isCurrentAdmin() {
+  const sbAdmins = getLocalSupabaseAdmins();
+  if (!Array.isArray(sbAdmins) || sbAdmins.length === 0) {
+    return false;
+  }
+
+  // 1. Check verified admin session
   const adminDemo = localStorage.getItem(STORAGE_ADMIN_SESSION);
   if (adminDemo) {
     try {
       const parsed = JSON.parse(adminDemo);
-      const email = (parsed.email || '').toLowerCase().trim();
-      const id = parsed.id;
-      const sbAdmins = getLocalSupabaseAdmins();
+      if (parsed && typeof parsed === 'object') {
+        const email = (parsed.email || '').toLowerCase().trim();
+        const id = (parsed.id || '').trim();
 
-      const isSbAdmin = sbAdmins.some(a => {
-        const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
-        if (r !== 'admin') return false;
-        const aEmail = (a.email || '').trim().toLowerCase();
-        const aId = (a.id || '').trim();
-        const aUserId = (a.user_id || '').trim();
-        return (email && aEmail === email) || (id && (aId === id || aUserId === id));
-      });
+        // Must strictly match a verified admin record in store_admins
+        const isSbAdmin = sbAdmins.some(a => {
+          const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
+          if (r !== 'admin') return false;
+          const aEmail = (a.email || '').trim().toLowerCase();
+          const aId = (a.id || '').trim();
+          const aUserId = (a.user_id || '').trim();
+          return (email && aEmail === email) || (id && (aId === id || aUserId === id));
+        });
 
-      if (isSbAdmin || parsed.role === 'admin') {
-        return true;
+        if (isSbAdmin) {
+          return true;
+        }
       }
+      // If parsed fails verification against store_admins, wipe unverified/stale admin session
+      localStorage.removeItem(STORAGE_ADMIN_SESSION);
     } catch {
       localStorage.removeItem(STORAGE_ADMIN_SESSION);
-      return false;
     }
   }
 
-  // Check if active customer session belongs to a verified admin in Supabase
-  const custSession = localStorage.getItem(STORAGE_CUSTOMER_SESSION);
-  if (custSession) {
-    try {
-      const cust = JSON.parse(custSession);
-      const email = (cust.email || '').toLowerCase().trim();
-      const id = cust.id;
-      const sbAdmins = getLocalSupabaseAdmins();
-
-      const isSbAdmin = sbAdmins.some(a => {
-        const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
-        if (r !== 'admin') return false;
-        const aEmail = (a.email || '').trim().toLowerCase();
-        const aId = (a.id || '').trim();
-        const aUserId = (a.user_id || '').trim();
-        return (email && aEmail === email) || (id && (aId === id || aUserId === id));
-      });
-
-      if (isSbAdmin) {
-        const adminSession = {
-          id: cust.id,
-          email: cust.email,
-          name: cust.name || 'Store Administrator',
-          role: 'admin',
-          avatar: cust.avatar || '/images/social-user.png',
-          provider: cust.provider || 'google'
-        };
-        localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminSession));
-        return true;
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // Check Supabase cached session
+  // 2. Check Supabase cached auth token (JWT session)
   const client = getClient();
   if (client) {
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-          const val = JSON.parse(localStorage.getItem(key));
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          const val = JSON.parse(raw);
           const user = val?.user;
-          if (user) {
-            const role = (user.app_metadata?.role || user.user_metadata?.role || '').replace(/['"]/g, '').trim().toLowerCase();
-            if (role === 'admin') return true;
-
+          if (user && typeof user === 'object') {
             const email = (user.email || '').toLowerCase().trim();
-            const id = user.id;
-            const sbAdmins = getLocalSupabaseAdmins();
+            const id = (user.id || '').trim();
+
             const isSbAdmin = sbAdmins.some(a => {
               const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
               if (r !== 'admin') return false;
@@ -138,6 +134,7 @@ export function isCurrentAdmin() {
               const aUserId = (a.user_id || '').trim();
               return (email && aEmail === email) || (id && (aId === id || aUserId === id));
             });
+
             if (isSbAdmin) return true;
           }
         }
@@ -157,7 +154,10 @@ export function getCurrentCustomer() {
   const session = localStorage.getItem(STORAGE_CUSTOMER_SESSION);
   if (session) {
     try {
-      return JSON.parse(session);
+      const parsed = JSON.parse(session);
+      if (parsed && typeof parsed === 'object') {
+        return parsed;
+      }
     } catch {
       return null;
     }
@@ -168,13 +168,14 @@ export function getCurrentCustomer() {
 export const getCurrentCustomerUser = getCurrentCustomer;
 
 /**
- * OAuth Authentication (Google, GitHub, or 1-Click Authorized Person Token)
+ * OAuth Authentication (Google, GitHub, or verified token)
  * - Checks directly with Supabase via checkIsSupabaseAdmin.
  * - Only users verified as admin in Supabase are assigned role: 'admin'.
- * - All other users are strictly treated as normal customers (role: 'customer').
+ * - Direct email inputs or unauthenticated calls CANNOT elevate to admin.
  */
 export async function authenticateOAuthUser(provider = 'google', profile = null) {
   const cleanProvider = (provider || 'google').toLowerCase();
+  const isDirectLogin = cleanProvider === 'email' || cleanProvider === 'direct';
 
   const userProfile = profile || {
     id: `oauth-${cleanProvider}-${Date.now().toString(36)}`,
@@ -184,35 +185,38 @@ export async function authenticateOAuthUser(provider = 'google', profile = null)
     provider: cleanProvider
   };
 
-  // 1. Strictly verify with Supabase if this user is an admin
-  const isSbAdmin = await checkIsSupabaseAdmin(userProfile);
+  userProfile.email = (userProfile.email || '').toLowerCase().trim();
 
-  if (isSbAdmin) {
-    const adminSession = {
-      id: userProfile.id || 'demo-admin-id',
-      email: userProfile.email,
-      name: userProfile.name || 'Store Administrator',
-      role: 'admin',
-      avatar: userProfile.avatar || '/images/social-user.png',
-      provider: cleanProvider
-    };
-    localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminSession));
-    localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
-    return { success: true, role: 'admin', user: adminSession };
+  // Only check admin for verified OAuth providers, never for unauthenticated direct logins
+  if (!isDirectLogin) {
+    const isSbAdmin = await checkIsSupabaseAdmin(userProfile);
+    if (isSbAdmin) {
+      const adminSession = {
+        id: userProfile.id || 'demo-admin-id',
+        email: userProfile.email,
+        name: userProfile.name || 'Store Administrator',
+        role: 'admin',
+        avatar: userProfile.avatar || '/images/social-user.png',
+        provider: cleanProvider
+      };
+      localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminSession));
+      localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
+      return { success: true, role: 'admin', user: adminSession };
+    }
   }
 
-  // 2. All other users than admin are strictly normal customers
+  // All other users are strictly treated as normal customers (role: 'customer')
   const accounts = getStoredAccounts();
-  let customerAccount = accounts.find(a => a.email.toLowerCase() === userProfile.email.toLowerCase());
+  let customerAccount = accounts.find(a => a.email && a.email.toLowerCase() === userProfile.email);
 
   if (!customerAccount) {
     customerAccount = {
       id: userProfile.id || `cust-${Date.now()}`,
-      name: userProfile.name || '',
-      email: userProfile.email.toLowerCase(),
-      phone: userProfile.phone || '',
-      address: userProfile.address || '',
-      city: userProfile.city || 'Dhangadhi',
+      name: sanitizeInput(userProfile.name || ''),
+      email: userProfile.email,
+      phone: sanitizeInput(userProfile.phone || ''),
+      address: sanitizeInput(userProfile.address || ''),
+      city: sanitizeInput(userProfile.city || 'Dhangadhi'),
       avatar: userProfile.avatar || '/images/social-user.png',
       role: 'customer',
       provider: cleanProvider,
@@ -244,13 +248,7 @@ export async function authenticateOAuthUser(provider = 'google', profile = null)
  */
 export async function authenticateAuthorizedPerson(persona) {
   if (persona === 'admin') {
-    return authenticateOAuthUser('admin', {
-      id: 'store-admin-id',
-      email: 'admin@furniturehubdhangadhi.com',
-      name: 'Store Administrator',
-      role: 'admin',
-      avatar: '/images/social-user.png'
-    });
+    throw new Error('Direct persona admin access is disabled. Please authenticate via verified credentials.');
   }
   return authenticateOAuthUser('google', {
     id: `cust-${Date.now()}`,
@@ -271,26 +269,11 @@ export async function authenticateUser(identifier, password) {
   if (!cleanId) {
     throw new Error('Please enter your email or authorized account.');
   }
-
-  // 1. Check Administrator Credentials - verified strictly via Supabase
-  if (cleanId === 'admin@furniturehub.com') {
-    const isSbAdmin = await checkIsSupabaseAdmin({ email: 'admin@furniturehub.com', id: 'demo-admin-id' });
-    if (!isSbAdmin) {
-      throw new Error('Access denied. Error (Code: 403)');
-    }
-    const adminUser = {
-      id: 'demo-admin-id',
-      email: 'admin@furniturehub.com',
-      name: 'Store Administrator',
-      role: 'admin',
-      user_metadata: { full_name: 'Store Administrator', role: 'admin' }
-    };
-    localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminUser));
-    localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
-    return { success: true, role: 'admin', user: adminUser };
+  if (!password || typeof password !== 'string') {
+    throw new Error('Please enter your password.');
   }
 
-  // 2. Try Supabase Auth if configured and identifier is an email
+  // 1. If Supabase is configured and identifier is an email, authenticate via Supabase Auth
   const client = getClient();
   if (client && cleanId.includes('@')) {
     try {
@@ -298,9 +281,10 @@ export async function authenticateUser(identifier, password) {
         email: cleanId,
         password
       });
+
       if (!error && data?.user) {
-        const role = data.user.user_metadata?.role || (data.user.email === 'admin@furniturehub.com' ? 'admin' : 'customer');
-        if (role === 'admin') {
+        const isSbAdmin = await checkIsSupabaseAdmin(data.user);
+        if (isSbAdmin) {
           const adminUser = {
             id: data.user.id,
             email: data.user.email,
@@ -316,9 +300,9 @@ export async function authenticateUser(identifier, password) {
             id: data.user.id,
             email: data.user.email,
             name: data.user.user_metadata?.full_name || data.user.user_metadata?.name || 'Customer',
-            phone: data.user.user_metadata?.phone || '9841234567',
-            address: data.user.user_metadata?.address || 'Kathmandu',
-            city: data.user.user_metadata?.city || 'Kathmandu Valley',
+            phone: data.user.user_metadata?.phone || '',
+            address: data.user.user_metadata?.address || '',
+            city: data.user.user_metadata?.city || 'Dhangadhi',
             role: 'customer'
           };
           localStorage.setItem(STORAGE_CUSTOMER_SESSION, JSON.stringify(custUser));
@@ -327,31 +311,69 @@ export async function authenticateUser(identifier, password) {
         }
       }
     } catch (sbErr) {
-      console.warn('Supabase authentication failed, checking local accounts:', sbErr);
+      console.warn('Supabase authentication notice:', sbErr.message || sbErr);
     }
   }
 
-  // 3. Check Customer Accounts (Local store)
-  const accounts = getStoredAccounts();
-  const found = accounts.find(acc => {
-    const emailMatch = acc.email.toLowerCase() === cleanId;
-    const phoneMatch = cleanPhone.length >= 7 && acc.phone.replace(/[^0-9]/g, '') === cleanPhone;
-    return (emailMatch || phoneMatch) && acc.password === password;
-  });
-
-  if (found) {
-    const sessionData = {
-      id: found.id,
-      name: found.name,
-      email: found.email,
-      phone: found.phone,
-      address: found.address,
-      city: found.city,
-      role: 'customer'
+  // 2. Demo Administrator Account (Strictly verifies credentials and Supabase admin status)
+  if (cleanId === 'admin@furniturehub.com') {
+    if (password !== 'admin123') {
+      throw new Error('Invalid email or password. Error (Code: 401)');
+    }
+    const isSbAdmin = await checkIsSupabaseAdmin({ email: 'admin@furniturehub.com', id: 'admin-sb-01' });
+    if (!isSbAdmin) {
+      throw new Error('Access denied. Administrator privileges revoked.');
+    }
+    const adminUser = {
+      id: 'admin-sb-01',
+      email: 'admin@furniturehub.com',
+      name: 'Store Administrator',
+      role: 'admin'
     };
-    localStorage.setItem(STORAGE_CUSTOMER_SESSION, JSON.stringify(sessionData));
-    localStorage.removeItem(STORAGE_ADMIN_SESSION);
-    return { success: true, role: 'customer', user: sessionData };
+    localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminUser));
+    localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
+    return { success: true, role: 'admin', user: adminUser };
+  }
+
+  // 3. Check Customer Accounts with salted hash verification (Never plaintext)
+  const accounts = getStoredAccounts();
+  for (let i = 0; i < accounts.length; i++) {
+    const acc = accounts[i];
+    const emailMatch = acc.email && acc.email.toLowerCase() === cleanId;
+    const phoneMatch = cleanPhone.length >= 7 && acc.phone && acc.phone.replace(/[^0-9]/g, '') === cleanPhone;
+
+    if (emailMatch || phoneMatch) {
+      let passwordValid = false;
+
+      if (acc.passwordHash && acc.salt) {
+        const computed = await hashPassword(password, acc.salt);
+        passwordValid = (computed === acc.passwordHash);
+      } else if (acc.password) {
+        // Transparent upgrade of legacy plaintext account: hash immediately and erase plaintext!
+        if (acc.password === password) {
+          passwordValid = true;
+          acc.salt = generateSalt();
+          acc.passwordHash = await hashPassword(password, acc.salt);
+          delete acc.password;
+          saveStoredAccounts(accounts);
+        }
+      }
+
+      if (passwordValid) {
+        const sessionData = {
+          id: acc.id,
+          name: acc.name,
+          email: acc.email,
+          phone: acc.phone,
+          address: acc.address,
+          city: acc.city,
+          role: 'customer'
+        };
+        localStorage.setItem(STORAGE_CUSTOMER_SESSION, JSON.stringify(sessionData));
+        localStorage.removeItem(STORAGE_ADMIN_SESSION);
+        return { success: true, role: 'customer', user: sessionData };
+      }
+    }
   }
 
   throw new Error('Invalid credentials. Please verify your email/phone and password.');
@@ -368,17 +390,21 @@ export async function customerRegister({ name, phone, email, address, city, pass
     throw new Error('This email is reserved for system administration. Please choose another email.');
   }
 
-  if (!cleanEmail || !cleanEmail.includes('@')) {
+  if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
     throw new Error('Please enter a valid email address.');
   }
   if (!cleanPhone || cleanPhone.length < 10) {
     throw new Error('Please enter a valid 10-digit Nepal mobile number.');
   }
-  if (!password || password.length < 6) {
+  if (!password || typeof password !== 'string' || password.length < 6) {
     throw new Error('Password must be at least 6 characters long.');
   }
 
-  // Try Supabase registration if configured
+  const safeName = sanitizeInput(name ? name.trim() : 'Valued Customer');
+  const safeAddress = sanitizeInput(address ? address.trim() : 'Kathmandu');
+  const safeCity = sanitizeInput(city || 'Kathmandu Valley');
+
+  // 1. Try Supabase registration if configured
   const client = getClient();
   if (client) {
     try {
@@ -387,10 +413,10 @@ export async function customerRegister({ name, phone, email, address, city, pass
         password,
         options: {
           data: {
-            full_name: name,
+            full_name: safeName,
             phone: cleanPhone,
-            address,
-            city,
+            address: safeAddress,
+            city: safeCity,
             role: 'customer'
           }
         }
@@ -401,21 +427,25 @@ export async function customerRegister({ name, phone, email, address, city, pass
     }
   }
 
-  // Save to local accounts
+  // 2. Save to local accounts using salted hash (NEVER plaintext)
   const accounts = getStoredAccounts();
-  const existing = accounts.find(a => a.email.toLowerCase() === cleanEmail);
+  const existing = accounts.find(a => a.email && a.email.toLowerCase() === cleanEmail);
   if (existing) {
     throw new Error('An account with this email already exists. Please sign in instead.');
   }
 
+  const salt = generateSalt();
+  const passwordHash = await hashPassword(password, salt);
+
   const newAccount = {
-    id: 'cust-' + Date.now(),
-    name: name.trim() || 'Valued Customer',
+    id: 'cust-' + (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : (Date.now() + '-' + Math.random().toString(36).substring(2, 9))),
+    name: safeName,
     email: cleanEmail,
     phone: cleanPhone,
-    address: (address || 'Kathmandu').trim(),
-    city: city || 'Kathmandu Valley',
-    password,
+    address: safeAddress,
+    city: safeCity,
+    passwordHash,
+    salt,
     role: 'customer',
     created_at: new Date().toISOString()
   };
@@ -467,40 +497,83 @@ export const customerLogin = async (identifier, password) => {
 
 /**
  * Update Customer Profile
+ * Strictly whitelists editable fields and blocks mass-assignment/privilege escalation.
  */
-export function updateCustomerProfile(updatedData) {
+export function updateCustomerProfile(param1, param2) {
   const current = getCurrentCustomer();
-  if (!current) return null;
+  if (!current || typeof current !== 'object') return null;
 
-  const merged = { ...current, ...updatedData };
-  localStorage.setItem(STORAGE_CUSTOMER_SESSION, JSON.stringify(merged));
+  const rawData = (param2 && typeof param2 === 'object') ? param2 : (param1 && typeof param1 === 'object' ? param1 : {});
 
-  // Also update stored accounts
+  // Strictly whitelist allowed fields, blocking any role, id, or credential tampering
+  const safeUpdates = {};
+  for (const key of ALLOWED_PROFILE_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(rawData, key) && rawData[key] !== undefined) {
+      if (typeof rawData[key] === 'string') {
+        safeUpdates[key] = sanitizeInput(rawData[key]);
+      }
+    }
+  }
+
+  // Immutable identity guarantees
+  const sanitized = {
+    ...current,
+    ...safeUpdates,
+    id: current.id,
+    email: current.email,
+    role: 'customer' // Protected role field cannot be altered
+  };
+
+  localStorage.setItem(STORAGE_CUSTOMER_SESSION, JSON.stringify(sanitized));
+
+  // Update in stored accounts list with same whitelist protection
   const accounts = getStoredAccounts();
-  const idx = accounts.findIndex(a => a.id === current.id || a.email === current.email);
+  const idx = accounts.findIndex(a => a.id === current.id || (a.email && a.email.toLowerCase() === current.email.toLowerCase()));
   if (idx !== -1) {
-    accounts[idx] = { ...accounts[idx], ...updatedData };
+    accounts[idx] = {
+      ...accounts[idx],
+      ...safeUpdates,
+      id: accounts[idx].id,
+      email: accounts[idx].email,
+      role: 'customer'
+    };
     saveStoredAccounts(accounts);
   }
 
-  return merged;
+  return sanitized;
 }
 
 /**
  * Order History management for customers (Strictly Isolated per customer)
+ * IDOR Protection: Ordinary customers can ONLY retrieve their own orders.
  */
 export function getCustomerOrders(customerId = null) {
   const current = getCurrentCustomer();
-  let targetCustomer = current;
+  const admin = isCurrentAdmin();
 
-  if (customerId && (!current || current.id !== customerId)) {
-    const accounts = getStoredAccounts();
-    targetCustomer = accounts.find(a => a.id === customerId) || { id: customerId };
+  let targetId = current?.id;
+  let targetEmail = current?.email?.toLowerCase();
+  let targetPhone = current?.phone?.replace(/[^0-9]/g, '');
+
+  if (customerId) {
+    if (admin) {
+      // Only verified administrators can specify a target customerId
+      const accounts = getStoredAccounts();
+      const target = accounts.find(a => a.id === customerId);
+      if (target) {
+        targetId = target.id;
+        targetEmail = target.email?.toLowerCase();
+        targetPhone = target.phone?.replace(/[^0-9]/g, '');
+      } else {
+        targetId = customerId;
+        targetEmail = null;
+        targetPhone = null;
+      }
+    } else if (current && current.id !== customerId) {
+      // Non-admin tried to specify another customer's ID -> Access Denied / empty result
+      return [];
+    }
   }
-
-  const targetId = targetCustomer?.id;
-  const targetEmail = targetCustomer?.email?.toLowerCase();
-  const targetPhone = targetCustomer?.phone?.replace(/[^0-9]/g, '');
 
   if (!targetId && !targetEmail) return [];
 
@@ -522,15 +595,23 @@ export function getCustomerOrders(customerId = null) {
   });
 }
 
+/**
+ * Save customer order with strict identity binding to prevent spoofing
+ */
 export function saveCustomerOrder(order) {
+  if (!order || typeof order !== 'object') return null;
   const current = getCurrentCustomer();
-  const customerId = order.customerId || current?.id || 'cust-guest';
-  const customerEmail = order.customerEmail || current?.email || '';
+
+  // Strict identity binding: authenticated customer orders cannot be spoofed to another user
+  const customerId = current?.id ? current.id : (order.customerId ? sanitizeInput(order.customerId) : 'cust-guest');
+  const customerEmail = current?.email ? current.email.toLowerCase() : (order.customerEmail ? sanitizeInput(order.customerEmail).toLowerCase() : '');
 
   const taggedOrder = {
     ...order,
     customerId,
-    customerEmail
+    customerEmail,
+    id: order.id || `ord-${Date.now().toString(36)}`,
+    createdAt: order.createdAt || new Date().toISOString()
   };
 
   const allOrders = getAllOrdersFromStorage();
@@ -538,4 +619,3 @@ export function saveCustomerOrder(order) {
   saveAllOrdersToStorage(allOrders);
   return taggedOrder;
 }
-

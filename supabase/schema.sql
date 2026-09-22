@@ -107,26 +107,49 @@ DROP POLICY IF EXISTS "Public can manage settings" ON public.store_settings;
 DROP POLICY IF EXISTS "Public can view admins" ON public.store_admins;
 DROP POLICY IF EXISTS "Public can manage admins" ON public.store_admins;
 
--- 1. Products: anyone can browse; admins/staff can manage
+-- 1. Products: anyone can browse; only verified admins can manage
 CREATE POLICY "Public can view products" ON public.products FOR SELECT USING (true);
-CREATE POLICY "Public can manage products" ON public.products FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admins can manage products" ON public.products FOR ALL USING (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+) WITH CHECK (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 
--- 2. Orders: anyone can insert orders (checkout); staff/admin can view and update
-CREATE POLICY "Public can view orders" ON public.orders FOR SELECT USING (true);
-CREATE POLICY "Public can create orders" ON public.orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public can manage orders" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+-- 2. Orders: anyone can insert orders (checkout); customers view own orders; admins manage all
+CREATE POLICY "Customers can create orders" ON public.orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Customers view own orders" ON public.orders FOR SELECT USING (
+  customer_email = (auth.jwt()->>'email') 
+  OR (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
+CREATE POLICY "Admins can manage orders" ON public.orders FOR ALL USING (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+) WITH CHECK (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 
--- 3. Coupons: anyone can check coupons; admins can manage
+-- 3. Coupons: anyone can view coupons for validation; admins can manage
 CREATE POLICY "Public can view coupons" ON public.coupons FOR SELECT USING (true);
-CREATE POLICY "Public can manage coupons" ON public.coupons FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admins can manage coupons" ON public.coupons FOR ALL USING (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+) WITH CHECK (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 
 -- 4. Store Settings: anyone can read configuration; admins can update
 CREATE POLICY "Public can view settings" ON public.store_settings FOR SELECT USING (true);
-CREATE POLICY "Public can manage settings" ON public.store_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admins can manage settings" ON public.store_settings FOR ALL USING (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+) WITH CHECK (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 
--- 5. Store Admins: anyone can check admin role; admins can manage
+-- 5. Store Admins: anyone can check admin role; only existing admins can manage admins
 CREATE POLICY "Public can view admins" ON public.store_admins FOR SELECT USING (true);
-CREATE POLICY "Public can manage admins" ON public.store_admins FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Admins can manage admins" ON public.store_admins FOR ALL USING (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+) WITH CHECK (
+  (auth.jwt()->>'email') IN (SELECT email FROM public.store_admins WHERE role = 'admin')
+);
 
 -- ==========================================================================
 -- STORAGE BUCKET FOR PRODUCT IMAGES

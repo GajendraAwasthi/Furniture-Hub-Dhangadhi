@@ -178,9 +178,9 @@ export async function checkIsSupabaseAdmin(user) {
   const client = getClient();
   if (client) {
     try {
-      // 1. Check user metadata directly in Supabase auth object
-      const metaRole = (user.app_metadata?.role || user.user_metadata?.role || '').replace(/['"]/g, '').trim().toLowerCase();
-      if (metaRole === 'admin') {
+      // 1. Check server-side claims (app_metadata only, never client-modifiable user_metadata)
+      const appRole = (user.app_metadata?.role || '').replace(/['"]/g, '').trim().toLowerCase();
+      if (appRole === 'admin') {
         return true;
       }
 

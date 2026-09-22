@@ -530,12 +530,22 @@ async function renderCurrentView() {
 
     // Strict Role-Based Security: Non-admins cannot access admin views or data
     if (!isCurrentAdmin()) {
-      // Asynchronously verify against Supabase cloud store_admins
-      const currentUser = state.customerUser || (await client?.auth?.getUser())?.data?.user;
-      if (currentUser) {
-        const isSb = await checkIsSupabaseAdmin(currentUser);
+      // Asynchronously verify against server-side Supabase authentication
+      const client = getClient();
+      let verifiedUser = null;
+      if (client) {
+        try {
+          const { data: { user } } = await client.auth.getUser();
+          verifiedUser = user;
+        } catch {
+          verifiedUser = null;
+        }
+      }
+
+      if (verifiedUser) {
+        const isSb = await checkIsSupabaseAdmin(verifiedUser);
         if (isSb) {
-          applyAuthenticatedSession({ role: 'admin', user: currentUser }, 'Administrator access verified.');
+          applyAuthenticatedSession({ role: 'admin', user: verifiedUser }, 'Administrator access verified.');
           return;
         }
       }
@@ -670,30 +680,33 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.warn('Admin cache sync notice:', e);
   }
 
-  // Auto-promote active customer session if their email/id was added to store_admins in Supabase
-  if (state.customerUser && !isCurrentAdmin()) {
+  // Server-Verified Admin Auto-Promotion: Only promotes if backed by a valid Supabase token
+  const client = getClient();
+  if (client) {
     try {
-      const isSb = await checkIsSupabaseAdmin(state.customerUser);
-      if (isSb) {
-        const adminSession = {
-          id: state.customerUser.id,
-          email: state.customerUser.email,
-          name: state.customerUser.name || 'Store Administrator',
-          role: 'admin',
-          avatar: state.customerUser.avatar || '/images/social-user.png',
-          provider: state.customerUser.provider || 'google'
-        };
-        localStorage.setItem('fh_demo_admin_user', JSON.stringify(adminSession));
-        localStorage.removeItem('fh_customer_session');
-        state.customerUser = null;
+      const { data: { user } } = await client.auth.getUser();
+      if (user) {
+        const isSb = await checkIsSupabaseAdmin(user);
+        if (isSb && !isCurrentAdmin()) {
+          const adminSession = {
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.full_name || user.user_metadata?.name || 'Store Administrator',
+            role: 'admin',
+            avatar: user.user_metadata?.avatar_url || '/images/social-user.png',
+            provider: user.app_metadata?.provider || 'google'
+          };
+          localStorage.setItem('fh_demo_admin_user', JSON.stringify(adminSession));
+          localStorage.removeItem('fh_customer_session');
+          state.customerUser = null;
+        }
       }
     } catch (e) {
-      console.warn('Admin auto-promotion error:', e);
+      console.warn('Server session verification notice:', e);
     }
   }
 
   // Handle real Supabase Google OAuth callback session
-  const client = getClient();
   if (client) {
     try {
       const { data: { session } } = await client.auth.getSession();
