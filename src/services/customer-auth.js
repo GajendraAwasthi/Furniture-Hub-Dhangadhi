@@ -177,7 +177,7 @@ export function getCurrentCustomer() {
         if (!Array.isArray(sbAdmins) || sbAdmins.length === 0) return null;
 
         const isSbAdmin = sbAdmins.some(a => {
-          const r = (a.role || '').replace(/['"][g]/g, '').trim().toLowerCase();
+          const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
           if (r !== 'admin') return false;
           const aEmail = (a.email || '').trim().toLowerCase();
           const aId = (a.id || '').trim();

@@ -679,6 +679,13 @@ async function renderCurrentView() {
     }
     // If customer is missing phone or delivery address, redirect to onboarding page
     if (!state.customerUser.phone || !state.customerUser.address) {
+      // Preserve a valid tab request so onboarding redirects back to it afterwards
+      const tabBeforeOnboard = ['orders', 'profile', 'wishlist'].includes(params.get('tab')) ? params.get('tab') : null;
+      if (tabBeforeOnboard) {
+        sessionStorage.setItem('fh_pending_tab', tabBeforeOnboard);
+      } else {
+        sessionStorage.removeItem('fh_pending_tab');
+      }
       window.location.hash = '#onboarding';
       return;
     }
@@ -805,8 +812,14 @@ window.addEventListener('DOMContentLoaded', async () => {
             });
             applyAuthenticatedSession(res, 'Welcome back, Store Administrator!');
           } else if (!isCurrentAdmin()) {
-            if (!state.customerUser) {
-              // First-time session restore — authenticate and route
+            const sbEmail = (u.email || '').toLowerCase().trim();
+            const sessionMatchesSbUser =
+              state.customerUser &&
+              (state.customerUser.id === u.id ||
+                (state.customerUser.email || '').toLowerCase().trim() === sbEmail);
+
+            if (!state.customerUser || !sessionMatchesSbUser) {
+              // No session, or existing session belongs to a different user — authenticate properly
               const res = await authenticateOAuthUser('google', {
                 id: u.id,
                 email: u.email,
@@ -815,13 +828,16 @@ window.addEventListener('DOMContentLoaded', async () => {
               });
               applyAuthenticatedSession(res, 'Signed in successfully with Google.');
             } else {
-              // Session already recovered from JWT — just ensure the view is rendered correctly
-              // (covers the refresh-on-#onboarding case)
+              // Session already confirmed to belong to this Supabase user — just render
               renderCurrentView();
             }
           }
         } else if (event === 'SIGNED_OUT') {
+          // Clear both in-memory state and the persisted fh_customer_session so a
+          // page refresh cannot restore the signed-out customer via getCurrentCustomer()
+          await logoutUser();
           state.customerUser = null;
+          sessionStorage.removeItem('fh_pending_tab');
           updateChrome();
           if (window.location.hash.startsWith('#admin') || window.location.hash.startsWith('#customer') || window.location.hash === '#onboarding') {
             window.location.hash = '#home';

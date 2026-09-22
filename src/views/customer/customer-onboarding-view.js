@@ -157,8 +157,17 @@ export function renderOnboardingView(container, state, events) {
       const city = container.querySelector('#onboard-city').value;
       const address = container.querySelector('#onboard-address').value.trim();
 
-      if (!name || !phone || !address) {
-        events.emit('toast', { message: 'Please provide your full name, WhatsApp number, and delivery address.', type: 'danger' });
+      // Validate digit count: require 8–15 digits with an optional leading +
+      const isValidPhone = /^\+?\d{8,15}$/.test(phone);
+      if (!name || !isValidPhone || !address) {
+        events.emit('toast', {
+          message: !name
+            ? 'Please provide your full name.'
+            : !isValidPhone
+              ? 'Please enter a valid WhatsApp number (8–15 digits, e.g. 9800000000).'
+              : 'Please provide your delivery address.',
+          type: 'danger'
+        });
         return;
       }
 
