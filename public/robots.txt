@@ -84,4 +84,5 @@ User-agent: PetalBot
 Disallow: /
 
 Sitemap: https://www.furniturehubdhangadhi.com/sitemap.xml
+Sitemap: https://furniturehubdhangadhi.com/sitemap.xml
 Host: https://www.furniturehubdhangadhi.com

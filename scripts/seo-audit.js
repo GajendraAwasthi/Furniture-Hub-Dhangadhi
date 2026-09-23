@@ -103,6 +103,29 @@ if (fs.existsSync(path.resolve('dist'))) {
   console.log('  ℹ dist directory not yet built. Will be validated during full build.');
 }
 
+// 6. Audit Agentic AI Readiness (llms.txt & ai-catalog.json)
+console.log('\n[6/6] Auditing Agentic AI Readiness (llms.txt & ai-catalog.json)...');
+const llmsPath = path.resolve('public/llms.txt');
+assert(fs.existsSync(llmsPath), 'llms.txt exists in public directory');
+if (fs.existsSync(llmsPath)) {
+  const llmsContent = fs.readFileSync(llmsPath, 'utf8');
+  assert(llmsContent.startsWith('# '), 'llms.txt contains an H1 header');
+  const markdownLinks = llmsContent.match(/\[.*?\]\(https?:\/\/.*?\)/g);
+  assert(Boolean(markdownLinks && markdownLinks.length >= 10), `llms.txt is link-dense (${markdownLinks ? markdownLinks.length : 0} links found)`);
+}
+
+const aiCatalogPath = path.resolve('public/.well-known/ai-catalog.json');
+assert(fs.existsSync(aiCatalogPath), '.well-known/ai-catalog.json exists');
+if (fs.existsSync(aiCatalogPath)) {
+  try {
+    const catalog = JSON.parse(fs.readFileSync(aiCatalogPath, 'utf8'));
+    assert(catalog.specVersion === '1.0', 'ai-catalog.json conforms to ARD specVersion 1.0');
+    assert(Array.isArray(catalog.entries) && catalog.entries.length > 0, 'ai-catalog.json contains valid entries array');
+  } catch (err) {
+    assert(false, `ai-catalog.json JSON parsing failed: ${err.message}`);
+  }
+}
+
 console.log(`\n==================================================`);
 console.log(`SEO Audit Completed: ${passCount} passed, ${failCount} failed.`);
 console.log(`==================================================\n`);
@@ -110,3 +133,4 @@ console.log(`==================================================\n`);
 if (failCount > 0) {
   process.exit(1);
 }
+

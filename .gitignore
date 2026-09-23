@@ -17,6 +17,7 @@ fig_assets/
 *.fig
 *.py
 *.txt
+!public/*.txt
 /*.png
 
 # Editor & OS Files

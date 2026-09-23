@@ -88,6 +88,25 @@ function generateSitemap() {
   fs.writeFileSync(path.resolve('public/sitemap.xml'), xml, 'utf8');
   if (fs.existsSync(path.resolve('dist'))) {
     fs.writeFileSync(path.resolve('dist/sitemap.xml'), xml, 'utf8');
+    
+    // Ensure all critical manifests are mirrored in dist
+    const filesToSync = [
+      'robots.txt',
+      'llms.txt',
+      'llms-full.txt',
+      'ai-catalog.json',
+      '.well-known/ai-catalog.json',
+      'data/products.json'
+    ];
+
+    for (const f of filesToSync) {
+      const src = path.resolve('public', f);
+      const dest = path.resolve('dist', f);
+      if (fs.existsSync(src)) {
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(src, dest);
+      }
+    }
   }
   console.log(`Generated sitemap with ${staticPages.length + categories.length + products.length} canonical URLs.`);
 }

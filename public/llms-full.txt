@@ -1,0 +1,49 @@
+# Furniture Hub Dhangadhi — Full Context Document
+
+> Handcrafted wooden furniture, modern sofas, beds, dining tables, and office seating in Dhangadhi, Kailali, Sudurpashchim, Nepal.
+> फर्निचर हब धनगढी — धनगढी, कैलालीमा काठको गुणस्तरीय फर्निचर, सोफा, टेबल र कुर्सी पसल।
+
+## 1. Business Profile & Identity
+- **Business Name**: Furniture Hub Dhangadhi (फर्निचर हब धनगढी)
+- **Official Website**: https://www.furniturehubdhangadhi.com
+- **Store Location**: Main Road / Hasanpur, Ward 1, Dhangadhi, Kailali District, Sudurpashchim Pradesh, Nepal
+- **Geographic Coordinates**: 28.6967° N, 80.5882° E
+- **Customer Support Phone / WhatsApp**: +977 9841234567
+- **Inquiry Email**: support@furniturehubdhangadhi.com
+- **Operating Hours**: Sunday to Friday, 09:00 AM – 07:00 PM (Saturday Closed)
+
+## 2. Furniture Collections & Catalog URLs
+- **All Products**: https://www.furniturehubdhangadhi.com/shop
+- **Seatings**: https://www.furniturehubdhangadhi.com/category/seatings
+  - Argo Office Chair (Rs. 18,500): https://www.furniturehubdhangadhi.com/products/argo-office-chair
+  - Valentina Accent Chair (Rs. 14,000): https://www.furniturehubdhangadhi.com/products/valentina-accent-chair
+  - Nordic Bench (Rs. 9,500): https://www.furniturehubdhangadhi.com/products/nordic-bench
+- **Combos**: https://www.furniturehubdhangadhi.com/category/combos
+  - Sofa Decor Combo (Rs. 42,000): https://www.furniturehubdhangadhi.com/products/sofa-decor-combo
+- **Surfaces**: https://www.furniturehubdhangadhi.com/category/surfaces
+  - Scandinavian Dining Table (Rs. 38,000): https://www.furniturehubdhangadhi.com/products/scandinavian-dining-table
+  - Winnie Side Table (Rs. 7,500): https://www.furniturehubdhangadhi.com/products/winnie-side-table
+- **Decorations**: https://www.furniturehubdhangadhi.com/category/decorations
+  - Artisan Ceramic Vase (Rs. 3,200): https://www.furniturehubdhangadhi.com/products/artisan-ceramic-vase
+  - Halo Arch Floor Lamp (Rs. 11,500): https://www.furniturehubdhangadhi.com/products/halo-arch-floor-lamp
+- **Greens**: https://www.furniturehubdhangadhi.com/category/greens
+  - Botanical Indoor Plant (Rs. 2,800): https://www.furniturehubdhangadhi.com/products/botanical-indoor-plant
+- **Long Sofa**: https://www.furniturehubdhangadhi.com/category/long-sofa
+  - Zenith Curved Lounge Sofa (Rs. 65,000): https://www.furniturehubdhangadhi.com/products/zenith-curved-lounge-sofa
+
+## 3. Delivery Coverage & Logistics
+- **Local Express Delivery**: Dhangadhi Sub-Metropolitan City (Main Road, Hasanpur, Chauraha, Campus Chowk, Boradandi, Trinagar).
+- **Regional Delivery**: Attariya, Tikapur, Lamki, Sukhad, Mahendranagar (Bhimdatta), and surrounding towns across Kailali and Kanchanpur.
+- **Handling**: Careful vehicle transport with showroom delivery and on-site furniture positioning.
+
+## 4. Payment Options
+- Cash on Delivery (COD) within Dhangadhi and Kailali
+- eSewa Mobile Wallet
+- Khalti Digital Wallet
+- Direct Bank Transfer / Fonepay QR upon order confirmation
+
+## 5. Machine-Readable Resources
+- AI Resource Catalog (ARD): https://www.furniturehubdhangadhi.com/.well-known/ai-catalog.json
+- Raw Products API: https://www.furniturehubdhangadhi.com/data/products.json
+- XML Sitemap: https://www.furniturehubdhangadhi.com/sitemap.xml
+- Robots Directive: https://www.furniturehubdhangadhi.com/robots.txt
