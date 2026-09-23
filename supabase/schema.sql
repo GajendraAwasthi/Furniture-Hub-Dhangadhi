@@ -187,8 +187,10 @@ CREATE POLICY "Admins can manage products" ON public.products FOR ALL USING (
 CREATE POLICY "Customers can create orders" ON public.orders FOR INSERT WITH CHECK (
   (
     (auth.jwt() IS NOT NULL AND (customer_email = (auth.jwt()->>'email') OR customer_email IS NULL))
-    OR auth.role() = 'anon'
-    OR auth.jwt() IS NULL
+    OR (
+      (auth.role() = 'anon' OR auth.jwt() IS NULL)
+      AND customer_email IS NULL
+    )
   )
   AND customer_phone IS NOT NULL
   AND customer_name IS NOT NULL

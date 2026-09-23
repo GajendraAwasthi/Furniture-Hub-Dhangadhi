@@ -550,17 +550,46 @@ export async function createOrder(order) {
       ];
 
   if (client) {
+    let customerEmail = order.customer_email || order.email || null;
+    let orderNotes = order.notes || null;
+
+    // Check for authenticated Supabase session
+    try {
+      const session = (await client.auth.getSession())?.data?.session;
+      const authedEmail = session?.user?.email;
+      if (!authedEmail) {
+        // Unauthenticated / guest caller: do not assign account-ownership customer_email
+        // Store guest contact email in notes if provided so store admins can see it
+        if (customerEmail) {
+          orderNotes = orderNotes 
+            ? `${orderNotes} | Contact Email: ${customerEmail}`
+            : `Contact Email: ${customerEmail}`;
+        }
+        customerEmail = null;
+      } else {
+        // Authenticated caller: bind to verified session email
+        customerEmail = authedEmail;
+      }
+    } catch {
+      if (customerEmail) {
+        orderNotes = orderNotes 
+          ? `${orderNotes} | Contact Email: ${customerEmail}`
+          : `Contact Email: ${customerEmail}`;
+      }
+      customerEmail = null;
+    }
+
     const { data, error } = await client.from('orders').insert({
       id: order.id,
       customer_name: order.customer_name || order.name,
-      customer_email: order.customer_email || order.email || null,
+      customer_email: customerEmail,
       customer_phone: order.customer_phone || order.phone,
       delivery_address: order.delivery_address || order.address,
       items: order.items,
       total_amount: order.total_amount || order.total,
       payment_method: order.payment_method || order.paymentMethod || 'Cash on Delivery',
       status: order.status || 'Pending',
-      notes: order.notes || null,
+      notes: orderNotes,
       tracking_history: initialHistory
     });
 
