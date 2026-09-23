@@ -192,7 +192,8 @@
 .figma-footer-bottom-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  text-align: center;
   font-size: 0.85rem;
   color: #6e7a75;
   width: 100%;

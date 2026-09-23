@@ -83,33 +83,7 @@ export function renderFigmaFooter() {
 
         <!-- Bottom Row -->
         <div class="figma-footer-bottom-row">
-          <span>furniturehubdhangadhi.com &copy; 2025-2026, All Rights Reserved • Dhangadhi, Nepal</span>
-
-          <div class="figma-payment-pills">
-            <!-- Visa -->
-            <div class="figma-pay-badge" style="color: #1a1f71; font-weight: 800; font-style: italic; font-size: 0.95rem; font-family: sans-serif;">
-              VISA
-            </div>
-            <!-- Mastercard -->
-            <div class="figma-pay-badge" style="display: flex; align-items: center; justify-content: center;">
-              <svg width="24" height="16" viewBox="0 0 32 20">
-                <circle cx="10" cy="10" r="9" fill="#EB001B"/>
-                <circle cx="22" cy="10" r="9" fill="#F79E1B" fill-opacity="0.8"/>
-              </svg>
-            </div>
-            <!-- PayPal -->
-            <div class="figma-pay-badge" style="color: #003087; font-weight: 800; font-style: italic; font-size: 0.85rem; font-family: sans-serif;">
-              PayPal
-            </div>
-            <!-- Apple Pay -->
-            <div class="figma-pay-badge" style="color: #000000; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 2px;">
-              <span style="font-size: 1rem;"></span>Pay
-            </div>
-            <!-- Google Pay -->
-            <div class="figma-pay-badge" style="color: #5f6368; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 2px;">
-              <span style="color: #4285F4; font-weight: 800;">G</span>&nbsp;Pay
-            </div>
-          </div>
+          <span>furniturehubdhangadhi.com &copy; 2026, All Rights Reserved</span>
         </div>
       </div>
     </div>
