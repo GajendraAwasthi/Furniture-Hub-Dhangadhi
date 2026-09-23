@@ -159,11 +159,22 @@ export function getCurrentCustomer() {
   if (session) {
     try {
       const parsed = JSON.parse(session);
-      if (parsed && typeof parsed === 'object') {
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        typeof parsed.id === 'string' &&
+        parsed.id.trim().length > 0 &&
+        typeof parsed.email === 'string' &&
+        parsed.email.includes('@') &&
+        (parsed.role === 'customer' || !parsed.role)
+      ) {
         return parsed;
+      } else {
+        // Discard invalid stored objects
+        localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
       }
     } catch {
-      // ignore
+      localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
     }
   }
 
@@ -775,4 +786,62 @@ export function saveCustomerOrder(order) {
   allOrders.unshift(taggedOrder);
   saveAllOrdersToStorage(allOrders);
   return taggedOrder;
+}
+
+/**
+ * Asynchronously fetch session-backed customer orders from Supabase.
+ * Merges by ID with local orders in favor of cloud values.
+ * Uses local storage fallback only if fetching fails or offline.
+ */
+export async function fetchCustomerOrders(customerId = null) {
+  const localOrders = getCustomerOrders(customerId);
+  const client = getClient();
+  if (client) {
+    try {
+      const session = (await client.auth.getSession())?.data?.session;
+      if (session?.user) {
+        const { data, error } = await client
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && Array.isArray(data)) {
+          const cloudMap = new Map();
+          const normalizedCloudOrders = data.map(co => ({
+            ...co,
+            id: co.id,
+            reference: co.id,
+            name: co.customer_name || 'Customer',
+            customer_name: co.customer_name,
+            phone: co.customer_phone || '',
+            customer_phone: co.customer_phone,
+            address: co.delivery_address || '',
+            delivery_address: co.delivery_address,
+            total: co.total_amount != null ? Number(co.total_amount) : 0,
+            total_amount: co.total_amount != null ? Number(co.total_amount) : 0,
+            date: co.created_at ? new Date(co.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent',
+            paymentMethod: co.payment_method || 'WhatsApp Direct',
+            status: co.status || 'Pending',
+            items: co.items || [],
+            tracking_history: co.tracking_history || []
+          }));
+
+          for (const co of normalizedCloudOrders) {
+            cloudMap.set(co.id, co);
+          }
+
+          const merged = [...normalizedCloudOrders];
+          for (const lo of localOrders) {
+            if (lo.id && !cloudMap.has(lo.id)) {
+              merged.push(lo);
+            }
+          }
+          return merged;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch session-backed Supabase orders, falling back to local storage:', err);
+    }
+  }
+  return localOrders;
 }

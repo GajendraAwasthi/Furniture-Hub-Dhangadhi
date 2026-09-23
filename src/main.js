@@ -227,13 +227,48 @@ events.on('close-checkout', () => {
   updateChrome();
 });
 
+let isPlacingOrder = false;
+
 events.on('order-placed', async (orderData = {}) => {
+  // Prevent duplicate placement while in flight
+  if (isPlacingOrder) return;
+
   if (!state.customerUser) {
     showToast('🔒 Please sign in to complete your order.', 'danger');
     state.customerAuthTab = 'login';
     state.isCustomerAuthOpen = true;
     updateChrome();
     return;
+  }
+
+  // Live checkout session verification: Check live Supabase session
+  const client = getClient();
+  if (client) {
+    try {
+      const { data: sessionData, error: sessionErr } = await client.auth.getSession();
+      const activeSession = sessionData?.session;
+      if (sessionErr || !activeSession || !activeSession.user) {
+        // Local customer exists without a Supabase session: clear local session and state.customerUser, open customer-auth-modal, and stop.
+        localStorage.removeItem('fh_customer_session');
+        state.customerUser = null;
+        showToast('🔒 Your session has expired. Please sign in to verify your account and place your order.', 'danger');
+        state.customerAuthTab = 'login';
+        state.isCustomerAuthOpen = true;
+        updateChrome();
+        return;
+      }
+    } catch (sessionCheckErr) {
+      console.warn('Session verification check failed:', sessionCheckErr);
+    }
+  }
+
+  // Lock placement in flight and disable submit button
+  isPlacingOrder = true;
+  const submitBtn = document.querySelector('#checkout-submit-btn');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.6';
+    submitBtn.style.pointerEvents = 'none';
   }
 
   const customer = state.customerUser;
@@ -257,18 +292,11 @@ events.on('order-placed', async (orderData = {}) => {
     created_at: new Date().toISOString()
   };
 
-  // Generate verified WhatsApp deep-link adhering strictly to 1800 character ceiling
-  const wa = generateWhatsAppLink(orderPayload, orderItems, {
-    recipient_name: orderPayload.name,
-    phone: orderPayload.phone,
-    address_line1: orderPayload.address
-  });
-  orderPayload.whatsappUrl = wa.url;
-
-  // Push order directly into Supabase / local database first (source of truth)
+  // 1. Order Creation via Authoritative RPC
+  let createdOrder = null;
   try {
     showGlobalBrandLoader('Finalizing order & preparing WhatsApp receipt...');
-    const createdOrder = await createOrder({
+    createdOrder = await createOrder({
       id: orderPayload.id,
       customer_name: orderPayload.name,
       customer_email: orderPayload.customerEmail,
@@ -277,35 +305,79 @@ events.on('order-placed', async (orderData = {}) => {
       items: orderPayload.items,
       total_amount: orderPayload.total,
       payment_method: orderPayload.paymentMethod,
-      coupon_code: state.couponApplied ? (state.couponCode || 'HUB10') : null,
+      coupon_code: orderData.couponCode || (state.couponApplied ? (state.couponCode || 'HUB10') : null),
       status: 'Pending',
       created_at: orderPayload.created_at
     });
+  } catch (err) {
+    // Keep order-creation failure separate: re-enable button and inform customer
+    console.error('Error recording order to database:', err);
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.style.pointerEvents = 'auto';
+    }
+    isPlacingOrder = false;
+    hideGlobalBrandLoader();
+    showToast(`❌ Failed to place order: ${err.message || 'Please check your connection and try again.'}`, 'danger');
+    return;
+  }
 
+  // 2. Post-Persistence Processing: use canonical returned order throughout customer flow
+  try {
+    const previewTotal = orderPayload.total;
+    const canonicalTotal = createdOrder.total != null 
+      ? Number(createdOrder.total) 
+      : (createdOrder.total_amount != null ? Number(createdOrder.total_amount) : previewTotal);
+
+    if (canonicalTotal !== previewTotal) {
+      showToast(`Order total updated to Rs. ${canonicalTotal.toLocaleString()}/- (store delivery & promotional calculation applied)`, 'info');
+    }
+
+    const canonicalOrder = {
+      ...orderPayload,
+      ...createdOrder,
+      total: canonicalTotal,
+      total_amount: canonicalTotal
+    };
+
+    // Generate WhatsApp link using canonical order and canonical items, preserving ME-6 ceiling
+    const wa = generateWhatsAppLink(canonicalOrder, canonicalOrder.items || orderItems, {
+      recipient_name: canonicalOrder.name,
+      phone: canonicalOrder.phone,
+      address_line1: canonicalOrder.address
+    });
+    canonicalOrder.whatsappUrl = wa.url;
+
+    state.lastOrder = canonicalOrder;
     state.isCheckoutOpen = false;
     state.isReceiptOpen = true;
-    state.lastOrder = {
-      ...orderPayload,
-      ...createdOrder
-    };
     state.cart = [];
     saveState();
-    saveCustomerOrder(state.lastOrder);
+    saveCustomerOrder(canonicalOrder);
     updateChrome();
-    showToast(`🎊 Order #${state.lastOrder.id || orderRef} placed successfully!`, 'success');
+    showToast(`🎊 Order #${canonicalOrder.reference || canonicalOrder.id} placed successfully!`, 'success');
 
     // Attempt auto-opening WhatsApp notification window if allowed by browser
     try {
-      if (orderPayload.whatsappUrl) {
-        window.open(orderPayload.whatsappUrl, '_blank');
+      if (canonicalOrder.whatsappUrl) {
+        window.open(canonicalOrder.whatsappUrl, '_blank');
       }
     } catch (popupErr) {
       // Popup blockers handled gracefully by receipt modal button
     }
-  } catch (err) {
-    console.error('Error recording order to database:', err);
-    showToast(`❌ Failed to place order: ${err.message || 'Please check your connection and try again.'}`, 'danger');
+  } catch (postErr) {
+    // Keep order-creation failure separate from post-persistence errors; log later errors and show success with reference
+    console.error('Post-persistence order processing error:', postErr);
+    const ref = createdOrder?.reference || createdOrder?.id || orderRef;
+    state.isCheckoutOpen = false;
+    state.isReceiptOpen = true;
+    state.cart = [];
+    saveState();
+    updateChrome();
+    showToast(`🎊 Order #${ref} placed successfully!`, 'success');
   } finally {
+    isPlacingOrder = false;
     hideGlobalBrandLoader();
   }
 });
@@ -692,7 +764,7 @@ async function renderCurrentView() {
     const activeTab = ['orders', 'profile', 'wishlist'].includes(requestedTab)
       ? requestedTab
       : (route === '#profile' ? 'profile' : 'orders');
-    renderCustomerDashboardView(appContainer, state, events, activeTab);
+    await renderCustomerDashboardView(appContainer, state, events, activeTab);
     return;
   }
 

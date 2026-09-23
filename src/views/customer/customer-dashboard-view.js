@@ -1,7 +1,7 @@
-import { getCustomerOrders, updateCustomerProfile, logoutUser } from '../../services/customer-auth.js';
+import { fetchCustomerOrders, getCustomerOrders, updateCustomerProfile, logoutUser } from '../../services/customer-auth.js';
 import { resolveCloudImageUrl } from '../../utils/cloud-image-resolver.js';
 
-export function renderCustomerDashboardView(container, state, events, activeTab = 'orders') {
+export async function renderCustomerDashboardView(container, state, events, activeTab = 'orders') {
   const customer = state.customerUser;
   if (!customer) {
     events.emit('toast', { message: 'Please sign in to access your customer dashboard.', type: 'danger' });
@@ -10,8 +10,8 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
     return;
   }
 
-  // Get orders strictly isolated to this specific customer
-  const customerOrders = getCustomerOrders(customer.id);
+  // Fetch session-backed Supabase orders, merging by ID with local orders
+  const customerOrders = await fetchCustomerOrders(customer.id);
 
   // Compute customer stats
   const totalSpent = customerOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
@@ -182,30 +182,37 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
                   </div>
 
                   <div class="cust-order-items">
-                    ${(order.items || []).map(item => `
-                      <div class="cust-order-item-row">
-                        <img src="${resolveCloudImageUrl(item.product?.image)}" alt="${item.product?.name || 'Item'}" class="cust-order-thumb" onerror="this.src='/images/hero-living-room.png'">
-                        <div class="cust-order-item-info">
-                          <h4>${item.product?.name || 'Furniture Item'}</h4>
-                          <span class="cust-order-meta">Qty: ${item.quantity || 1} ${item.color ? `&bull; Color: ${item.color}` : ''}</span>
+                    ${(order.items || []).map(item => {
+                      const name = item.product?.name || item.name || item.product_name_snapshot || 'Furniture Item';
+                      const img = resolveCloudImageUrl(item.product?.image || item.image);
+                      const unitPrice = item.product?.price != null ? Number(item.product.price) : (item.price != null ? Number(item.price) : 0);
+                      const qty = item.quantity || 1;
+                      const color = item.color || item.variant || '';
+                      return `
+                        <div class="cust-order-item-row">
+                          <img src="${img}" alt="${name}" class="cust-order-thumb" onerror="this.src='/images/hero-living-room.png'">
+                          <div class="cust-order-item-info">
+                            <h4>${name}</h4>
+                            <span class="cust-order-meta">Qty: ${qty} ${color ? `&bull; Color: ${color}` : ''}</span>
+                          </div>
+                          <div class="cust-order-item-price">
+                            Rs. ${(unitPrice * qty).toLocaleString()}/-
+                          </div>
                         </div>
-                        <div class="cust-order-item-price">
-                          Rs. ${Number((item.product?.price || 0) * (item.quantity || 1)).toLocaleString()}/-
-                        </div>
-                      </div>
-                    `).join('')}
+                      `;
+                    }).join('')}
                   </div>
 
                   <div class="cust-order-footer">
                     <div class="cust-order-delivery-info">
                       <span style="color: var(--color-text-subtle); font-size: 0.8rem;">Delivery To:</span>
-                      <strong>${order.address || customer.address || 'Kathmandu Valley'}</strong>
+                      <strong>${order.address || order.delivery_address || customer.address || 'Kathmandu Valley'}</strong>
                     </div>
 
                     <div style="display: flex; align-items: center; gap: 16px;">
                       <div style="text-align: right;">
                         <span style="font-size: 0.78rem; color: var(--color-text-subtle); display: block;">Total Amount</span>
-                        <strong style="color: var(--color-primary); font-size: 1.15rem;">Rs. ${Number(order.total || 0).toLocaleString()}/-</strong>
+                        <strong style="color: var(--color-primary); font-size: 1.15rem;">Rs. ${(order.total != null ? Number(order.total) : Number(order.total_amount || 0)).toLocaleString()}/-</strong>
                       </div>
 
                       <a href="#track?ref=${encodeURIComponent(order.reference || order.id)}" class="btn btn-sm btn-outline" style="border: 1px solid #122d25; color: #122d25; background: #ffffff; padding: 8px 14px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
@@ -433,9 +440,9 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
   // Attach event listeners
   // Tab switching
   container.querySelectorAll('.cust-dash-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const tab = btn.dataset.tab;
-      renderCustomerDashboardView(container, state, events, tab);
+      await renderCustomerDashboardView(container, state, events, tab);
     });
   });
 
@@ -456,7 +463,7 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
   // Profile edit submit
   const profileForm = container.querySelector('#cust-profile-edit-form');
   if (profileForm) {
-    profileForm.addEventListener('submit', (e) => {
+    profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const newName = container.querySelector('#cp-name').value.trim();
       const newPhone = container.querySelector('#cp-phone').value.trim().replace(/[^0-9]/g, '');
@@ -485,7 +492,7 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
         };
         localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
         events.emit('toast', { message: `Delivery profile updated for ${updated.name}!`, type: 'success' });
-        renderCustomerDashboardView(container, state, events, 'profile');
+        await renderCustomerDashboardView(container, state, events, 'profile');
       }
     });
   }
@@ -502,10 +509,10 @@ export function renderCustomerDashboardView(container, state, events, activeTab 
   });
 
   container.querySelectorAll('.cust-wishlist-remove-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const pid = btn.dataset.id;
       events.emit('toggle-wishlist', pid);
-      renderCustomerDashboardView(container, state, events, 'wishlist');
+      await renderCustomerDashboardView(container, state, events, 'wishlist');
     });
   });
 }

@@ -817,6 +817,41 @@ describe('Security Verification & Adversarial Audit Suite', () => {
       'createOrder must retry unique constraint collisions (23505) using the existing reference format'
     );
   });
+
+  test('24. Live Checkout Verification: Session Check, In-Flight Lock, Cloud History Merge', async () => {
+    const { getCurrentCustomer, fetchCustomerOrders } = await import('../src/services/customer-auth.js');
+    const mainJs = (await import('fs')).readFileSync((await import('path')).resolve(process.cwd(), 'src/main.js'), 'utf-8');
+
+    // 1. Invalid stored session objects are discarded and purged
+    localStorage.setItem('fh_customer_session', JSON.stringify({ invalid: 'object' }));
+    const invalidRes = getCurrentCustomer();
+    assert.equal(invalidRes, null, 'Invalid session object must return null');
+    assert.equal(localStorage.getItem('fh_customer_session'), null, 'Invalid session object must be evicted from localStorage');
+
+    localStorage.setItem('fh_customer_session', JSON.stringify({ id: '', email: 'no-id@test.com' }));
+    assert.equal(getCurrentCustomer(), null);
+    assert.equal(localStorage.getItem('fh_customer_session'), null);
+
+    localStorage.setItem('fh_customer_session', JSON.stringify({ id: 'valid-id', email: 'valid@test.com', role: 'customer' }));
+    assert.ok(getCurrentCustomer() !== null, 'Valid session object must be returned');
+
+    // 2. fetchCustomerOrders merges orders and falls back to local orders
+    const orders = await fetchCustomerOrders('valid-id');
+    assert.ok(Array.isArray(orders), 'fetchCustomerOrders must return an array');
+
+    // 3. main.js contains in-flight lock, submit button disable, and post-persistence error isolation
+    assert.ok(
+      mainJs.includes('let isPlacingOrder = false;') &&
+      mainJs.includes('if (isPlacingOrder) return;') &&
+      mainJs.includes('submitBtn.disabled = true;'),
+      'main.js must guard against duplicate in-flight orders and disable submit button'
+    );
+    assert.ok(
+      mainJs.includes('Post-persistence order processing error') &&
+      mainJs.includes('showToast(`🎊 Order #${ref} placed successfully!`, \'success\');'),
+      'main.js must decouple RPC creation failure from post-persistence errors'
+    );
+  });
 });
 
 

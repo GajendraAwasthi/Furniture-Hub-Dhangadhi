@@ -560,7 +560,8 @@ export function renderCartDrawer(container, state, events) {
         name: customerName,
         phone: customerPhone,
         address: fullAddress,
-        paymentMethod: 'WhatsApp Direct'
+        paymentMethod: 'WhatsApp Direct',
+        couponCode: state.couponApplied ? (state.couponCode || 'HUB10') : null
       });
     });
   }
