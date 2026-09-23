@@ -5,7 +5,9 @@ import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 import { escapeHtml } from '../utils/security.js';
 
 export function renderShopView(container, state, events, params) {
-  let activeCategory = params.get('category') || 'All';
+  const rawCategory = (params.get('category') || 'All').toLowerCase();
+  let activeCategory = ['All', 'Seatings', 'Surfaces', 'Decorations', 'Greens', 'Long Sofa', 'Combos']
+    .find(c => c.toLowerCase() === rawCategory || c.toLowerCase().replace(/\s+/g, '-') === rawCategory) || 'All';
   let activeFilter = params.get('filter') || 'all';
   let searchQuery = params.get('search') || '';
   let activeSort = params.get('sort') || 'featured';
@@ -68,6 +70,16 @@ export function renderShopView(container, state, events, params) {
 
   const categories = ['All', 'Seatings', 'Surfaces', 'Decorations', 'Greens', 'Long Sofa', 'Combos'];
 
+  let pageHeading = 'Furniture Collection in Dhangadhi';
+  let pageSubheading = 'Explore our catalog of executive chairs, hand-finished surfaces, and signature living room combos.';
+  if (activeFilter === 'wishlist') {
+    pageHeading = 'My Wishlist';
+    pageSubheading = 'Saved items curated for your dream interior';
+  } else if (activeCategory !== 'All') {
+    pageHeading = `${activeCategory} in Dhangadhi, Kailali`;
+    pageSubheading = `Browse handcrafted ${activeCategory.toLowerCase()} available at Furniture Hub Dhangadhi with delivery across Sudurpashchim.`;
+  }
+
   container.innerHTML = `
     <div class="container catalog-header">
       <!-- Breadcrumbs -->
@@ -75,7 +87,7 @@ export function renderShopView(container, state, events, params) {
         <a href="#home">Home</a>
         <span class="separator">/</span>
         <a href="#shop">Shop Now</a>
-        ${activeCategory !== 'All' ? `<span class="separator">/</span><span>${activeCategory}</span>` : ''}
+        ${activeCategory !== 'All' ? `<span class="separator">/</span><span>${escapeHtml(activeCategory)}</span>` : ''}
         ${activeFilter === 'wishlist' ? `<span class="separator">/</span><span>My Wishlist</span>` : ''}
       </nav>
 
@@ -83,12 +95,10 @@ export function renderShopView(container, state, events, params) {
       <div class="catalog-title-bar">
         <div>
           <h1 class="heading-section">
-            ${activeFilter === 'wishlist' ? 'My Wishlist' : 'Accessories for your space'}
+            ${escapeHtml(pageHeading)}
           </h1>
           <p class="text-subtitle">
-            ${activeFilter === 'wishlist' 
-              ? 'Saved items curated for your dream interior' 
-              : 'Explore our catalog of executive chairs, hand-finished surfaces, and signature living room combos.'}
+            ${escapeHtml(pageSubheading)}
           </p>
         </div>
       </div>
@@ -143,11 +153,11 @@ export function renderShopView(container, state, events, params) {
                           <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                         </svg>
                       </button>
-                      <img src="${resolveCloudImageUrl(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" class="product-navigate-trigger" data-id="${escapeHtml(p.id)}" onerror="this.src='/images/hero-living-room.png'">
+                      <img src="${resolveCloudImageUrl(p.image)}" alt="${escapeHtml(p.name)} — Furniture Hub Dhangadhi" width="300" height="260" loading="lazy" decoding="async" class="product-navigate-trigger" data-id="${escapeHtml(p.id)}" onerror="this.src='/images/hero-living-room.png'">
                     </div>
                     <div class="product-info">
                       <span class="product-category-label">${escapeHtml(p.category)}</span>
-                      <h3 class="product-title product-navigate-trigger" data-id="${escapeHtml(p.id)}">${escapeHtml(p.name)}</h3>
+                      <h3 class="product-title"><a href="/products/${escapeHtml(p.id)}" class="product-navigate-trigger" data-id="${escapeHtml(p.id)}" style="color: inherit; text-decoration: none;">${escapeHtml(p.name)}</a></h3>
                       <div class="product-rating product-rating-interactive" data-open-reviews-pid="${escapeHtml(p.id)}" title="View ${escapeHtml(p.name)} reviews">
                         <span class="stars">${renderStars(p.rating)}</span>
                         <span class="rating-count">(${p.reviewCount} reviews)</span>
@@ -255,7 +265,11 @@ export function renderShopView(container, state, events, params) {
 
   // Card navigation
   container.querySelectorAll('.product-navigate-trigger').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
+      if ((e.target.closest('a') || el.tagName === 'A') && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (e.button && e.button !== 0))) {
+        return;
+      }
+      e.preventDefault();
       const pid = el.dataset.id;
       window.location.hash = `#product-detail?id=${encodeURIComponent(pid)}`;
     });

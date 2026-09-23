@@ -19,10 +19,10 @@ export function renderHomeView(container, state, events) {
     return `
       <div class="figma-product-card" data-id="${product.id}">
         <div class="figma-card-img-wrap">
-          <img src="${resolveCloudImageUrl(product.image)}" alt="${product.name}" loading="lazy" onerror="this.src='/images/hero-living-room.png'">
+          <img src="${resolveCloudImageUrl(product.image)}" alt="${product.name} — Furniture Hub Dhangadhi" width="300" height="260" loading="lazy" decoding="async" onerror="this.src='/images/hero-living-room.png'">
         </div>
         <span class="figma-card-category">${product.category || 'Decorations'}</span>
-        <h4 class="figma-card-title">${product.name}</h4>
+        <h3 class="figma-card-title"><a href="/products/${product.id}" style="color: inherit; text-decoration: none;">${product.name}</a></h3>
         <div class="figma-card-rating figma-card-rating-interactive" data-open-reviews-pid="${product.id}" title="View verified customer reviews">
           <span class="stars">${renderStars(product.rating || 5)}</span>
           <span class="count">(${product.reviewCount || 8} reviews)</span>
@@ -49,10 +49,11 @@ export function renderHomeView(container, state, events) {
     <section class="figma-hero">
       <div class="site-container">
         <h1 class="figma-hero-title">
-          Find the Right Furniture<br>that Matches You and Your Home
+          Furniture Store in Dhangadhi, Kailali<br>
+          <span style="font-size: clamp(1.4rem, 2.8vw, 2.2rem); font-weight: 700; opacity: 0.95;">Find the Right Furniture for Your Home</span>
         </h1>
         <p class="figma-hero-subtitle">
-          Browse through our diverse range of meticulously curated furniture, curated to bring out your individuality and cater to your sense of style.
+          Handcrafted wooden furniture, modern sofas, beds, dining tables, and office seating in Dhangadhi, Kailali. Curated to bring out your individuality with delivery across Sudurpashchim Pradesh.
         </p>
         <div class="figma-hero-visual">
           <picture>
@@ -216,26 +217,26 @@ export function renderHomeView(container, state, events) {
         <div class="figma-category-grid">
           <!-- Row 1: Seatings & Surfaces -->
           <div class="figma-cat-row">
-            <div class="figma-cat-card w-small" data-category="Seatings" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);">
+            <a href="/category/seatings" class="figma-cat-card w-small" data-category="Seatings" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); text-decoration: none; color: inherit;">
               <span class="figma-cat-title" style="font-size: 1.45rem; font-weight: 800;">Seatings</span>
               <span style="font-size: 2.5rem; align-self: flex-end; opacity: 0.85;">🪑</span>
-            </div>
-            <div class="figma-cat-card w-large" data-category="Surfaces" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);">
+            </a>
+            <a href="/category/surfaces" class="figma-cat-card w-large" data-category="Surfaces" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); text-decoration: none; color: inherit;">
               <span class="figma-cat-title" style="font-size: 1.45rem; font-weight: 800;">Surfaces</span>
               <span style="font-size: 2.5rem; align-self: flex-end; opacity: 0.85;">🪵</span>
-            </div>
+            </a>
           </div>
 
           <!-- Row 2: Decorations & Greens -->
           <div class="figma-cat-row">
-            <div class="figma-cat-card w-half" data-category="Decorations" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);">
+            <a href="/category/decorations" class="figma-cat-card w-half" data-category="Decorations" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); text-decoration: none; color: inherit;">
               <span class="figma-cat-title" style="font-size: 1.45rem; font-weight: 800;">Decorations</span>
               <span style="font-size: 2.5rem; align-self: flex-end; opacity: 0.85;">✨</span>
-            </div>
-            <div class="figma-cat-card w-half" data-category="Greens" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);">
+            </a>
+            <a href="/category/greens" class="figma-cat-card w-half" data-category="Greens" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); text-decoration: none; color: inherit;">
               <span class="figma-cat-title" style="font-size: 1.45rem; font-weight: 800;">Greens</span>
               <span style="font-size: 2.5rem; align-self: flex-end; opacity: 0.85;">🌿</span>
-            </div>
+            </a>
           </div>
         </div>
 
@@ -304,6 +305,10 @@ export function renderHomeView(container, state, events) {
       if (e.target.closest('[data-open-reviews-pid]') || e.target.closest('.home-card-add-btn')) {
         return;
       }
+      if (e.target.closest('a') && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (e.button && e.button !== 0))) {
+        return;
+      }
+      e.preventDefault();
       const pid = card.dataset.id;
       window.location.hash = `#product-detail?id=${encodeURIComponent(pid)}`;
     });
@@ -349,7 +354,11 @@ export function renderHomeView(container, state, events) {
 
   // Category navigation
   container.querySelectorAll('.figma-cat-card').forEach(card => {
-    card.addEventListener('click', () => {
+    card.addEventListener('click', (e) => {
+      if ((e.target.closest('a') || card.tagName === 'A') && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (e.button && e.button !== 0))) {
+        return;
+      }
+      e.preventDefault();
       const cat = card.dataset.category;
       window.location.hash = `#shop?category=${encodeURIComponent(cat)}`;
     });

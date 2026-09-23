@@ -45,6 +45,13 @@ import {
   saveCustomerOrder 
 } from './services/customer-auth.js';
 import { safeGetJson, safeSetJson } from './utils/security.js';
+import { SEO_CONFIG } from './config/seo-config.js';
+import { 
+  updateDocumentMeta, 
+  buildBreadcrumbsSchema, 
+  buildProductSchema, 
+  buildCategorySchema 
+} from './utils/meta-updater.js';
 
 // Global Application State
 const initialCustomer = getCurrentCustomer();
@@ -621,110 +628,196 @@ function resolveRoute() {
         window.history.replaceState(null, '', '/' + hash);
       } catch (_) {}
     }
-    return { route: rawHashRoute, params };
+    return { route: rawHashRoute, params, canonicalPath: '/' };
   }
 
-  // 2. No hash route provided: evaluate pathname
+  // 2. Clean pathname matching for Products (/products/:id or /product/:id)
+  if (pathname.startsWith('/products/') || pathname.startsWith('/product/')) {
+    const segments = pathname.split('/').filter(Boolean);
+    const prodId = segments[1];
+    if (prodId) {
+      params.set('id', prodId);
+      return { route: '#product-detail', params, canonicalPath: `/products/${prodId}` };
+    }
+  }
+
+  // 3. Clean pathname matching for Categories (/category/:slug or /categories/:slug)
+  if (pathname.startsWith('/category/') || pathname.startsWith('/categories/')) {
+    const segments = pathname.split('/').filter(Boolean);
+    const catSlug = segments[1];
+    if (catSlug) {
+      const cat = SEO_CONFIG.categories.find(c => c.slug === catSlug.toLowerCase());
+      params.set('category', cat ? cat.name : catSlug);
+      return { route: '#shop', params, canonicalPath: `/category/${cat ? cat.slug : catSlug}` };
+    }
+  }
+
+  // 4. Clean standard pathnames
   if (pathname === '/' || pathname === '/index.html' || pathname === '/home') {
-    return { route: '#home', params };
+    return { route: '#home', params, canonicalPath: '/' };
   }
   if (pathname === '/shop') {
-    return { route: '#shop', params };
+    const cat = params.get('category');
+    return { route: '#shop', params, canonicalPath: cat ? `/category/${cat}` : '/shop' };
   }
   if (pathname === '/track' || pathname === '/track-order' || pathname === '/order-tracking') {
-    return { route: '#track', params };
+    return { route: '#track', params, canonicalPath: '/track' };
   }
   if (pathname === '/product-detail') {
-    return { route: '#product-detail', params };
+    const id = params.get('id');
+    return { route: '#product-detail', params, canonicalPath: id ? `/products/${id}` : '/shop' };
   }
   if (pathname === '/about') {
-    return { route: '#about', params };
+    return { route: '#about', params, canonicalPath: '/about' };
   }
   if (pathname === '/faq' || pathname === '/faqs') {
-    return { route: '#faq', params };
+    return { route: '#faq', params, canonicalPath: '/faq' };
   }
   if (pathname === '/terms' || pathname === '/terms-and-conditions') {
-    return { route: '#terms', params };
+    return { route: '#terms', params, canonicalPath: '/terms' };
   }
   if (pathname === '/privacy' || pathname === '/privacy-policy') {
-    return { route: '#privacy', params };
+    return { route: '#privacy', params, canonicalPath: '/privacy' };
   }
   if (pathname === '/onboarding' || pathname === '/complete-profile') {
-    return { route: '#onboarding', params };
+    return { route: '#onboarding', params, canonicalPath: '/onboarding' };
   }
   if (pathname === '/customer' || pathname === '/customer/dashboard' || pathname === '/customer-dashboard' || pathname === '/account' || pathname === '/dashboard') {
-    return { route: '#customer/dashboard', params };
+    return { route: '#customer/dashboard', params, canonicalPath: '/customer/dashboard' };
   }
   if (pathname === '/profile') {
-    return { route: '#profile', params };
+    return { route: '#profile', params, canonicalPath: '/profile' };
   }
   if (pathname === '/login') {
-    return { route: '#login', params };
+    return { route: '#login', params, canonicalPath: '/login' };
   }
   if (pathname === '/register') {
-    return { route: '#register', params };
+    return { route: '#register', params, canonicalPath: '/register' };
   }
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    return { route: '#' + pathname.replace(/^\/+/, ''), params };
+    return { route: '#' + pathname.replace(/^\/+/, ''), params, canonicalPath: pathname };
   }
   if (pathname === '/404' || pathname === '/notfound' || pathname === '/not-found') {
-    return { route: '#404', params };
+    return { route: '#404', params, canonicalPath: '/404' };
   }
 
   // Any unrecognized path (e.g. /sfaskdkasjjfasjfhjvjaksfjhvjbsj) routes to 404
-  return { route: '#404', params };
+  return { route: '#404', params, canonicalPath: '/404' };
 }
 
-function updatePageMeta(route, params) {
-  let title = 'Furniture Hub Dhangadhi | #1 Furniture Store in Dhangadhi | फर्निचर हब';
-  let isNotFound = false;
+function updatePageMeta(route, params, canonicalPath) {
+  let title = SEO_CONFIG.defaultTitle;
+  let description = SEO_CONFIG.defaultDescription;
+  let image = SEO_CONFIG.defaultImage;
+  let type = 'website';
+  let noindex = false;
+  let structuredData = null;
+  let path = canonicalPath || '/';
 
   if (route === '#shop') {
-    title = 'Shop Furniture Collection | Furniture Hub Dhangadhi';
+    const catSlug = params?.get('category');
+    if (catSlug) {
+      const cat = SEO_CONFIG.categories.find(c => c.slug === catSlug || c.name.toLowerCase() === catSlug.toLowerCase());
+      if (cat) {
+        title = cat.title;
+        description = cat.description;
+        path = `/category/${cat.slug}`;
+        const matchingProducts = Array.isArray(state.products)
+          ? state.products.filter(p => p.category && p.category.toLowerCase() === cat.name.toLowerCase())
+          : [];
+        structuredData = buildCategorySchema(cat, matchingProducts);
+      } else {
+        title = `Shop Furniture | Furniture Hub Dhangadhi`;
+        path = '/shop';
+      }
+    } else {
+      title = 'Shop Furniture Collection | Furniture Hub Dhangadhi';
+      description = 'Browse our complete catalog of living room, bedroom, dining, and office furniture available in Dhangadhi with delivery across Nepal.';
+      path = '/shop';
+      structuredData = buildBreadcrumbsSchema([
+        { name: 'Home', url: '/' },
+        { name: 'Shop', url: '/shop' }
+      ]);
+    }
   } else if (route === '#track' || route === '#track-order' || route === '#order-tracking') {
     title = 'Track Your Order | Furniture Hub Dhangadhi';
+    description = 'Track live delivery status of your furniture orders with Furniture Hub Dhangadhi.';
+    path = '/track';
+    noindex = true;
   } else if (route === '#product-detail') {
     const pid = params?.get('id');
     const p = pid && Array.isArray(state.products) ? state.products.find(x => x.id === pid) : null;
-    title = p ? `${p.name} | Furniture Hub Dhangadhi` : 'Product Details | Furniture Hub Dhangadhi';
+    if (p) {
+      title = `${p.name} | Furniture Hub Dhangadhi`;
+      description = `${p.name} available at Furniture Hub Dhangadhi. ${p.description || ''}`;
+      path = `/products/${p.id}`;
+      image = p.image || SEO_CONFIG.defaultImage;
+      type = 'product';
+      structuredData = buildProductSchema(p);
+    } else {
+      title = 'Piece Not Found (404) | Furniture Hub Dhangadhi';
+      description = 'The requested furniture piece could not be found.';
+      path = '/404';
+      noindex = true;
+    }
   } else if (route === '#about') {
-    title = 'About Us | Furniture Hub Dhangadhi';
+    title = 'About Furniture Hub Dhangadhi | Our Heritage & Quality Craftsmanship';
+    description = 'Learn about Furniture Hub Dhangadhi, our dedication to solid wood durability, kiln-dried timber standards, and white-glove setup service in Kailali, Nepal.';
+    path = '/about';
+    structuredData = buildBreadcrumbsSchema([
+      { name: 'Home', url: '/' },
+      { name: 'About Us', url: '/about' }
+    ]);
   } else if (route === '#faq' || route === '#faqs') {
-    title = 'Frequently Asked Questions | Furniture Hub Dhangadhi';
+    title = 'Frequently Asked Questions & Support | Furniture Hub Dhangadhi';
+    description = 'Find answers about furniture ordering, WhatsApp delivery, payment options, custom sizing, and warranty coverage at Furniture Hub Dhangadhi.';
+    path = '/faq';
+    structuredData = buildBreadcrumbsSchema([
+      { name: 'Home', url: '/' },
+      { name: 'FAQ', url: '/faq' }
+    ]);
   } else if (route === '#terms') {
     title = 'Terms & Conditions | Furniture Hub Dhangadhi';
+    description = 'Terms of service, warranty policies, delivery guidelines, and customer protections for Furniture Hub Dhangadhi.';
+    path = '/terms';
   } else if (route === '#privacy') {
     title = 'Privacy Policy | Furniture Hub Dhangadhi';
+    description = 'Privacy policy and data protection commitments for customers ordering furniture through Furniture Hub Dhangadhi.';
+    path = '/privacy';
   } else if (route === '#admin' || route.startsWith('#admin/')) {
     title = 'Admin Workspace | Furniture Hub Dhangadhi';
-  } else if (route === '#onboarding' || route === '#complete-profile') {
-    title = 'Complete Profile | Furniture Hub Dhangadhi';
+    noindex = true;
+  } else if (route === '#onboarding' || route === '#complete-profile' || route === '#login' || route === '#register') {
+    title = 'Customer Account | Furniture Hub Dhangadhi';
+    noindex = true;
   } else if (route === '#customer/dashboard' || route === '#profile' || route === '#customer-dashboard' || route === '#account' || route === '#dashboard') {
     title = 'Customer Dashboard | Furniture Hub Dhangadhi';
+    noindex = true;
   } else if (route === '#404' || route === '#notfound' || route === '#not-found') {
     title = 'Page Not Found (404) | Furniture Hub Dhangadhi';
-    isNotFound = true;
+    description = 'The requested page could not be found on Furniture Hub Dhangadhi.';
+    noindex = true;
+    path = '/404';
   } else if (route === '#home' || route === '' || route === '#') {
-    title = 'Furniture Hub Dhangadhi | #1 Furniture Store in Dhangadhi | फर्निचर हब';
+    title = SEO_CONFIG.defaultTitle;
+    description = SEO_CONFIG.defaultDescription;
+    path = '/';
   } else {
     title = 'Page Not Found (404) | Furniture Hub Dhangadhi';
-    isNotFound = true;
+    description = 'The requested page could not be found on Furniture Hub Dhangadhi.';
+    noindex = true;
+    path = '/404';
   }
 
-  document.title = title;
-
-  // Manage robots meta tag to avoid indexing 404 pages
-  let robotsMeta = document.querySelector('meta[name="robots"]');
-  if (isNotFound) {
-    if (!robotsMeta) {
-      robotsMeta = document.createElement('meta');
-      robotsMeta.name = 'robots';
-      document.head.appendChild(robotsMeta);
-    }
-    robotsMeta.content = 'noindex, nofollow';
-  } else if (robotsMeta) {
-    robotsMeta.content = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
-  }
+  updateDocumentMeta({
+    title,
+    description,
+    canonicalPath: path,
+    image,
+    type,
+    noindex,
+    structuredData
+  });
 }
 
 // Router & View Rendering
@@ -742,8 +835,8 @@ async function renderCurrentView() {
     return;
   }
 
-  const { route, params } = resolveRoute();
-  updatePageMeta(route, params);
+  const { route, params, canonicalPath } = resolveRoute();
+  updatePageMeta(route, params, canonicalPath);
 
   window.scrollTo({ top: 0, behavior: 'instant' });
 

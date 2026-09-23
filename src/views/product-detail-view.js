@@ -62,11 +62,13 @@ export function renderProductDetailView(container, state, events, params) {
 
   container.innerHTML = `
     <div class="container" style="padding-top: 20px;">
-      <!-- Breadcrumb (Directly from Figma: Home > Shop Now > Sofa Decor Combo) -->
+      <!-- Breadcrumb (Directly from Figma: Home > Shop Now > Category > Product) -->
       <nav class="breadcrumbs">
         <a href="#home">Home</a>
         <span class="separator">&gt;</span>
         <a href="#shop">Shop Now</a>
+        <span class="separator">&gt;</span>
+        <a href="#shop?category=${encodeURIComponent(product.category || '')}">${product.category || 'Collection'}</a>
         <span class="separator">&gt;</span>
         <span>${product.name}</span>
       </nav>
@@ -76,7 +78,7 @@ export function renderProductDetailView(container, state, events, params) {
         <!-- Gallery Column -->
         <div class="detail-gallery">
           <div class="detail-main-img" id="detail-main-img-wrap" style="position: relative; cursor: zoom-in;" title="Click to view full-resolution image">
-            <img id="detail-active-img" src="${selectedImage}" alt="${product.name}" onerror="this.src='/images/hero-living-room.png'">
+            <img id="detail-active-img" src="${selectedImage}" alt="${product.name} — Furniture Hub Dhangadhi" width="600" height="520" fetchpriority="high" decoding="async" onerror="this.src='/images/hero-living-room.png'">
             <span style="position: absolute; bottom: 12px; right: 12px; background: rgba(18,45,37,0.8); color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; backdrop-filter: blur(4px); display: flex; align-items: center; gap: 4px; pointer-events: none;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
               <span>HQ Zoom</span>
@@ -87,7 +89,7 @@ export function renderProductDetailView(container, state, events, params) {
           <div class="detail-thumbnails" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;">
             ${gallery.map((imgUrl, idx) => `
               <div class="detail-thumb ${imgUrl === selectedImage ? 'active' : ''}" data-img-url="${imgUrl}" style="cursor: pointer; flex-shrink: 0;" title="View angle ${idx + 1}">
-                <img src="${imgUrl}" alt="${product.name} angle ${idx + 1}" onerror="this.src='/images/hero-living-room.png'">
+                <img src="${imgUrl}" alt="${product.name} thumbnail angle ${idx + 1}" width="80" height="80" loading="lazy" decoding="async" onerror="this.src='/images/hero-living-room.png'">
               </div>
             `).join('')}
           </div>

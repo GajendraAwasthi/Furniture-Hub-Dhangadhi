@@ -2,31 +2,220 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-
-  <!--
-    Single-Page Application Note:
-    Hash-based routes (#shop, #about etc.) are client-side fragments and are NOT
-    valid sitemap URLs. Google ignores the fragment part of a URL entirely.
-    We submit only the canonical root URL; Google discovers SPA content
-    via JavaScript rendering and the JSON-LD structured data in index.html.
-  -->
-
   <url>
     <loc>https://www.furniturehubdhangadhi.com/</loc>
-    <lastmod>2026-09-22</lastmod>
+    <lastmod>2026-09-23</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/shop</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/shop"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/shop"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/about</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/about"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/about"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/faq</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/faq"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/faq"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/terms</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/terms"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/terms"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/privacy</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/privacy"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/privacy"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/category/seatings</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/category/seatings"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/category/seatings"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/category/combos</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/category/combos"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/category/combos"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/category/surfaces</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/category/surfaces"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/category/surfaces"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/category/decorations</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/category/decorations"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/category/decorations"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/category/greens</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/category/greens"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/category/greens"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/category/long-sofa</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/category/long-sofa"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/category/long-sofa"/>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/argo-office-chair</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/argo-office-chair"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/argo-office-chair"/>
     <image:image>
       <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
-      <image:title>Furniture Hub Dhangadhi — Premium Living Room Furniture | फर्निचर हब धनगढी</image:title>
-      <image:caption>Best furniture store in Dhangadhi, Kailali, Nepal — सोफा, पलङ, टेबल, कुर्सी र घर सजावट</image:caption>
-    </image:image>
-    <image:image>
-      <image:loc>https://www.furniturehubdhangadhi.com/images/furniture-hub-logo.png</image:loc>
-      <image:title>Furniture Hub Dhangadhi Logo — फर्निचर हब धनगढी</image:title>
+      <image:title>Argo Office Chair — Furniture Hub Dhangadhi</image:title>
     </image:image>
   </url>
-
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/sofa-decor-combo</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/sofa-decor-combo"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/sofa-decor-combo"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Sofa Decor Combo — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/valentina-accent-chair</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/valentina-accent-chair"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/valentina-accent-chair"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Valentina Accent Chair — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/winnie-side-table</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/winnie-side-table"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/winnie-side-table"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Winnie Side Table — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/artisan-ceramic-vase</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/artisan-ceramic-vase"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/artisan-ceramic-vase"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Artisan Ceramic Vase — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/botanical-monstera-plant</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/botanical-monstera-plant"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/botanical-monstera-plant"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Botanical Indoor Green — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/scandinavian-dining-table</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/scandinavian-dining-table"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/scandinavian-dining-table"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Scandinavian Dining Table — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/nordic-lounge-bench</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/nordic-lounge-bench"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/nordic-lounge-bench"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Nordic Minimalist Bench — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/halo-standing-lamp</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/halo-standing-lamp"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/halo-standing-lamp"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Halo Arch Floor Lamp — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://www.furniturehubdhangadhi.com/products/zenith-curved-sofa</loc>
+    <lastmod>2026-09-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="ne" href="https://www.furniturehubdhangadhi.com/products/zenith-curved-sofa"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.furniturehubdhangadhi.com/products/zenith-curved-sofa"/>
+    <image:image>
+      <image:loc>https://www.furniturehubdhangadhi.com/images/hero-living-room.png</image:loc>
+      <image:title>Zenith Curved Lounge Sofa — Furniture Hub Dhangadhi</image:title>
+    </image:image>
+  </url>
 </urlset>

@@ -17,11 +17,11 @@ export function renderAboutView(container, state, events) {
         <span class="badge-tag" style="margin-bottom: 16px; background: rgba(18, 45, 37, 0.08); color: var(--color-primary); font-weight: 800;">
           Our Heritage & Philosophy
         </span>
-        <h1 style="font-family: var(--font-heading); font-size: clamp(2.2rem, 4.5vw, 3.4rem); font-weight: 800; color: var(--color-primary); line-height: 1.2; margin-bottom: 16px;">
-          Quality Furniture for Modern Homes
+        <h1 style="font-family: var(--font-heading); font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; color: var(--color-primary); line-height: 1.2; margin-bottom: 16px;">
+          Furniture Hub Dhangadhi — Quality Furniture for Modern Homes
         </h1>
         <p style="font-size: 1.1rem; color: var(--color-text-subtle); line-height: 1.6; max-width: 620px; margin: 0 auto 32px;">
-          Based in Dhangadhi, Kailali, Furniture Hub brings you modern, durable wooden furniture for your home and office — with reliable delivery across Nepal.
+          Based in Dhangadhi, Kailali, Furniture Hub brings you handcrafted, durable wooden furniture for your home and office — with reliable delivery across Nepal.
         </p>
         <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
           <a href="#shop" class="btn btn-primary" style="padding: 13px 30px; border-radius: 99px; font-weight: 700;">
@@ -151,6 +151,63 @@ export function renderAboutView(container, state, events) {
           <p style="font-size: 0.92rem; color: var(--color-text-subtle); line-height: 1.6;">
             Every frame, joinery seam, and pneumatic mechanism is backed by our direct manufacturer structural replacement guarantee.
           </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOCAL SHOWROOM & SUDURPASHCHIM DELIVERY -->
+    <section style="background: #faf8f5; border-top: 1px solid rgba(18, 45, 37, 0.08); padding: 70px 20px;">
+      <div class="site-container" style="max-width: 900px; margin: 0 auto; text-align: center;">
+        <span class="badge-tag" style="background: rgba(18, 45, 37, 0.08); color: var(--color-primary); font-weight: 800; margin-bottom: 12px; display: inline-block;">
+          Local Presence in Sudurpashchim
+        </span>
+        <h2 style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 800; color: var(--color-primary); margin-bottom: 16px;">
+          Visit Our Dhangadhi Showroom
+        </h2>
+        <p style="color: var(--color-text-subtle); max-width: 650px; margin: 0 auto 36px; line-height: 1.6;">
+          Experience our solid wood finishes, test ergonomic cushioning, and consult directly with our furniture craft team in Dhangadhi, Kailali.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; text-align: left; margin-bottom: 36px;">
+          <div style="background: #ffffff; padding: 24px; border-radius: 14px; border: 1px solid rgba(18, 45, 37, 0.1);">
+            <div style="font-weight: 800; color: var(--color-primary); margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+              <span>📍</span> Showroom Address
+            </div>
+            <p style="font-size: 0.95rem; color: var(--color-text); line-height: 1.5; margin: 0;">
+              Main Road / Hasanpur, Ward 1<br>
+              Dhangadhi, Kailali District<br>
+              Sudurpashchim Pradesh, Nepal
+            </p>
+          </div>
+
+          <div style="background: #ffffff; padding: 24px; border-radius: 14px; border: 1px solid rgba(18, 45, 37, 0.1);">
+            <div style="font-weight: 800; color: var(--color-primary); margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+              <span>🕒</span> Operating Hours
+            </div>
+            <p style="font-size: 0.95rem; color: var(--color-text); line-height: 1.5; margin: 0;">
+              Sunday – Friday: 9:00 AM – 7:00 PM<br>
+              Saturday: Closed or by appointment<br>
+              Online orders accepted 24/7
+            </p>
+          </div>
+
+          <div style="background: #ffffff; padding: 24px; border-radius: 14px; border: 1px solid rgba(18, 45, 37, 0.1);">
+            <div style="font-weight: 800; color: var(--color-primary); margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+              <span>🚚</span> Regional Delivery
+            </div>
+            <p style="font-size: 0.95rem; color: var(--color-text); line-height: 1.5; margin: 0;">
+              Regular deliveries to Dhangadhi, Attariya, Tikapur, Mahendranagar, and all districts across western Nepal.
+            </p>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
+          <a href="https://wa.me/9779841234567" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding: 12px 28px; border-radius: 99px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+            <span>💬 Message on WhatsApp (+977 9841234567)</span>
+          </a>
+          <a href="mailto:support@furniturehubdhangadhi.com" class="btn btn-outline" style="padding: 12px 28px; border-radius: 99px; font-weight: 700; border-color: var(--color-primary); color: var(--color-primary);">
+            Email Support
+          </a>
         </div>
       </div>
     </section>
