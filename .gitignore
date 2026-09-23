@@ -13,6 +13,7 @@ docs/
 # Unwanted & Scratch Test Scripts (Exempt from GitHub)
 unwanted_scripts/
 scratch/
+test/
 fig_assets/
 *.fig
 *.py

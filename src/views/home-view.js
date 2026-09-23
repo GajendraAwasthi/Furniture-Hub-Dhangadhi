@@ -49,11 +49,10 @@ export function renderHomeView(container, state, events) {
     <section class="figma-hero">
       <div class="site-container">
         <h1 class="figma-hero-title">
-          Furniture Store in Dhangadhi, Kailali<br>
-          <span style="font-size: clamp(1.4rem, 2.8vw, 2.2rem); font-weight: 700; opacity: 0.95;">Find the Right Furniture for Your Home</span>
+          Find the Right Furniture<br>that Matches You and Your Home
         </h1>
         <p class="figma-hero-subtitle">
-          Handcrafted wooden furniture, modern sofas, beds, dining tables, and office seating in Dhangadhi, Kailali. Curated to bring out your individuality with delivery across Sudurpashchim Pradesh.
+          Browse through our diverse range of meticulously curated furniture, curated to bring out your individuality and cater to your sense of style.
         </p>
         <div class="figma-hero-visual">
           <picture>
