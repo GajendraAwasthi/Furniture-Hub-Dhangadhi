@@ -625,7 +625,7 @@ export const customerLogin = async (identifier, password) => {
  * Update Customer Profile
  * Strictly whitelists editable fields and blocks mass-assignment/privilege escalation.
  */
-export function updateCustomerProfile(param1, param2) {
+export async function updateCustomerProfile(param1, param2) {
   const current = getCurrentCustomer();
   if (!current || typeof current !== 'object') return null;
 
@@ -650,9 +650,12 @@ export function updateCustomerProfile(param1, param2) {
     role: 'customer' // Protected role field cannot be altered
   };
 
+  // Await and verify cloud mutation FIRST before mutating local state
+  await syncCustomerProfileToSupabase(sanitized);
+
+  // Update local session and accounts cache strictly after cloud sync succeeds (or if no client)
   localStorage.setItem(STORAGE_CUSTOMER_SESSION, JSON.stringify(sanitized));
 
-  // Update in stored accounts list with same whitelist protection
   const accounts = getStoredAccounts();
   const idx = accounts.findIndex(a => a.id === current.id || (a.email && a.email.toLowerCase() === current.email.toLowerCase()));
   if (idx !== -1) {
@@ -666,9 +669,6 @@ export function updateCustomerProfile(param1, param2) {
     saveStoredAccounts(accounts);
   }
 
-  // Asynchronously sync profile changes (phone, address, city, name) directly to Supabase
-  syncCustomerProfileToSupabase(sanitized).catch(() => {});
-
   return sanitized;
 }
 
@@ -679,6 +679,28 @@ export async function syncCustomerProfileToSupabase(customer) {
   if (!customer || !customer.email) return;
   const client = getClient();
   if (!client) return;
+
+  // Retrieve Supabase session user ID
+  let userId = null;
+  try {
+    const { data: sessionData } = await client.auth.getSession();
+    userId = sessionData?.session?.user?.id || null;
+  } catch (err) {
+    console.warn('Supabase getSession note:', err?.message || err);
+  }
+
+  if (!userId) {
+    try {
+      const { data: userData } = await client.auth.getUser();
+      userId = userData?.user?.id || null;
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!userId && customer.id && !customer.id.startsWith('cust-') && !customer.id.startsWith('oauth-')) {
+    userId = customer.id;
+  }
 
   // 1. Update Supabase Auth user_metadata
   try {
@@ -695,19 +717,22 @@ export async function syncCustomerProfileToSupabase(customer) {
     console.warn('Supabase auth.updateUser note:', err?.message || err);
   }
 
-  // 2. Upsert into public.customer_profiles table in Supabase
-  try {
-    await client.from('customer_profiles').upsert({
-      id: customer.id || customer.email,
-      email: customer.email,
-      name: customer.name,
-      phone: customer.phone,
-      address: customer.address,
-      city: customer.city || 'Dhangadhi',
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'email' });
-  } catch (err) {
-    console.warn('Supabase customer_profiles table upsert note:', err?.message || err);
+  // 2. Upsert into public.customer_profiles table in Supabase including session user_id
+  const profileRow = {
+    id: customer.id || customer.email,
+    user_id: userId,
+    email: customer.email,
+    name: customer.name,
+    phone: customer.phone,
+    address: customer.address,
+    city: customer.city || 'Dhangadhi',
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await client.from('customer_profiles').upsert(profileRow, { onConflict: 'email' });
+  if (error) {
+    console.error('Supabase customer_profiles upsert error:', error);
+    throw new Error(`Failed to update customer profile in cloud database: ${error.message}`);
   }
 }
 

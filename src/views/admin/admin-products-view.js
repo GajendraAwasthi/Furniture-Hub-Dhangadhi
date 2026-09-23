@@ -516,12 +516,17 @@ export async function renderAdminProductsView(container, state, events) {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
         if (confirm(`Are you sure you want to permanently delete "${id}" from the database?`)) {
-          await deleteProduct(id);
-          events.emit('toast', { message: `Product "${id}" deleted from database`, type: 'info' });
-          products = await fetchProducts();
-          state.products = products;
-          events.emit('products-updated', products);
-          render();
+          try {
+            await deleteProduct(id);
+            events.emit('toast', { message: `Product "${id}" deleted from database`, type: 'info' });
+            products = await fetchProducts();
+            state.products = products;
+            events.emit('products-updated', products);
+            render();
+          } catch (err) {
+            console.error('Failed to delete product:', err);
+            events.emit('toast', { message: `Failed to delete product: ${err.message}`, type: 'danger' });
+          }
         }
       });
     });
@@ -660,18 +665,26 @@ export async function renderAdminProductsView(container, state, events) {
           colors: editingProduct?.colors || [{ name: 'Default', hex: '#122d25' }]
         };
 
-        await saveProduct(newProd);
-        events.emit('toast', { 
-          message: `Product "${newProd.name}" with ${finalGallery.length} gallery images saved successfully!`, 
-          type: 'success' 
-        });
-        isModalOpen = false;
-        editingProduct = null;
-        currentGallery = [];
-        products = await fetchProducts();
-        state.products = products;
-        events.emit('products-updated', products);
-        render();
+        try {
+          await saveProduct(newProd);
+          events.emit('toast', { 
+            message: `Product "${newProd.name}" with ${finalGallery.length} gallery images saved successfully!`, 
+            type: 'success' 
+          });
+          isModalOpen = false;
+          editingProduct = null;
+          currentGallery = [];
+          products = await fetchProducts();
+          state.products = products;
+          events.emit('products-updated', products);
+          render();
+        } catch (err) {
+          console.error('Failed to save product:', err);
+          events.emit('toast', { 
+            message: `Failed to save product: ${err.message}`, 
+            type: 'danger' 
+          });
+        }
       });
     }
 

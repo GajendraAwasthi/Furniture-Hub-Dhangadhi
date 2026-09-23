@@ -1,5 +1,5 @@
 import { normalizeWhatsAppNumber } from '../services/whatsapp.js';
-import { getCustomerOrders } from '../services/customer-auth.js';
+import { getCustomerOrders, updateCustomerProfile } from '../services/customer-auth.js';
 
 export function renderUserProfileModal(container, state, events) {
   const customer = state.customerUser;
@@ -228,7 +228,7 @@ export function renderUserProfileModal(container, state, events) {
 
   const form = container.querySelector('#user-profile-form');
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const phoneVal = container.querySelector('#up-phone').value.trim();
       const nameVal = container.querySelector('#up-name').value.trim();
@@ -236,15 +236,31 @@ export function renderUserProfileModal(container, state, events) {
       const cityVal = container.querySelector('#up-city').value;
 
       const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
-
-      events.emit('update-user-profile', {
+      const profileData = {
         phone: cleanPhone,
         name: nameVal,
         address: addressVal,
         city: cityVal
-      });
+      };
 
-      closeProfile();
+      try {
+        if (state.customerUser) {
+          const updated = await updateCustomerProfile(profileData);
+          if (updated) state.customerUser = updated;
+        }
+        state.customerProfile = { ...state.customerProfile, ...profileData };
+        localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
+        events.emit('toast', { message: `📱 Mobile number & contact profile updated (${cleanPhone})!`, type: 'success' });
+        events.emit('chrome-update');
+        closeProfile();
+      } catch (err) {
+        console.error('Failed to update user profile modal:', err);
+        events.emit('toast', {
+          message: `Failed to update profile: ${err.message}`,
+          type: 'danger'
+        });
+        // Form fields remain intact for retry; do not close modal
+      }
     });
   }
 }

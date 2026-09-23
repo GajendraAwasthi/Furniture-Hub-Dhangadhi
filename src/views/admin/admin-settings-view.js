@@ -404,17 +404,22 @@ export async function renderAdminSettingsView(container, state, events) {
           ...settings,
           whatsappNumber: clean
         };
-        await saveStoreSettings(updated);
-        settings = updated;
-        events.emit('toast', { 
-          message: `✅ Store WhatsApp receiver updated to +${clean}! All orders will now route to this number.`, 
-          type: 'success' 
-        });
+        try {
+          await saveStoreSettings(updated);
+          settings = updated;
+          events.emit('toast', { 
+            message: `✅ Store WhatsApp receiver updated to +${clean}! All orders will now route to this number.`, 
+            type: 'success' 
+          });
 
-        // Update top-bar badge if present
-        const topBadge = document.querySelector('.admin-wa-badge span:first-of-type');
-        if (topBadge) {
-          topBadge.textContent = `WA: +${clean}`;
+          // Update top-bar badge if present
+          const topBadge = document.querySelector('.admin-wa-badge span:first-of-type');
+          if (topBadge) {
+            topBadge.textContent = `WA: +${clean}`;
+          }
+        } catch (err) {
+          console.error('Failed to update WhatsApp number:', err);
+          events.emit('toast', { message: `Failed to update WhatsApp receiver: ${err.message}`, type: 'danger' });
         }
       });
     }
@@ -446,9 +451,14 @@ export async function renderAdminSettingsView(container, state, events) {
           address: container.querySelector('#st-address').value.trim(),
           operatingHours: container.querySelector('#st-hours').value.trim()
         };
-        await saveStoreSettings(updated);
-        settings = updated;
-        events.emit('toast', { message: `Store profile & WhatsApp number (+${cleanWa}) saved!`, type: 'success' });
+        try {
+          await saveStoreSettings(updated);
+          settings = updated;
+          events.emit('toast', { message: `Store profile & WhatsApp number (+${cleanWa}) saved!`, type: 'success' });
+        } catch (err) {
+          console.error('Failed to save store settings:', err);
+          events.emit('toast', { message: `Failed to save store profile: ${err.message}`, type: 'danger' });
+        }
       });
     }
 
@@ -464,10 +474,15 @@ export async function renderAdminSettingsView(container, state, events) {
           isActive: true,
           usageCount: 0
         };
-        await saveCoupon(newCp);
-        coupons = await fetchCoupons();
-        events.emit('toast', { message: `Coupon "${newCp.code}" created!`, type: 'success' });
-        render();
+        try {
+          await saveCoupon(newCp);
+          coupons = await fetchCoupons();
+          events.emit('toast', { message: `Coupon "${newCp.code}" created!`, type: 'success' });
+          render();
+        } catch (err) {
+          console.error('Failed to create coupon:', err);
+          events.emit('toast', { message: `Failed to create coupon: ${err.message}`, type: 'danger' });
+        }
       });
     }
 
@@ -476,10 +491,15 @@ export async function renderAdminSettingsView(container, state, events) {
       btn.addEventListener('click', async () => {
         const code = btn.dataset.code;
         if (confirm(`Delete coupon "${code}"?`)) {
-          await deleteCoupon(code);
-          coupons = await fetchCoupons();
-          events.emit('toast', { message: `Coupon "${code}" removed`, type: 'info' });
-          render();
+          try {
+            await deleteCoupon(code);
+            coupons = await fetchCoupons();
+            events.emit('toast', { message: `Coupon "${code}" removed`, type: 'info' });
+            render();
+          } catch (err) {
+            console.error('Failed to delete coupon:', err);
+            events.emit('toast', { message: `Failed to delete coupon: ${err.message}`, type: 'danger' });
+          }
         }
       });
     });
@@ -497,9 +517,14 @@ export async function renderAdminSettingsView(container, state, events) {
           showReviews: container.querySelector('#cat-show-reviews').checked,
           heroSubtitle: container.querySelector('#cat-hero-text').value.trim()
         };
-        await saveStoreSettings(updated);
-        settings = updated;
-        events.emit('toast', { message: 'Catalog display settings saved!', type: 'success' });
+        try {
+          await saveStoreSettings(updated);
+          settings = updated;
+          events.emit('toast', { message: 'Catalog display settings saved!', type: 'success' });
+        } catch (err) {
+          console.error('Failed to save catalog settings:', err);
+          events.emit('toast', { message: `Failed to save catalog settings: ${err.message}`, type: 'danger' });
+        }
       });
     }
 
@@ -513,9 +538,14 @@ export async function renderAdminSettingsView(container, state, events) {
           lowStockThreshold: Number(container.querySelector('#low-stock-limit').value),
           maintenanceMode: container.querySelector('#st-maintenance').checked
         };
-        await saveStoreSettings(updated);
-        settings = updated;
-        events.emit('toast', { message: 'System & inventory thresholds saved!', type: 'success' });
+        try {
+          await saveStoreSettings(updated);
+          settings = updated;
+          events.emit('toast', { message: 'System & inventory thresholds saved!', type: 'success' });
+        } catch (err) {
+          console.error('Failed to save system settings:', err);
+          events.emit('toast', { message: `Failed to save system settings: ${err.message}`, type: 'danger' });
+        }
       });
     }
 

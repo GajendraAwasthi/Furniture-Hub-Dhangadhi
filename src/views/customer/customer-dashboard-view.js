@@ -475,24 +475,33 @@ export async function renderCustomerDashboardView(container, state, events, acti
         return;
       }
 
-      const updated = updateCustomerProfile({
-        name: newName,
-        phone: newPhone,
-        address: newAddress,
-        city: newCity
-      });
+      try {
+        const updated = await updateCustomerProfile({
+          name: newName,
+          phone: newPhone,
+          address: newAddress,
+          city: newCity
+        });
 
-      if (updated) {
-        state.customerUser = updated;
-        state.customerProfile = {
-          name: updated.name,
-          phone: updated.phone,
-          address: updated.address,
-          city: updated.city
-        };
-        localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
-        events.emit('toast', { message: `Delivery profile updated for ${updated.name}!`, type: 'success' });
-        await renderCustomerDashboardView(container, state, events, 'profile');
+        if (updated) {
+          state.customerUser = updated;
+          state.customerProfile = {
+            name: updated.name,
+            phone: updated.phone,
+            address: updated.address,
+            city: updated.city
+          };
+          localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
+          events.emit('toast', { message: `Delivery profile updated for ${updated.name}!`, type: 'success' });
+          await renderCustomerDashboardView(container, state, events, 'profile');
+        }
+      } catch (err) {
+        console.error('Failed to update customer profile:', err);
+        events.emit('toast', {
+          message: `Failed to update profile: ${err.message}`,
+          type: 'danger'
+        });
+        // Form data is kept intact for retry
       }
     });
   }

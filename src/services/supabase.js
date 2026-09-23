@@ -406,7 +406,45 @@ function normalizeProductFromDb(row) {
 
 export async function saveProduct(product) {
   const client = getClient();
-  // Always update local storage
+  const payload = {
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    price: product.price,
+    original_price: product.originalPrice || null,
+    rating: product.rating || 5,
+    review_count: product.reviewCount || 0,
+    tag: product.tag || product.category,
+    description: product.description || '',
+    materials: product.materials || '',
+    dimensions: product.dimensions || '',
+    weight: product.weight || '',
+    colors: product.colors || [],
+    image: product.image,
+    gallery: product.gallery || [product.image],
+    badge: product.badge || null,
+    is_new_arrival: Boolean(product.isNewArrival),
+    is_best_seller: Boolean(product.isBestSeller),
+    is_top_deal: Boolean(product.isTopDeal),
+    in_stock: product.inStock !== false
+  };
+  if (product.stockQuantity !== undefined) {
+    payload.stock_quantity = product.stockQuantity;
+  }
+
+  // Await and verify cloud mutation FIRST before mutating local state
+  if (client) {
+    const { data, error } = await client.from('products').upsert(payload).select();
+    if (error) {
+      console.error('Supabase product upsert error:', error);
+      throw new Error(`Failed to save product in cloud database: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Product could not be saved to cloud database.');
+    }
+  }
+
+  // Update local cache strictly after cloud update succeeds (or if no client)
   const local = getLocalProducts();
   const idx = local.findIndex(p => p.id === product.id);
   if (idx >= 0) {
@@ -416,46 +454,25 @@ export async function saveProduct(product) {
   }
   saveLocalProducts(local);
 
-  // Sync to Supabase if connected
-  if (client) {
-    const payload = {
-      id: product.id,
-      name: product.name,
-      category: product.category,
-      price: product.price,
-      original_price: product.originalPrice || null,
-      rating: product.rating || 5,
-      review_count: product.reviewCount || 0,
-      tag: product.tag || product.category,
-      description: product.description || '',
-      materials: product.materials || '',
-      dimensions: product.dimensions || '',
-      weight: product.weight || '',
-      colors: product.colors || [],
-      image: product.image,
-      gallery: product.gallery || [product.image],
-      badge: product.badge || null,
-      is_new_arrival: Boolean(product.isNewArrival),
-      is_best_seller: Boolean(product.isBestSeller),
-      is_top_deal: Boolean(product.isTopDeal),
-      in_stock: product.inStock !== false
-    };
-    const { error } = await client.from('products').upsert(payload);
-    if (error) console.error('Supabase product upsert error:', error);
-  }
-
   return product;
 }
 
 export async function deleteProduct(productId) {
   const client = getClient();
+  // Await cloud delete FIRST before mutating local state
+  if (client) {
+    const { data, error } = await client.from('products').delete().eq('id', productId).select();
+    if (error) {
+      console.error('Supabase product delete error:', error);
+      throw new Error(`Failed to delete product from cloud database: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
+      throw new Error(`Product "${productId}" was not found or could not be deleted.`);
+    }
+  }
+
   const local = getLocalProducts().filter(p => p.id !== productId);
   saveLocalProducts(local);
-
-  if (client) {
-    const { error } = await client.from('products').delete().eq('id', productId);
-    if (error) console.error('Supabase product delete error:', error);
-  }
 }
 
 export async function syncLocalProductsToSupabase() {
@@ -742,10 +759,13 @@ export async function updateOrderTracking(orderId, { status, title, note, locati
     if (updatedHistory.length > 0) {
       updatePayload.tracking_history = updatedHistory;
     }
-    const { error } = await client.from('orders').update(updatePayload).eq('id', orderId);
+    const { data, error } = await client.from('orders').update(updatePayload).eq('id', orderId).select();
     if (error) {
       console.error('Supabase updateOrderTracking failed:', error);
       throw new Error(`Failed to update order in cloud database: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
+      throw new Error(`Order #${orderId} was not found or could not be updated.`);
     }
   }
 
@@ -764,10 +784,13 @@ export async function deleteOrder(orderId) {
   const client = getClient();
   // Await cloud delete FIRST before mutating local state
   if (client) {
-    const { error } = await client.from('orders').delete().eq('id', orderId);
+    const { data, error } = await client.from('orders').delete().eq('id', orderId).select();
     if (error) {
       console.error('Supabase deleteOrder failed:', error);
       throw new Error(`Failed to delete order from cloud database: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
+      throw new Error(`Order #${orderId} was not found or could not be deleted.`);
     }
   }
 
@@ -821,18 +844,22 @@ export async function fetchStoreSettings() {
 
 export async function saveStoreSettings(settings) {
   const client = getClient();
-  localStorage.setItem(STORAGE_LOCAL_SETTINGS, JSON.stringify(settings));
-
+  // Await cloud mutation FIRST before mutating local state
   if (client) {
-    try {
-      await client.from('store_settings').upsert({
-        key: 'general',
-        value: settings
-      });
-    } catch (e) {
-      console.warn('Failed to persist settings in Supabase:', e);
+    const { data, error } = await client.from('store_settings').upsert({
+      key: 'general',
+      value: settings
+    }).select();
+    if (error) {
+      console.error('Supabase store_settings upsert error:', error);
+      throw new Error(`Failed to save store settings to cloud database: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Store settings could not be saved to cloud database.');
     }
   }
+
+  localStorage.setItem(STORAGE_LOCAL_SETTINGS, JSON.stringify(settings));
   return settings;
 }
 
@@ -866,33 +893,46 @@ export async function fetchCoupons() {
 
 export async function saveCoupon(coupon) {
   const client = getClient();
+  // Await cloud mutation FIRST before mutating local state
+  if (client) {
+    const { data, error } = await client.from('coupons').upsert({
+      code: coupon.code.toUpperCase(),
+      discount_percent: coupon.discountPercent,
+      min_order_amount: coupon.minOrderAmount || 0,
+      is_active: coupon.isActive !== false
+    }).select();
+    if (error) {
+      console.error('Supabase coupon upsert error:', error);
+      throw new Error(`Failed to save coupon to cloud database: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Coupon could not be saved to cloud database.');
+    }
+  }
+
   const local = await fetchCoupons();
   const idx = local.findIndex(c => c.code.toUpperCase() === coupon.code.toUpperCase());
   if (idx >= 0) local[idx] = { ...local[idx], ...coupon };
   else local.push(coupon);
   localStorage.setItem(STORAGE_LOCAL_COUPONS, JSON.stringify(local));
 
-  if (client) {
-    try {
-      await client.from('coupons').upsert({
-        code: coupon.code.toUpperCase(),
-        discount_percent: coupon.discountPercent,
-        min_order_amount: coupon.minOrderAmount || 0,
-        is_active: coupon.isActive !== false
-      });
-    } catch { /* ignore */ }
-  }
   return coupon;
 }
 
 export async function deleteCoupon(code) {
   const client = getClient();
+  // Await cloud delete FIRST before mutating local state
+  if (client) {
+    const { data, error } = await client.from('coupons').delete().eq('code', code.toUpperCase()).select();
+    if (error) {
+      console.error('Supabase coupon delete error:', error);
+      throw new Error(`Failed to delete coupon from cloud database: ${error.message}`);
+    }
+    if (!data || data.length === 0) {
+      throw new Error(`Coupon "${code}" was not found or could not be deleted.`);
+    }
+  }
+
   const local = (await fetchCoupons()).filter(c => c.code.toUpperCase() !== code.toUpperCase());
   localStorage.setItem(STORAGE_LOCAL_COUPONS, JSON.stringify(local));
-
-  if (client) {
-    try {
-      await client.from('coupons').delete().eq('code', code.toUpperCase());
-    } catch { /* ignore */ }
-  }
 }

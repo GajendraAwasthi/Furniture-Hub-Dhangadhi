@@ -150,7 +150,7 @@ export function renderOnboardingView(container, state, events) {
 
   const form = container.querySelector('#customer-onboarding-form');
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = container.querySelector('#onboard-name').value.trim();
       const phone = sanitizePhoneNumber(container.querySelector('#onboard-phone').value.trim());
@@ -172,31 +172,40 @@ export function renderOnboardingView(container, state, events) {
       }
 
       // Save customer profile with whitelisted sanitization
-      const updated = updateCustomerProfile(customer.id, { name, phone, city, address });
-      if (!updated) {
-        events.emit('toast', { message: 'Unable to save your delivery details.', type: 'danger' });
-        return;
+      try {
+        const updated = await updateCustomerProfile(customer.id, { name, phone, city, address });
+        if (!updated) {
+          events.emit('toast', { message: 'Unable to save your delivery details.', type: 'danger' });
+          return;
+        }
+
+        // Use only the sanitized result — never raw form values — to prevent HTML injection
+        state.customerUser = updated;
+        state.customerProfile = {
+          name: updated.name,
+          phone: updated.phone,
+          city: updated.city,
+          address: updated.address
+        };
+
+        safeSetJson('fh_customer_profile', state.customerProfile);
+        events.emit('toast', { message: 'Delivery details saved! Welcome to Furniture Hub Dhangadhi.', type: 'success' });
+        events.emit('chrome-update');
+
+        // Honour any pending tab saved before the auth guard redirected the visitor
+        const pendingTab = sessionStorage.getItem('fh_pending_tab');
+        sessionStorage.removeItem('fh_pending_tab');
+        window.location.hash = pendingTab
+          ? `#customer/dashboard?tab=${pendingTab}`
+          : '#customer/dashboard';
+      } catch (err) {
+        console.error('Failed to save onboarding delivery details:', err);
+        events.emit('toast', {
+          message: `Failed to save delivery details: ${err.message}`,
+          type: 'danger'
+        });
+        // Form inputs remain intact for retry
       }
-
-      // Use only the sanitized result — never raw form values — to prevent HTML injection
-      state.customerUser = updated;
-      state.customerProfile = {
-        name: updated.name,
-        phone: updated.phone,
-        city: updated.city,
-        address: updated.address
-      };
-
-      safeSetJson('fh_customer_profile', state.customerProfile);
-      events.emit('toast', { message: 'Delivery details saved! Welcome to Furniture Hub Dhangadhi.', type: 'success' });
-      events.emit('chrome-update');
-
-      // Honour any pending tab saved before the auth guard redirected the visitor
-      const pendingTab = sessionStorage.getItem('fh_pending_tab');
-      sessionStorage.removeItem('fh_pending_tab');
-      window.location.hash = pendingTab
-        ? `#customer/dashboard?tab=${pendingTab}`
-        : '#customer/dashboard';
     });
   }
 }

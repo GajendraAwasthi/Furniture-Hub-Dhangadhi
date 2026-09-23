@@ -230,7 +230,7 @@ describe('Security Verification & Adversarial Audit Suite', () => {
       phone: '9842222222'
     };
 
-    const updated = updateCustomerProfile(exploitPayload);
+    const updated = await updateCustomerProfile(exploitPayload);
 
     // Verification: Protected fields remain immutable
     assert.equal(updated.role, 'customer', 'role field must remain strictly "customer"');
@@ -851,6 +851,128 @@ describe('Security Verification & Adversarial Audit Suite', () => {
       mainJs.includes('showToast(`🎊 Order #${ref} placed successfully!`, \'success\');'),
       'main.js must decouple RPC creation failure from post-persistence errors'
     );
+  });
+
+  test('25. Confirmed Write Semantics: Mutation Helpers & Profile Writes Report Success Only After Confirmed Cloud Write', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const supabaseJs = fs.readFileSync(path.resolve(process.cwd(), 'src/services/supabase.js'), 'utf-8');
+    const customerAuthJs = fs.readFileSync(path.resolve(process.cwd(), 'src/services/customer-auth.js'), 'utf-8');
+    const adminProductsJs = fs.readFileSync(path.resolve(process.cwd(), 'src/views/admin/admin-products-view.js'), 'utf-8');
+    const adminSettingsJs = fs.readFileSync(path.resolve(process.cwd(), 'src/views/admin/admin-settings-view.js'), 'utf-8');
+    const onboardingJs = fs.readFileSync(path.resolve(process.cwd(), 'src/views/customer/customer-onboarding-view.js'), 'utf-8');
+    const customerDashJs = fs.readFileSync(path.resolve(process.cwd(), 'src/views/customer/customer-dashboard-view.js'), 'utf-8');
+
+    // 1. updateOrderTracking uses .select() and throws on empty result
+    assert.ok(
+      supabaseJs.includes(".from('orders').update(updatePayload).eq('id', orderId).select();") &&
+      supabaseJs.includes('if (!data || data.length === 0) {') &&
+      supabaseJs.includes('Order #${orderId} was not found or could not be updated.'),
+      'updateOrderTracking must request rows with .select() and throw on empty result'
+    );
+
+    // 2. saveProduct and deleteProduct confirm cloud write with .select() before cache update
+    assert.ok(
+      supabaseJs.includes(".from('products').upsert(payload).select();") &&
+      supabaseJs.includes('Product could not be saved to cloud database.'),
+      'saveProduct must await .select() and throw on error or empty result before updating cache'
+    );
+    assert.ok(
+      supabaseJs.includes(".from('products').delete().eq('id', productId).select();") &&
+      supabaseJs.includes('Product "${productId}" was not found or could not be deleted.'),
+      'deleteProduct must await .select() and throw on error or empty result before updating cache'
+    );
+
+    // 3. Settings & Coupon mutations confirm cloud write with .select() before cache update
+    assert.ok(
+      supabaseJs.includes(".from('store_settings').upsert({") &&
+      supabaseJs.includes("key: 'general',") &&
+      supabaseJs.includes('}).select();'),
+      'saveStoreSettings must await .select() and throw on error before updating cache'
+    );
+    assert.ok(
+      supabaseJs.includes(".from('coupons').upsert({") &&
+      supabaseJs.includes('}).select();'),
+      'saveCoupon must await .select() and throw on error before updating cache'
+    );
+    assert.ok(
+      supabaseJs.includes(".from('coupons').delete().eq('code', code.toUpperCase()).select();"),
+      'deleteCoupon must await .select() and throw on error before updating cache'
+    );
+
+    // 4. Profile upserts include session user_id and await sync in updateCustomerProfile
+    assert.ok(
+      customerAuthJs.includes('user_id: userId,') &&
+      customerAuthJs.includes("const { error } = await client.from('customer_profiles').upsert(profileRow"),
+      'Customer profile sync must include user_id and check { error }'
+    );
+    assert.ok(
+      customerAuthJs.includes('await syncCustomerProfileToSupabase(sanitized);') &&
+      customerAuthJs.includes('localStorage.setItem(STORAGE_CUSTOMER_SESSION, JSON.stringify(sanitized));'),
+      'updateCustomerProfile must await syncCustomerProfileToSupabase and throw before mutating local cache'
+    );
+
+    // 5. Admin callers show success after resolution and failure on exception
+    assert.ok(
+      adminProductsJs.includes('await saveProduct(newProd);') &&
+      adminProductsJs.includes("type: 'danger'") &&
+      adminProductsJs.includes('Failed to save product:'),
+      'admin-products-view.js must handle saveProduct errors with danger toast and keep modal open'
+    );
+    assert.ok(
+      adminProductsJs.includes('await deleteProduct(id);') &&
+      adminProductsJs.includes('Failed to delete product:'),
+      'admin-products-view.js must handle deleteProduct errors with danger toast'
+    );
+    assert.ok(
+      adminSettingsJs.includes('Failed to update WhatsApp receiver:') &&
+      adminSettingsJs.includes('Failed to save store profile:') &&
+      adminSettingsJs.includes('Failed to create coupon:') &&
+      adminSettingsJs.includes('Failed to delete coupon:'),
+      'admin-settings-view.js must handle mutation errors with danger toasts'
+    );
+
+    // 6. Onboarding & profile views handle errors with danger toasts while keeping form data intact
+    assert.ok(
+      onboardingJs.includes('await updateCustomerProfile(') &&
+      onboardingJs.includes('Failed to save delivery details:'),
+      'customer-onboarding-view.js must await updateCustomerProfile and show failure toast on error'
+    );
+    assert.ok(
+      customerDashJs.includes('await updateCustomerProfile(') &&
+      customerDashJs.includes('Failed to update profile:'),
+      'customer-dashboard-view.js must await updateCustomerProfile and show failure toast on error'
+    );
+
+    // 7. Offline fallback functionality: verify mutations succeed when no Supabase client exists
+    const { saveProduct, deleteProduct, saveStoreSettings, saveCoupon, deleteCoupon, updateOrderTracking } = await import('../src/services/supabase.js');
+    const { updateCustomerProfile: updateCustProf, customerRegister } = await import('../src/services/customer-auth.js');
+
+    // Offline product mutation
+    const testProd = { id: 'offline-prod-1', name: 'Offline Table', category: 'Tables', price: 9999, inStock: true };
+    const savedProd = await saveProduct(testProd);
+    assert.equal(savedProd.id, 'offline-prod-1', 'saveProduct must succeed in offline mode');
+    await deleteProduct('offline-prod-1');
+
+    // Offline settings and coupon mutations
+    const savedSettings = await saveStoreSettings({ storeName: 'Offline Hub' });
+    assert.equal(savedSettings.storeName, 'Offline Hub', 'saveStoreSettings must succeed in offline mode');
+
+    const savedCoupon = await saveCoupon({ code: 'OFFLINE10', discountPercent: 10, minOrderAmount: 1000 });
+    assert.equal(savedCoupon.code, 'OFFLINE10', 'saveCoupon must succeed in offline mode');
+    await deleteCoupon('OFFLINE10');
+
+    // Offline customer profile update
+    await customerRegister({
+      name: 'Offline Customer',
+      email: 'offline@customer.com',
+      phone: '9840000000',
+      address: 'Hasanpur',
+      city: 'Dhangadhi',
+      password: 'OfflinePassword123'
+    });
+    const updatedCust = await updateCustProf({ name: 'Offline Updated', address: 'Main Road' });
+    assert.equal(updatedCust.name, 'Offline Updated', 'updateCustomerProfile must succeed in offline mode');
   });
 });
 

@@ -556,14 +556,19 @@ events.on('close-profile', () => {
   updateChrome();
 });
 
-events.on('update-user-profile', (data) => {
-  state.customerProfile = { ...state.customerProfile, ...data };
-  localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
-  if (state.customerUser) {
-    state.customerUser = updateCustomerProfile(data);
+events.on('update-user-profile', async (data) => {
+  try {
+    if (state.customerUser) {
+      state.customerUser = await updateCustomerProfile(data);
+    }
+    state.customerProfile = { ...state.customerProfile, ...data };
+    localStorage.setItem('fh_customer_profile', JSON.stringify(state.customerProfile));
+    updateChrome();
+    showToast(`📱 Mobile number & contact profile updated (${state.customerProfile.phone})!`, 'success');
+  } catch (err) {
+    console.error('Failed to update profile:', err);
+    showToast(`Failed to update profile: ${err.message}`, 'danger');
   }
-  updateChrome();
-  showToast(`📱 Mobile number & contact profile updated (${state.customerProfile.phone})!`, 'success');
 });
 
 // Update persistent components (Navbar, Cart Drawer, Customer Profile Modal, Customer Auth Modal, Floating WhatsApp)
