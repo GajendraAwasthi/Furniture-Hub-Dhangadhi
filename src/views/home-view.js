@@ -55,7 +55,19 @@ export function renderHomeView(container, state, events) {
           Browse through our diverse range of meticulously curated furniture, curated to bring out your individuality and cater to your sense of style.
         </p>
         <div class="figma-hero-visual">
-          <img src="/images/hero-living-room.png" alt="Sofa and Side Table Living Composition">
+          <picture>
+            <source type="image/avif" srcset="/images/hero-living-room.avif">
+            <source type="image/webp" srcset="/images/hero-living-room-600.webp 600w, /images/hero-living-room.webp 1200w" sizes="(max-width: 768px) 100vw, 1160px">
+            <img 
+              src="/images/hero-living-room.webp" 
+              alt="Sofa and Side Table Living Composition" 
+              width="1200" 
+              height="437" 
+              fetchpriority="high"
+              decoding="async"
+              onerror="this.onerror=null; this.closest('picture')?.querySelectorAll('source').forEach(s => s.remove()); this.src='/images/hero-living-room.png';"
+            >
+          </picture>
         </div>
         <div class="figma-hero-btn-wrap">
           <a href="#shop" class="figma-pill-btn dark-outline" id="hero-shop-now-btn">

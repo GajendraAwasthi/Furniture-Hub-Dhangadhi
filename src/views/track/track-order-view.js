@@ -97,7 +97,7 @@ export async function renderTrackOrderView(container, state, events, params) {
         <!-- Search Bar Card -->
         <div class="card" style="padding: 24px; border-radius: 16px; margin-bottom: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.06);">
           <form id="track-order-search-form" style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <div style="flex: 2; min-width: 240px; position: relative;">
+            <div style="flex: 2; min-width: 220px; position: relative;">
               <input 
                 type="text" 
                 id="track-input-ref" 
@@ -111,6 +111,20 @@ export async function renderTrackOrderView(container, state, events, params) {
                 <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                 <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
                 <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+
+            <div style="flex: 1.5; min-width: 180px; position: relative;">
+              <input 
+                type="tel" 
+                id="track-input-phone" 
+                class="settings-input" 
+                placeholder="Mobile Number (e.g. 98xxxxxxxx)" 
+                value="${escapeHtml(currentPhone || '')}"
+                style="height: 48px; font-size: 0.95rem; font-weight: 600; padding-left: 42px; border-radius: 10px;"
+              >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--color-text-subtle);">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
               </svg>
             </div>
 
@@ -304,63 +318,70 @@ export async function renderTrackOrderView(container, state, events, params) {
                   <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.92rem;">
                     <div>
                       <span style="color: var(--color-text-subtle); display: block; font-size: 0.8rem;">Recipient:</span>
-                      <strong>${escapeHtml(order.customer_name || 'Customer')}</strong>
+                      <strong>${escapeHtml(order.customer_name_masked || order.customer_name || 'Customer')}</strong>
                     </div>
+                    ${order.customer_phone ? `
+                      <div>
+                        <span style="color: var(--color-text-subtle); display: block; font-size: 0.8rem;">Contact Number:</span>
+                        <span>${escapeHtml(order.customer_phone)}</span>
+                      </div>
+                    ` : ''}
                     <div>
-                      <span style="color: var(--color-text-subtle); display: block; font-size: 0.8rem;">Contact Number:</span>
-                      <span>${escapeHtml(order.customer_phone || 'N/A')}</span>
+                      <span style="color: var(--color-text-subtle); display: block; font-size: 0.8rem;">Destination:</span>
+                      <strong style="color: #122d25;">${escapeHtml(order.delivery_city || order.delivery_address || 'Dhangadhi, Nepal')}</strong>
                     </div>
-                    <div>
-                      <span style="color: var(--color-text-subtle); display: block; font-size: 0.8rem;">Delivery Address:</span>
-                      <strong style="color: #122d25;">${escapeHtml(order.delivery_address || 'Dhangadhi, Nepal')}</strong>
-                    </div>
-                    <div>
-                      <span style="color: var(--color-text-subtle); display: block; font-size: 0.8rem;">Payment Method:</span>
-                      <span class="badge-tag" style="background: rgba(18, 45, 37, 0.08); color: #122d25; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
-                        ${escapeHtml(order.payment_method || 'Cash on Delivery')}
-                      </span>
-                    </div>
+                    ${order.payment_method ? `
+                      <div>
+                        <span style="color: var(--color-text-subtle); display: block; font-size: 0.8rem;">Payment Method:</span>
+                        <span class="badge-tag" style="background: rgba(18, 45, 37, 0.08); color: #122d25; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
+                          ${escapeHtml(order.payment_method)}
+                        </span>
+                      </div>
+                    ` : ''}
                   </div>
                 </div>
 
-                <!-- Ordered Items -->
-                <div class="card" style="padding: 24px; border-radius: 16px; background: #ffffff; border: 1px solid rgba(0,0,0,0.06);">
-                  <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary); margin-bottom: 16px;">
-                    Order Package Contents (${(order.items || []).length})
-                  </h3>
+                <!-- Ordered Items (Visible when item details are authorized) -->
+                ${Array.isArray(order.items) && order.items.length > 0 ? `
+                  <div class="card" style="padding: 24px; border-radius: 16px; background: #ffffff; border: 1px solid rgba(0,0,0,0.06);">
+                    <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--color-primary); margin-bottom: 16px;">
+                      Order Package Contents (${order.items.length})
+                    </h3>
 
-                  <div style="display: flex; flex-direction: column; gap: 14px; max-height: 280px; overflow-y: auto; padding-right: 6px;">
-                    ${(order.items || []).map(item => `
-                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
-                        <img 
-                          src="${resolveCloudImageUrl(item.product?.image || item.image)}" 
-                          alt="${escapeHtml(item.product?.name || item.name || 'Furniture')}"
-                          style="width: 52px; height: 52px; border-radius: 8px; object-fit: cover; background: #f5f5f5;"
-                          onerror="this.src='/images/hero-living-room.png'"
-                        >
-                        <div style="flex: 1;">
-                          <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); margin: 0 0 2px;">
-                            ${escapeHtml(item.product?.name || item.name || 'Furniture Item')}
-                          </h4>
-                          <span style="font-size: 0.78rem; color: var(--color-text-subtle);">
-                            Qty: ${item.quantity || 1} ${item.color ? `&bull; ${escapeHtml(item.color)}` : ''}
-                          </span>
+                    <div style="display: flex; flex-direction: column; gap: 14px; max-height: 280px; overflow-y: auto; padding-right: 6px;">
+                      ${order.items.map(item => `
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0;">
+                          <img 
+                            src="${resolveCloudImageUrl(item.product?.image || item.image)}" 
+                            alt="${escapeHtml(item.product?.name || item.name || 'Furniture')}"
+                            style="width: 52px; height: 52px; border-radius: 8px; object-fit: cover; background: #f5f5f5;"
+                            onerror="this.src='/images/hero-living-room.png'"
+                          >
+                          <div style="flex: 1;">
+                            <h4 style="font-size: 0.92rem; font-weight: 700; color: var(--color-primary); margin: 0 0 2px;">
+                              ${escapeHtml(item.product?.name || item.name || 'Furniture Item')}
+                            </h4>
+                            <span style="font-size: 0.78rem; color: var(--color-text-subtle);">
+                              Qty: ${item.quantity || 1} ${item.color ? `&bull; ${escapeHtml(item.color)}` : ''}
+                            </span>
+                          </div>
+                          <strong style="font-size: 0.95rem; color: var(--color-primary);">
+                            Rs. ${Number((item.product?.price || item.price || 0) * (item.quantity || 1)).toLocaleString()}
+                          </strong>
                         </div>
-                        <strong style="font-size: 0.95rem; color: var(--color-primary);">
-                          Rs. ${Number((item.product?.price || item.price || 0) * (item.quantity || 1)).toLocaleString()}
+                      `).join('')}
+                    </div>
+
+                    ${(order.total_amount || order.total) ? `
+                      <div style="margin-top: 18px; padding-top: 14px; border-top: 2px dashed #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; color: var(--color-text-subtle);">Total Investment</span>
+                        <strong style="font-size: 1.35rem; color: var(--color-primary); font-weight: 800;">
+                          Rs. ${Number(order.total_amount || order.total || 0).toLocaleString()}/-
                         </strong>
                       </div>
-                    `).join('')}
+                    ` : ''}
                   </div>
-
-                  <!-- Total Price summary -->
-                  <div style="margin-top: 18px; padding-top: 14px; border-top: 2px dashed #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-weight: 700; color: var(--color-text-subtle);">Total Investment</span>
-                    <strong style="font-size: 1.35rem; color: var(--color-primary); font-weight: 800;">
-                      Rs. ${Number(order.total_amount || order.total || 0).toLocaleString()}/-
-                    </strong>
-                  </div>
-                </div>
+                ` : ''}
 
               </div>
 
@@ -417,12 +438,14 @@ export async function renderTrackOrderView(container, state, events, params) {
     if (form) {
       form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const input = container.querySelector('#track-input-ref');
-        if (input && input.value.trim()) {
-          currentRef = input.value.trim();
+        const refInput = container.querySelector('#track-input-ref');
+        const phoneInput = container.querySelector('#track-input-phone');
+        if (refInput && refInput.value.trim()) {
+          currentRef = refInput.value.trim();
+          currentPhone = phoneInput ? phoneInput.value.trim() : '';
           hasSearched = true;
           // Update URL hash parameter cleanly without reload
-          window.location.hash = `#track?ref=${encodeURIComponent(currentRef)}`;
+          window.location.hash = `#track?ref=${encodeURIComponent(currentRef)}${currentPhone ? `&phone=${encodeURIComponent(currentPhone)}` : ''}`;
           loadOrder(currentRef, currentPhone);
         }
       });

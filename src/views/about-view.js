@@ -85,7 +85,7 @@ export function renderAboutView(container, state, events) {
         </div>
 
         <div style="border-radius: 20px; overflow: hidden; box-shadow: 0 20px 48px rgba(18, 45, 37, 0.12); border: 1px solid rgba(18, 45, 37, 0.1);">
-          <img src="/images/hero-living-room.png" alt="Furniture Hub Dhangadhi Craftsmanship" style="width: 100%; height: auto; display: block;">
+          <img src="/images/hero-living-room.webp" alt="Furniture Hub Dhangadhi Craftsmanship" loading="lazy" decoding="async" width="1200" height="437" style="width: 100%; height: auto; display: block;" onerror="this.src='/images/hero-living-room.png'">
         </div>
       </div>
 

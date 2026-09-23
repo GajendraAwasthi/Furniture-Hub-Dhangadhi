@@ -36,6 +36,7 @@ import {
   authenticateOAuthUser,
   authenticateAuthorizedPerson,
   isCurrentAdmin,
+  verifyAdminSession,
   customerLogin, 
   customerRegister, 
   customerLogout, 
@@ -549,42 +550,10 @@ async function renderCurrentView() {
       return;
     }
 
-    // Strict Role-Based Security: Verify administrator privileges
+    // Strict Role-Based Security: Verify administrator privileges asynchronously against Supabase server
     let hasAdminAccess = isCurrentAdmin();
     if (!hasAdminAccess) {
-      // Asynchronously verify against server-side Supabase authentication
-      const client = getClient();
-      let verifiedUser = null;
-      if (client) {
-        try {
-          const { data: { user } } = await client.auth.getUser();
-          verifiedUser = user;
-        } catch {
-          verifiedUser = null;
-        }
-      }
-
-      if (verifiedUser) {
-        const isSb = await checkIsSupabaseAdmin(verifiedUser);
-        if (isSb) {
-          hasAdminAccess = true;
-          const adminObj = {
-            id: verifiedUser.id,
-            email: verifiedUser.email,
-            name: verifiedUser.user_metadata?.full_name || verifiedUser.email.split('@')[0],
-            role: 'admin'
-          };
-          localStorage.setItem('fh_demo_admin_user', JSON.stringify(adminObj));
-          try {
-            const curAdmins = getLocalSupabaseAdmins();
-            if (!curAdmins.some(a => (a.email || '').toLowerCase() === (verifiedUser.email || '').toLowerCase())) {
-              localStorage.setItem('fh_supabase_store_admins', JSON.stringify([...curAdmins, adminObj]));
-            }
-          } catch {
-            // ignore
-          }
-        }
-      }
+      hasAdminAccess = await verifyAdminSession();
     }
 
     if (!hasAdminAccess) {

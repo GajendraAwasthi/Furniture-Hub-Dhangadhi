@@ -105,6 +105,26 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     assert.equal(localStorage.getItem('fh_demo_admin_user'), null, 'Rogue admin session must be purged');
   });
 
+  test('1d. Composition Probe (CRITICAL): Forged token + matching forged fh_supabase_store_admins cache is rejected', () => {
+    // Attack: Exact composition attack from audit
+    localStorage.clear();
+    localStorage.setItem('sb-fake-auth-token', JSON.stringify({
+      access_token: 'not-a-jwt',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: { id: 'attacker-id', email: 'attacker@example.com', app_metadata: { role: 'customer' } }
+    }));
+    localStorage.setItem('fh_supabase_store_admins', JSON.stringify([
+      { id: 'attacker-id', user_id: 'attacker-id', email: 'attacker@example.com', role: 'admin' }
+    ]));
+
+    // Action: Check authorization
+    const adminCheck = isCurrentAdmin();
+
+    // Verification: Must be rejected - client cache is not authoritative evidence
+    assert.equal(adminCheck, false, 'Composition of fake token and fake admin cache must be strictly rejected');
+    assert.equal(localStorage.getItem('fh_demo_admin_user'), null, 'Rogue admin session must be purged');
+  });
+
   test('2. Credential Security: Passwords are salted/hashed and never stored in plaintext', async () => {
     const rawPassword = 'SuperSecretPassword@2026';
     const regResult = await customerRegister({
@@ -168,7 +188,7 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     assert.equal(isCurrentAdmin(), false, 'Admin in localStorage without real Supabase JWT must be rejected');
     assert.equal(localStorage.getItem('fh_demo_admin_user'), null, 'Rogue admin session must be purged');
 
-    // Verification: Active Supabase JWT token with matching store_admins record validates successfully
+    // Verification: Active Supabase token in localStorage alone CANNOT grant admin access (must not trust client storage)
     localStorage.setItem('sb-test-auth-token', JSON.stringify({
       access_token: 'valid-test-jwt-token',
       user: {
@@ -177,7 +197,18 @@ describe('Security Verification & Adversarial Audit Suite', () => {
         role: 'authenticated'
       }
     }));
-    assert.equal(isCurrentAdmin(), true, 'Cryptographically authenticated Supabase JWT must grant admin access');
+    assert.equal(isCurrentAdmin(), false, 'localStorage token alone must never grant admin access without server verification');
+
+    // Verification: Setting verified admin session explicitly authorizes in memory
+    const { setVerifiedAdminUser, clearVerifiedAdminUser } = await import('../src/services/customer-auth.js');
+    setVerifiedAdminUser({
+      id: 'sb-admin-1',
+      email: 'verified.admin@furniturehub.com',
+      role: 'admin'
+    });
+    assert.equal(isCurrentAdmin(), true, 'In-memory verified admin session grants admin access');
+    clearVerifiedAdminUser();
+    assert.equal(isCurrentAdmin(), false, 'Clearing verified admin session revokes access');
   });
 
   test('4. Mass-Assignment Protection: Customer profile cannot escalate to admin or alter identity', async () => {
@@ -305,6 +336,32 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     assert.equal(clean.includes('<'), false, 'All angle brackets must be stripped');
     assert.equal(clean.includes('>'), false, 'All angle brackets must be stripped');
     assert.equal(clean, 'scriptalert("XSS")/scriptbMain Road/b');
+  });
+
+  test('7b. Stored XSS in Order Templates: Untrusted order fields are rendered inert and escaped', async () => {
+    const { escapeHtml } = await import('../src/utils/security.js');
+
+    const maliciousOrder = {
+      id: '<script>alert("xss")</script>',
+      customer_name: '<img src=x onerror=alert(1)>',
+      customer_phone: '"+alert(1)+"',
+      delivery_address: '<svg onload=alert(1)>',
+      notes: '<iframe src=javascript:alert(1)>'
+    };
+
+    const renderedId = escapeHtml(maliciousOrder.id);
+    const renderedName = escapeHtml(maliciousOrder.customer_name);
+    const renderedAddress = escapeHtml(maliciousOrder.delivery_address);
+    const renderedNotes = escapeHtml(maliciousOrder.notes);
+
+    assert.equal(renderedId.includes('<script>'), false, 'Script tags must be escaped');
+    assert.equal(renderedId, '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+    assert.equal(renderedName.includes('<img'), false, 'Image onerror tags must be escaped');
+    assert.equal(renderedName, '&lt;img src=x onerror=alert(1)&gt;');
+    assert.equal(renderedAddress.includes('<svg'), false, 'SVG tags must be escaped');
+    assert.equal(renderedAddress, '&lt;svg onload=alert(1)&gt;');
+    assert.equal(renderedNotes.includes('<iframe'), false, 'Iframe tags must be escaped');
+    assert.equal(renderedNotes, '&lt;iframe src=javascript:alert(1)&gt;');
   });
 
   test('8. Order Integrity (HI-2 & HI-12): Order creation enforces persistence before caching', async () => {
@@ -650,6 +707,50 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     const res = await createOrder(spoofOrderPayload);
     assert.ok(res, 'Guest order should succeed creation');
     // In local state or notes, the contact info can be preserved without compromising account-ownership in DB
+  });
+
+  test('21. Authoritative Pricing & Guest Identity Integrity (place_order RPC)', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const schemaSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/schema.sql'), 'utf-8');
+
+    // 1. Unknown products must be rejected with an exception rather than falling back to client-supplied prices
+    assert.ok(
+      schemaSql.includes("RAISE EXCEPTION 'Unknown product: %', COALESCE(v_product_id, '(missing id)');"),
+      'place_order must strictly reject unknown product IDs to prevent fabricated or negative pricing'
+    );
+
+    // 2. Must check auth.uid() IS NOT NULL rather than auth.jwt() to prevent anon JWTs from misidentifying guests
+    assert.ok(
+      schemaSql.includes("IF auth.uid() IS NOT NULL THEN"),
+      'place_order must use auth.uid() IS NOT NULL to accurately discern authenticated users from anon guests'
+    );
+  });
+
+  test('22. Order Tracking Phone Hardening & Hero Picture Fallback Resilience', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const schemaSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/schema.sql'), 'utf-8');
+    const homeViewJs = fs.readFileSync(path.resolve(process.cwd(), 'src/views/home-view.js'), 'utf-8');
+    const pkgJson = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf-8'));
+
+    // 1. track_order regex guard against empty strings and wildcard attacks
+    assert.ok(
+      schemaSql.includes("p_phone ~ '^[0-9]+$'"),
+      'track_order must enforce numeric regex on phone parameter before matching'
+    );
+
+    // 2. home-view.js removes <source> tags on error before setting PNG fallback
+    assert.ok(
+      homeViewJs.includes("this.closest('picture')?.querySelectorAll('source').forEach(s => s.remove())"),
+      'Hero picture onerror must remove <source> elements so PNG fallback is applied'
+    );
+
+    // 3. package.json build script includes asset conversion
+    assert.ok(
+      pkgJson.scripts.build.includes('node scripts/convert-hero.js'),
+      'Build script must generate optimized hero assets before bundling'
+    );
   });
 });
 

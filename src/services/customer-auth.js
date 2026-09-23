@@ -70,57 +70,79 @@ function saveAllOrdersToStorage(orders) {
   localStorage.setItem(STORAGE_CUSTOMER_ORDERS, JSON.stringify(orders));
 }
 
+// In-memory verified administrator session - NEVER trusted from browser-writable localStorage
+let _verifiedAdminUser = null;
+
+export function getVerifiedAdminUser() {
+  return _verifiedAdminUser;
+}
+
+export function setVerifiedAdminUser(user) {
+  _verifiedAdminUser = user;
+}
+
+export function clearVerifiedAdminUser() {
+  _verifiedAdminUser = null;
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(STORAGE_ADMIN_SESSION);
+    localStorage.removeItem('fh_demo_admin_user');
+  }
+}
+
 /**
  * Check if the currently active session has verified administrator privileges.
- * Administrator status is governed strictly by Supabase server-side records.
- * Client-modifiable role fields or arbitrary localStorage objects are NEVER trusted.
+ * Administrator status is governed strictly by Supabase server-side verification.
+ * Client-modifiable role fields, localStorage objects, or local admin caches are NEVER trusted.
  */
 export function isCurrentAdmin() {
-  // 1. Verify active Supabase cryptographic JWT token in localStorage
-  let verifiedSbUser = null;
+  if (_verifiedAdminUser && typeof _verifiedAdminUser === 'object' && _verifiedAdminUser.role === 'admin') {
+    return true;
+  }
+  // Wipe any rogue admin session in localStorage
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(STORAGE_ADMIN_SESSION);
+    localStorage.removeItem('fh_demo_admin_user');
+  }
+  return false;
+}
+
+/**
+ * Authoritatively verify administrative session with Supabase server.
+ * Uses client.auth.getUser() to cryptographically validate the JWT against the server,
+ * then checks authoritative store_admins database records.
+ * Fails closed if validation fails, token is missing/expired, or user is not an admin.
+ */
+export async function verifyAdminSession() {
+  const client = getClient();
+  if (!client) {
+    clearVerifiedAdminUser();
+    return false;
+  }
+
   try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-        const val = JSON.parse(raw);
-        if (val?.access_token && val?.user && typeof val.user === 'object') {
-          verifiedSbUser = val.user;
-          break;
-        }
-      }
+    const { data: { user }, error } = await client.auth.getUser();
+    if (error || !user) {
+      clearVerifiedAdminUser();
+      return false;
+    }
+
+    const isSb = await checkIsSupabaseAdmin(user);
+    if (isSb) {
+      _verifiedAdminUser = {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.full_name || user.email.split('@')[0],
+        role: 'admin'
+      };
+      return true;
+    } else {
+      clearVerifiedAdminUser();
+      return false;
     }
   } catch {
-    // ignore
+    clearVerifiedAdminUser();
+    return false;
   }
-
-  // If a Supabase session exists, validate strictly against authoritative store_admins database records
-  // Client-supplied app_metadata or user_metadata in localStorage is NEVER trusted!
-  if (verifiedSbUser) {
-    const sbAdmins = getLocalSupabaseAdmins();
-    if (Array.isArray(sbAdmins) && sbAdmins.length > 0) {
-      const email = (verifiedSbUser.email || '').toLowerCase().trim();
-      const id = (verifiedSbUser.id || '').trim();
-
-      const isSbAdmin = sbAdmins.some(a => {
-        const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
-        if (r !== 'admin') return false;
-        const aEmail = (a.email || '').trim().toLowerCase();
-        const aId = (a.id || '').trim();
-        const aUserId = (a.user_id || '').trim();
-        return (email && aEmail === email) || (id && (aId === id || aUserId === id));
-      });
-
-      if (isSbAdmin) {
-        return true;
-      }
-    }
-  }
-
-  // If unauthenticated or not verified as admin, wipe any rogue admin session
-  localStorage.removeItem(STORAGE_ADMIN_SESSION);
-  return false;
 }
 
 /**
@@ -550,9 +572,11 @@ export async function logoutUser() {
     }
 
     // Purge real application session states
+    clearVerifiedAdminUser();
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
       localStorage.removeItem(STORAGE_ADMIN_SESSION);
+      localStorage.removeItem('fh_demo_admin_user');
       localStorage.removeItem('fh_cart');
     }
     if (typeof sessionStorage !== 'undefined') {

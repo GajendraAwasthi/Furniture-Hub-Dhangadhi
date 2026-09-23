@@ -115,20 +115,20 @@ export async function renderAdminOrdersView(container, state, events) {
                 ${list.length > 0 ? list.map(o => `
                   <tr>
                     <td>
-                      <strong style="color: var(--color-primary); font-size: 0.95rem;">${o.id}</strong>
+                      <strong style="color: var(--color-primary); font-size: 0.95rem;">${escapeHtml(o.id)}</strong>
                     </td>
                     <td style="font-size: 0.82rem; color: var(--color-text-subtle); white-space: nowrap;">
                       ${new Date(o.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
                     <td>
-                      <div style="font-weight: 700;">${o.customer_name}</div>
-                      <div style="font-size: 0.8rem; color: var(--color-text-muted);">${o.customer_phone || ''}</div>
-                      <div style="font-size: 0.78rem; color: var(--color-text-subtle);">${o.delivery_address || ''}</div>
+                      <div style="font-weight: 700;">${escapeHtml(o.customer_name || 'Customer')}</div>
+                      <div style="font-size: 0.8rem; color: var(--color-text-muted);">${escapeHtml(o.customer_phone || '')}</div>
+                      <div style="font-size: 0.78rem; color: var(--color-text-subtle);">${escapeHtml(o.delivery_address || '')}</div>
                     </td>
                     <td>
                       <span class="badge-tag" style="background: rgba(37, 211, 102, 0.1); color: #075e54; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px;">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="#25D366"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.19 8.19 0 0 1-5.82 2.42c-1.42 0-2.82-.37-4.06-1.07l-.29-.17-3.02.79.81-2.94-.19-.3a8.14 8.14 0 0 1-1.25-4.5c0-4.54 3.7-8.24 8.24-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.65.81-.8 1-.15.19-.3.21-.55.08-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.25-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.45.06-.69.32-.23.25-.9.88-.9 2.14 0 1.26.92 2.48 1.05 2.65.13.17 1.81 2.76 4.38 3.87.61.27 1.09.43 1.46.55.62.2 1.18.17 1.62.11.5-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.17-.48-.29z"/></svg>
-                        <span>${o.payment_method || 'WhatsApp Direct'}</span>
+                        <span>${escapeHtml(o.payment_method || 'WhatsApp Direct')}</span>
                       </span>
                     </td>
                     <td>
@@ -136,7 +136,7 @@ export async function renderAdminOrdersView(container, state, events) {
                       <div style="font-size: 0.76rem; color: var(--color-text-subtle);">${(o.items || []).length} item(s)</div>
                     </td>
                     <td>
-                      <select class="settings-select order-status-select" data-order-id="${o.id}" style="width: auto; padding: 6px 10px; font-size: 0.82rem; font-weight: 600;">
+                      <select class="settings-select order-status-select" data-order-id="${escapeHtml(o.id)}" style="width: auto; padding: 6px 10px; font-size: 0.82rem; font-weight: 600;">
                         <option value="Pending" ${o.status === 'Pending' ? 'selected' : ''}>⏳ Pending</option>
                         <option value="Processing" ${o.status === 'Processing' ? 'selected' : ''}>⚙️ Processing</option>
                         <option value="Shipped" ${o.status === 'Shipped' ? 'selected' : ''}>🚚 Shipped</option>
@@ -146,7 +146,7 @@ export async function renderAdminOrdersView(container, state, events) {
                     </td>
                     <td style="text-align: right;">
                       <div style="display: inline-flex; gap: 8px;">
-                        <button class="action-icon-btn btn-manage-tracking" data-id="${o.id}" title="Manage Tracking & Milestones" style="color: #122d25; background: rgba(18, 45, 37, 0.08);">
+                        <button class="action-icon-btn btn-manage-tracking" data-id="${escapeHtml(o.id)}" title="Manage Tracking & Milestones" style="color: #122d25; background: rgba(18, 45, 37, 0.08);">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="1" y="3" width="15" height="13"></rect>
                             <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
@@ -154,7 +154,7 @@ export async function renderAdminOrdersView(container, state, events) {
                             <circle cx="18.5" cy="18.5" r="2.5"></circle>
                           </svg>
                         </button>
-                        <button class="action-icon-btn btn-view-receipt" data-id="${o.id}" title="View order receipt">
+                        <button class="action-icon-btn btn-view-receipt" data-id="${escapeHtml(o.id)}" title="View order receipt">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
@@ -163,7 +163,7 @@ export async function renderAdminOrdersView(container, state, events) {
                             <polyline points="10 9 9 9 8 9"></polyline>
                           </svg>
                         </button>
-                        <button class="action-icon-btn danger btn-delete-order" data-id="${o.id}" title="Delete order record">
+                        <button class="action-icon-btn danger btn-delete-order" data-id="${escapeHtml(o.id)}" title="Delete order record">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -190,7 +190,7 @@ export async function renderAdminOrdersView(container, state, events) {
             <div class="admin-modal-card" style="max-width: 520px;">
               <div class="admin-modal-header">
                 <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--color-primary);">
-                  Order Receipt #${viewingOrder.id}
+                  Order Receipt #${escapeHtml(viewingOrder.id)}
                 </h3>
                 <button class="btn-icon" id="btn-close-receipt" style="font-size: 1.2rem;">✕</button>
               </div>
@@ -199,26 +199,26 @@ export async function renderAdminOrdersView(container, state, events) {
                 <div style="background: var(--color-bg-light); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
                   <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: var(--color-text-subtle);">Customer:</span>
-                    <strong>${viewingOrder.customer_name}</strong>
+                    <strong>${escapeHtml(viewingOrder.customer_name || 'Customer')}</strong>
                   </div>
                   <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: var(--color-text-subtle);">Phone:</span>
-                    <span>${viewingOrder.customer_phone || 'N/A'}</span>
+                    <span>${escapeHtml(viewingOrder.customer_phone || 'N/A')}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: var(--color-text-subtle);">Address:</span>
-                    <span style="text-align: right; max-width: 250px;">${viewingOrder.delivery_address}</span>
+                    <span style="text-align: right; max-width: 250px;">${escapeHtml(viewingOrder.delivery_address || '')}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                     <span style="color: var(--color-text-subtle);">Order Channel:</span>
                     <strong style="color: #075e54; display: flex; align-items: center; gap: 4px;">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.19 8.19 0 0 1-5.82 2.42c-1.42 0-2.82-.37-4.06-1.07l-.29-.17-3.02.79.81-2.94-.19-.3a8.14 8.14 0 0 1-1.25-4.5c0-4.54 3.7-8.24 8.24-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.65.81-.8 1-.15.19-.3.21-.55.08-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.25-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.45.06-.69.32-.23.25-.9.88-.9 2.14 0 1.26.92 2.48 1.05 2.65.13.17 1.81 2.76 4.38 3.87.61.27 1.09.43 1.46.55.62.2 1.18.17 1.62.11.5-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.17-.48-.29z"/></svg>
-                      ${viewingOrder.payment_method || 'WhatsApp Direct'}
+                      ${escapeHtml(viewingOrder.payment_method || 'WhatsApp Direct')}
                     </strong>
                   </div>
                   <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--color-text-subtle);">Status:</span>
-                    <span class="status-badge ${(viewingOrder.status || 'Pending').toLowerCase()}">${viewingOrder.status}</span>
+                    <span class="status-badge ${(viewingOrder.status || 'Pending').toLowerCase()}">${escapeHtml(viewingOrder.status || 'Pending')}</span>
                   </div>
                 </div>
 
@@ -230,10 +230,10 @@ export async function renderAdminOrdersView(container, state, events) {
                   ${(viewingOrder.items || []).map(it => `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-radius: 8px; border: 1px solid rgba(18,45,37,0.08);">
                       <div>
-                        <div style="font-weight: 700; font-size: 0.9rem;">${it.name || it.product?.name || 'Furniture Item'}</div>
-                        <div style="font-size: 0.78rem; color: var(--color-text-subtle);">${it.color ? `Color: ${it.color}` : ''} • Qty: ${it.quantity}</div>
+                        <div style="font-weight: 700; font-size: 0.9rem;">${escapeHtml(it.name || it.product?.name || 'Furniture Item')}</div>
+                        <div style="font-size: 0.78rem; color: var(--color-text-subtle);">${it.color ? `Color: ${escapeHtml(it.color)}` : ''} • Qty: ${Number(it.quantity) || 1}</div>
                       </div>
-                      <strong style="font-size: 0.92rem;">${currency} ${((it.price || it.product?.price || 0) * (it.quantity || 1)).toLocaleString()}</strong>
+                      <strong style="font-size: 0.92rem;">${currency} ${((Number(it.price || it.product?.price) || 0) * (Number(it.quantity) || 1)).toLocaleString()}</strong>
                     </div>
                   `).join('')}
                 </div>
@@ -344,7 +344,7 @@ export async function renderAdminOrdersView(container, state, events) {
                             <span style="font-size: 0.76rem; color: var(--color-text-subtle);">${new Date(m.timestamp).toLocaleString()}</span>
                           </div>
                           <div style="font-size: 0.8rem; color: var(--color-text-subtle); margin-top: 2px;">
-                            Stage: <span class="status-badge ${(m.status || 'Pending').toLowerCase()}">${m.status}</span> &bull; 📍 ${escapeHtml(m.location || 'Dhangadhi')}
+                            Stage: <span class="status-badge ${(m.status || 'Pending').toLowerCase()}">${escapeHtml(m.status || 'Pending')}</span> &bull; 📍 ${escapeHtml(m.location || 'Dhangadhi')}
                           </div>
                           ${m.note ? `
                             <div style="font-size: 0.82rem; color: #333; margin-top: 6px; background: #fff; padding: 6px 10px; border-radius: 6px; border: 1px solid #e0e0e0;">
@@ -402,8 +402,12 @@ export async function renderAdminOrdersView(container, state, events) {
       select.addEventListener('change', async (e) => {
         const orderId = e.target.dataset.orderId;
         const newStatus = e.target.value;
-        await updateOrderStatus(orderId, newStatus);
-        events.emit('toast', { message: `Order #${orderId} marked as ${newStatus}`, type: 'success' });
+        try {
+          await updateOrderStatus(orderId, newStatus);
+          events.emit('toast', { message: `Order #${orderId} marked as ${newStatus}`, type: 'success' });
+        } catch (err) {
+          events.emit('toast', { message: `Failed to update status: ${err.message}`, type: 'danger' });
+        }
         orders = await fetchOrders();
         render();
       });
@@ -445,8 +449,12 @@ export async function renderAdminOrdersView(container, state, events) {
         const location = container.querySelector('#milestone-location-input')?.value || 'Dhangadhi Hub, Kailali';
         const note = container.querySelector('#milestone-note-input')?.value || '';
 
-        await updateOrderTracking(trackingOrder.id, { status, title, note, location });
-        events.emit('toast', { message: `Checkpoint "${title}" saved!`, type: 'success' });
+        try {
+          await updateOrderTracking(trackingOrder.id, { status, title, note, location });
+          events.emit('toast', { message: `Checkpoint "${title}" saved!`, type: 'success' });
+        } catch (err) {
+          events.emit('toast', { message: `Failed to save checkpoint: ${err.message}`, type: 'danger' });
+        }
 
         orders = await fetchOrders();
         trackingOrder = orders.find(o => o.id === trackingOrder.id) || trackingOrder;
@@ -498,8 +506,12 @@ export async function renderAdminOrdersView(container, state, events) {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
         if (confirm(`Delete order #${id} from the database?`)) {
-          await deleteOrder(id);
-          events.emit('toast', { message: `Order #${id} deleted`, type: 'info' });
+          try {
+            await deleteOrder(id);
+            events.emit('toast', { message: `Order #${id} deleted`, type: 'info' });
+          } catch (err) {
+            events.emit('toast', { message: `Failed to delete order: ${err.message}`, type: 'danger' });
+          }
           orders = await fetchOrders();
           render();
         }

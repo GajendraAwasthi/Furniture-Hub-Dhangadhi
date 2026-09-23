@@ -180,18 +180,8 @@ export async function checkIsSupabaseAdmin(user) {
     }
   }
 
-  // Local Supabase check: check cached and default admins
-  const admins = getLocalSupabaseAdmins();
-  const found = admins.find(a => {
-    const r = (a.role || '').replace(/['"]/g, '').trim().toLowerCase();
-    if (r !== 'admin') return false;
-    const aEmail = (a.email || '').trim().toLowerCase();
-    const aId = (a.id || '').trim();
-    const aUserId = (a.user_id || '').trim();
-    return (email && aEmail === email) || (userId && (aId === userId || aUserId === userId));
-  });
-
-  return Boolean(found);
+  // Authorization must fail closed - never trust browser-writable localStorage cache
+  return false;
 }
 
 /**
@@ -579,7 +569,7 @@ export async function createOrder(order) {
       customerEmail = null;
     }
 
-    const { data, error } = await client.from('orders').insert({
+    const orderPayload = {
       id: order.id,
       customer_name: order.customer_name || order.name,
       customer_email: customerEmail,
@@ -591,15 +581,36 @@ export async function createOrder(order) {
       status: order.status || 'Pending',
       notes: orderNotes,
       tracking_history: initialHistory
-    });
+    };
 
-    if (error) {
-      console.error('Supabase order creation error:', error);
-      throw new Error(error.message || 'Database rejected order creation. Please verify order details.');
+    // 1. Prefer transactional place_order RPC with authoritative server pricing & stock reservation
+    let persistedOrder = null;
+    try {
+      const { data: rpcData, error: rpcError } = await client.rpc('place_order', { p_order: orderPayload });
+      if (!rpcError && rpcData) {
+        persistedOrder = typeof rpcData === 'object' ? rpcData : orderPayload;
+      } else if (rpcError && rpcError.message && !rpcError.message.includes('function public.place_order') && !rpcError.message.includes('could not find function')) {
+        console.error('place_order RPC rejected order:', rpcError);
+        throw new Error(rpcError.message || 'Database rejected order creation. Please verify order details.');
+      }
+    } catch (e) {
+      if (e.message && !e.message.includes('function public.place_order') && !e.message.includes('could not find function')) {
+        throw e;
+      }
+    }
+
+    // 2. Direct INSERT fallback when place_order RPC is not yet provisioned
+    if (!persistedOrder) {
+      const { data, error } = await client.from('orders').insert(orderPayload);
+      if (error) {
+        console.error('Supabase order creation error:', error);
+        throw new Error(error.message || 'Database rejected order creation. Please verify order details.');
+      }
+      persistedOrder = orderPayload;
     }
   }
 
-  // Update local cache after successful persistence
+  // Update local cache strictly after successful persistence
   const orderWithTracking = {
     ...order,
     tracking_history: initialHistory
@@ -618,7 +629,7 @@ export async function fetchOrderByReference(orderRef, phone = null) {
 
   const client = getClient();
   if (client) {
-    // 1. Try secure RPC function (accessible anonymously without leaking other orders)
+    // 1. Try secure RPC function returning safe tracking projection without PII
     try {
       const { data, error } = await client.rpc('track_order', {
         p_order_id: cleanRef,
@@ -630,23 +641,9 @@ export async function fetchOrderByReference(orderRef, phone = null) {
     } catch (e) {
       console.warn('RPC track_order lookup fallback:', e);
     }
-
-    // 2. Direct table lookup attempt
-    try {
-      let query = client.from('orders').select('*').or(`id.eq.${cleanRef},id.eq.FH-${cleanRef}`);
-      if (cleanPhone) {
-        query = query.ilike('customer_phone', `%${cleanPhone}%`);
-      }
-      const { data, error } = await query.maybeSingle();
-      if (!error && data) {
-        return data;
-      }
-    } catch (e) {
-      console.warn('Supabase direct order fetch fallback:', e);
-    }
   }
 
-  // 3. Fallback to local storage order records
+  // 2. Fallback to local storage order records
   const localOrders = getLocalOrders();
   const foundLocal = localOrders.find(o => {
     const idMatch = (o.id && (o.id.toLowerCase() === cleanRef.toLowerCase() || o.id.toLowerCase() === `fh-${cleanRef}`.toLowerCase())) ||
@@ -656,7 +653,7 @@ export async function fetchOrderByReference(orderRef, phone = null) {
   });
   if (foundLocal) return foundLocal;
 
-  // 4. Fallback to customer profile saved orders
+  // 3. Fallback to customer profile saved orders
   if (typeof localStorage !== 'undefined') {
     try {
       const custOrders = JSON.parse(localStorage.getItem('fh_customer_orders') || '[]');
@@ -698,24 +695,29 @@ export async function updateOrderTracking(orderId, { status, title, note, locati
     timestamp: new Date().toISOString()
   };
 
-  let updatedHistory = [];
-  if (order) {
-    order.status = newStatus;
-    if (note) order.notes = note;
-    const history = Array.isArray(order.tracking_history) ? [...order.tracking_history] : [];
-    history.push(milestone);
-    order.tracking_history = history;
-    updatedHistory = history;
-    saveLocalOrders(local);
-  }
+  let updatedHistory = order && Array.isArray(order.tracking_history) ? [...order.tracking_history] : [];
+  updatedHistory.push(milestone);
 
+  // Await and verify cloud mutation FIRST before mutating local state
   if (client) {
     const updatePayload = { status: newStatus };
     if (note) updatePayload.notes = note;
     if (updatedHistory.length > 0) {
       updatePayload.tracking_history = updatedHistory;
     }
-    await client.from('orders').update(updatePayload).eq('id', orderId);
+    const { error } = await client.from('orders').update(updatePayload).eq('id', orderId);
+    if (error) {
+      console.error('Supabase updateOrderTracking failed:', error);
+      throw new Error(`Failed to update order in cloud database: ${error.message}`);
+    }
+  }
+
+  // Update local cache strictly after cloud update succeeds
+  if (order) {
+    order.status = newStatus;
+    if (note) order.notes = note;
+    order.tracking_history = updatedHistory;
+    saveLocalOrders(local);
   }
 
   return order;
@@ -723,12 +725,18 @@ export async function updateOrderTracking(orderId, { status, title, note, locati
 
 export async function deleteOrder(orderId) {
   const client = getClient();
+  // Await cloud delete FIRST before mutating local state
+  if (client) {
+    const { error } = await client.from('orders').delete().eq('id', orderId);
+    if (error) {
+      console.error('Supabase deleteOrder failed:', error);
+      throw new Error(`Failed to delete order from cloud database: ${error.message}`);
+    }
+  }
+
   const local = getLocalOrders().filter(o => o.id !== orderId);
   saveLocalOrders(local);
-
-  if (client) {
-    await client.from('orders').delete().eq('id', orderId);
-  }
+  return { success: true };
 }
 
 // ==========================================================================

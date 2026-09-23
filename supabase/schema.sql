@@ -157,22 +157,211 @@ AS $$
   );
 $$;
 
--- Security Definer function to track a specific order by reference or phone without exposing the orders table
+-- Drop existing track_order to allow changing return type
+DROP FUNCTION IF EXISTS public.track_order(text, text);
+
+-- Security Definer function to return a safe tracking projection without leaking customer PII
 CREATE OR REPLACE FUNCTION public.track_order(p_order_id text, p_phone text DEFAULT NULL)
-RETURNS SETOF public.orders
-LANGUAGE sql
+RETURNS TABLE (
+  id text,
+  status text,
+  tracking_history jsonb,
+  created_at timestamptz,
+  customer_name_masked text,
+  delivery_city text
+)
+LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 STABLE
 AS $$
-  SELECT * FROM public.orders
+BEGIN
+  -- An unauthenticated lookup without verified phone factor is refused to prevent enumeration
+  -- Use auth.uid() check because PostgREST anon requests contain a non-null auth.jwt() with role: anon
+  IF (p_phone IS NULL OR p_phone = '') AND auth.uid() IS NULL AND NOT public.is_admin() THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT 
+    o.id,
+    o.status,
+    o.tracking_history,
+    o.created_at,
+    CASE 
+      WHEN o.customer_name IS NOT NULL AND length(o.customer_name) > 2 
+      THEN substring(o.customer_name from 1 for 2) || '***'
+      ELSE 'Customer'
+    END AS customer_name_masked,
+    COALESCE(split_part(o.delivery_address, ',', -1), 'Dhangadhi') AS delivery_city
+  FROM public.orders o
   WHERE (
-    id = p_order_id 
-    OR id = 'FH-' || p_order_id
-    OR id = REPLACE(p_order_id, '#', '')
+    o.id = p_order_id 
+    OR o.id = 'FH-' || p_order_id
+    OR o.id = REPLACE(p_order_id, '#', '')
   )
-  AND (p_phone IS NULL OR customer_phone = p_phone OR customer_phone LIKE '%' || p_phone)
+  AND (
+    -- Require valid digits only to prevent wildcard '%' or empty string bypass
+    (p_phone IS NOT NULL AND p_phone ~ '^[0-9]+$' AND (o.customer_phone = p_phone OR o.customer_phone LIKE '%' || p_phone))
+    OR (auth.uid() IS NOT NULL AND o.customer_email = (auth.jwt()->>'email'))
+    OR public.is_admin()
+  )
   LIMIT 1;
+END;
+$$;
+
+-- Transactional RPC to place orders with server-side price recalculation and inventory locking
+CREATE OR REPLACE FUNCTION public.place_order(p_order jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_order_id text;
+  v_customer_id text;
+  v_customer_email text;
+  v_customer_phone text;
+  v_customer_name text;
+  v_delivery_address text;
+  v_payment_method text;
+  v_notes text;
+  v_items jsonb;
+  v_item jsonb;
+  v_product_id text;
+  v_qty int;
+  v_product_row record;
+  v_calculated_total numeric := 0;
+  v_order_items jsonb := '[]'::jsonb;
+  v_created_order record;
+  v_caller_email text;
+BEGIN
+  -- 1. Extract and sanitize inputs
+  v_order_id := COALESCE(p_order->>'id', 'FH-' || to_char(NOW(), 'YYYYMMDD-HH24MISS') || '-' || (FLOOR(1000 + RANDOM() * 9000)::text));
+  v_customer_name := TRIM(COALESCE(p_order->>'customer_name', ''));
+  v_customer_phone := TRIM(COALESCE(p_order->>'customer_phone', ''));
+  v_delivery_address := TRIM(COALESCE(p_order->>'delivery_address', ''));
+  v_payment_method := COALESCE(p_order->>'payment_method', 'WhatsApp Direct');
+  v_notes := COALESCE(p_order->>'notes', '');
+  v_items := p_order->'items';
+
+  IF v_customer_name = '' THEN
+    RAISE EXCEPTION 'Customer name is required';
+  END IF;
+
+  IF v_customer_phone = '' OR length(v_customer_phone) < 10 THEN
+    RAISE EXCEPTION 'Valid 10-digit customer phone number is required';
+  END IF;
+
+  IF v_delivery_address = '' THEN
+    RAISE EXCEPTION 'Delivery address is required';
+  END IF;
+
+  IF v_items IS NULL OR jsonb_array_length(v_items) = 0 THEN
+    RAISE EXCEPTION 'Order must contain at least one item';
+  END IF;
+
+  -- 2. Handle identity binding: check auth.uid() because anon requests carry a non-null anon JWT
+  IF auth.uid() IS NOT NULL THEN
+    v_caller_email := auth.jwt()->>'email';
+    v_customer_email := v_caller_email;
+    v_customer_id := auth.uid()::text;
+  ELSE
+    -- Unauthenticated guest checkout: customer_email is strictly NULL
+    v_customer_email := NULL;
+    v_customer_id := 'guest';
+  END IF;
+
+  -- 3. Validate items, lock product inventory, recalculate pricing authoritatively
+  FOR v_item IN SELECT * FROM jsonb_array_elements(v_items)
+  LOOP
+    v_product_id := COALESCE(v_item->>'id', v_item->'product'->>'id');
+    v_qty := COALESCE((v_item->>'quantity')::int, 1);
+
+    IF v_qty <= 0 THEN
+      RAISE EXCEPTION 'Invalid item quantity: %', v_qty;
+    END IF;
+
+    -- Lock product row to prevent race conditions & overselling
+    SELECT id, name, price, stock_quantity, image, category
+    INTO v_product_row
+    FROM public.products
+    WHERE id = v_product_id
+    FOR UPDATE;
+
+    -- Reject unknown product IDs to enforce authoritative database pricing
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Unknown product: %', COALESCE(v_product_id, '(missing id)');
+    ELSE
+      -- Deduct inventory if stock is tracked
+      IF v_product_row.stock_quantity IS NOT NULL AND v_product_row.stock_quantity < v_qty THEN
+        RAISE EXCEPTION 'Insufficient stock for product "%". Requested: %, Available: %', v_product_row.name, v_qty, v_product_row.stock_quantity;
+      END IF;
+
+      IF v_product_row.stock_quantity IS NOT NULL THEN
+        UPDATE public.products 
+        SET stock_quantity = stock_quantity - v_qty 
+        WHERE id = v_product_id;
+      END IF;
+
+      -- Add item with canonical price from database
+      v_calculated_total := v_calculated_total + (v_product_row.price * v_qty);
+      v_order_items := v_order_items || jsonb_build_array(jsonb_build_object(
+        'id', v_product_row.id,
+        'name', v_product_row.name,
+        'price', v_product_row.price,
+        'quantity', v_qty,
+        'image', v_product_row.image,
+        'category', v_product_row.category
+      ));
+    END IF;
+  END LOOP;
+
+  -- Apply coupon discount if specified and verified
+  IF (p_order->>'coupon_code') = 'HUB10' THEN
+    v_calculated_total := ROUND(v_calculated_total * 0.90, 2);
+  END IF;
+
+  -- 4. Insert into public.orders authoritatively
+  INSERT INTO public.orders (
+    id,
+    customer_id,
+    customer_name,
+    customer_email,
+    customer_phone,
+    delivery_address,
+    items,
+    total_amount,
+    payment_method,
+    status,
+    notes,
+    tracking_history,
+    created_at
+  ) VALUES (
+    v_order_id,
+    v_customer_id,
+    v_customer_name,
+    v_customer_email,
+    v_customer_phone,
+    v_delivery_address,
+    v_order_items,
+    v_calculated_total,
+    v_payment_method,
+    'Pending',
+    v_notes,
+    jsonb_build_array(jsonb_build_object(
+      'status', 'Pending',
+      'title', 'Order Placed & Registered',
+      'note', 'Order placed via WhatsApp Direct Checkout. Awaiting confirmation.',
+      'location', 'Dhangadhi Hub, Kailali',
+      'timestamp', to_char(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    )),
+    NOW()
+  )
+  RETURNING * INTO v_created_order;
+
+  RETURN to_jsonb(v_created_order);
+END;
 $$;
 
 -- 1. Products: anyone can browse; only verified admins can manage
