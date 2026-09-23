@@ -1116,6 +1116,223 @@ describe('Security Verification & Adversarial Audit Suite', () => {
       /Payment total mismatch/
     );
   });
+
+  test('27. Schema Source Invariants: Migrations, Indexes, and Function Security Attributes', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 1. Prisma initial migration schema source assertions
+    const migrationSql = fs.readFileSync(path.resolve(process.cwd(), 'prisma/migrations/0001_initial_schema/migration.sql'), 'utf-8');
+    assert.ok(
+      migrationSql.includes('CREATE UNIQUE INDEX IF NOT EXISTS uq_cart_items_nullsafe ON cart_items (cart_id, product_id, COALESCE(selected_color, \'\'));'),
+      'migration.sql must define null-safe uniqueness index on cart_items'
+    );
+    assert.ok(
+      migrationSql.includes('product_name_snapshot TEXT NOT NULL') &&
+      migrationSql.includes('sku_snapshot TEXT NOT NULL') &&
+      migrationSql.includes('unit_price_minor_snapshot BIGINT NOT NULL') &&
+      migrationSql.includes('line_total_minor BIGINT NOT NULL'),
+      'migration.sql order_items must define frozen snapshot columns'
+    );
+
+    // 2. Supabase schema source assertions
+    const schemaSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/schema.sql'), 'utf-8');
+    assert.ok(
+      schemaSql.includes('CREATE OR REPLACE FUNCTION public.place_order') &&
+      schemaSql.includes('SECURITY DEFINER') &&
+      schemaSql.includes('SET search_path = public'),
+      'place_order must be a SECURITY DEFINER function with explicit public search_path'
+    );
+    assert.ok(
+      schemaSql.includes('DROP POLICY IF EXISTS "Customers can create orders" ON public.orders;') &&
+      schemaSql.includes('DROP POLICY IF EXISTS "Public can create orders" ON public.orders;'),
+      'Direct order INSERT policies must be explicitly dropped for complete RLS lockdown'
+    );
+    assert.ok(
+      schemaSql.includes('ALTER TABLE public.products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER;') &&
+      schemaSql.includes('ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS user_id TEXT;'),
+      'Schema must define nullable products.stock_quantity and orders.user_id migrations'
+    );
+  });
+
+  test('28. Mocked-Supabase Behavior Suite: RPC Execution, Collision Retries, and Strict Confirmed Writes', async () => {
+    const { 
+      createOrder, 
+      saveProduct, 
+      deleteProduct, 
+      updateOrderTracking, 
+      setClientForTesting 
+    } = await import('../src/services/supabase.js');
+    const { updateCustomerProfile } = await import('../src/services/customer-auth.js');
+
+    try {
+      // 1. Mocked place_order RPC: Happy Path & Coupon Code Transmission
+      let rpcCallCount = 0;
+      let lastRpcPayload = null;
+
+      const mockClientHappy = {
+        auth: {
+          getSession: async () => ({
+            data: { session: { user: { id: 'sb-mock-user-1', email: 'verified.mock@test.com' } } }
+          })
+        },
+        rpc: async (funcName, args) => {
+          rpcCallCount++;
+          lastRpcPayload = args.p_order;
+          return {
+            data: {
+              id: args.p_order.id,
+              reference: args.p_order.id,
+              customer_name: args.p_order.customer_name,
+              customer_email: args.p_order.customer_email,
+              total_amount: args.p_order.total_amount,
+              status: 'Pending',
+              created_at: new Date().toISOString()
+            },
+            error: null
+          };
+        }
+      };
+
+      setClientForTesting(mockClientHappy);
+
+      const orderPayload = {
+        name: 'Mock Customer',
+        phone: '9848111222',
+        address: 'Dhangadhi Main Rd',
+        coupon_code: 'HUB10',
+        total: 10000,
+        items: [{ id: 'p1', name: 'Table', price: 10000, quantity: 1 }]
+      };
+
+      const placedOrder = await createOrder(orderPayload);
+      assert.equal(rpcCallCount, 1);
+      assert.equal(lastRpcPayload.coupon_code, 'HUB10', 'createOrder must pass coupon_code to place_order RPC');
+      assert.equal(lastRpcPayload.customer_email, 'verified.mock@test.com', 'createOrder must bind authenticated email');
+      assert.equal(placedOrder.status, 'Pending');
+
+      // 2. Mocked place_order RPC: Collision Retry on Postgres Code 23505
+      let retryCount = 0;
+      const seenIds = [];
+
+      const mockClientCollision = {
+        auth: {
+          getSession: async () => ({ data: { session: null } })
+        },
+        rpc: async (funcName, args) => {
+          retryCount++;
+          seenIds.push(args.p_order.id);
+          if (retryCount === 1) {
+            // First call triggers 23505 duplicate collision
+            return {
+              data: null,
+              error: { code: '23505', message: 'duplicate key value violates unique constraint orders_reference_key' }
+            };
+          }
+          // Second call succeeds with newly generated reference
+          return {
+            data: {
+              id: args.p_order.id,
+              reference: args.p_order.id,
+              customer_name: args.p_order.customer_name,
+              total_amount: args.p_order.total_amount,
+              status: 'Pending',
+              created_at: new Date().toISOString()
+            },
+            error: null
+          };
+        }
+      };
+
+      setClientForTesting(mockClientCollision);
+      const collisionResult = await createOrder(orderPayload);
+      assert.equal(retryCount, 2, 'createOrder must retry on unique collision (23505)');
+      assert.ok(seenIds.length === 2 && seenIds[0] !== seenIds[1], 'createOrder must generate fresh reference ID upon retry');
+      assert.equal(collisionResult.status, 'Pending');
+
+      // 3. Mocked place_order RPC: Rejection isolates failure and does NOT pollute local cache
+      const mockClientFailure = {
+        auth: { getSession: async () => ({ data: { session: null } }) },
+        rpc: async () => ({
+          data: null,
+          error: { code: 'P0001', message: 'Unknown product: prod-fake-999' }
+        })
+      };
+
+      setClientForTesting(mockClientFailure);
+      localStorage.removeItem('fh_local_orders');
+
+      await assert.rejects(
+        async () => await createOrder(orderPayload),
+        /Unknown product: prod-fake-999/
+      );
+      assert.equal(localStorage.getItem('fh_local_orders'), null, 'Failed RPC order must NEVER pollute local cache');
+
+      // 4. Confirmed Write: updateOrderTracking throws on empty .select() result
+      const mockClientEmptySelect = {
+        from: (table) => ({
+          update: () => ({
+            eq: () => ({
+              select: async () => ({ data: [], error: null })
+            })
+          }),
+          upsert: () => ({
+            select: async () => ({ data: [], error: null })
+          }),
+          delete: () => ({
+            eq: () => ({
+              select: async () => ({ data: [], error: null })
+            })
+          })
+        })
+      };
+
+      setClientForTesting(mockClientEmptySelect);
+
+      await assert.rejects(
+        async () => await updateOrderTracking('ord-missing-1', { status: 'Shipped' }),
+        /Order #ord-missing-1 was not found or could not be updated/
+      );
+
+      await assert.rejects(
+        async () => await saveProduct({ id: 'p-fail-1', name: 'Ghost Product', price: 500 }),
+        /Product could not be saved to cloud database/
+      );
+
+      await assert.rejects(
+        async () => await deleteProduct('p-fail-1'),
+        /Product "p-fail-1" was not found or could not be deleted/
+      );
+
+      // 5. Confirmed Write: updateCustomerProfile throws on sync failure and preserves local data
+      localStorage.setItem('fh_customer_session', JSON.stringify({
+        id: 'usr-profile-test',
+        email: 'profile.test@domain.com',
+        name: 'Original Name',
+        role: 'customer'
+      }));
+
+      const mockClientProfileFail = {
+        from: (table) => ({
+          upsert: async () => ({ error: { message: 'Cloud database unavailable' } })
+        })
+      };
+
+      setClientForTesting(mockClientProfileFail);
+
+      await assert.rejects(
+        async () => await updateCustomerProfile({ name: 'Unsaved New Name', phone: '9849999999' }),
+        /Cloud database unavailable/
+      );
+
+      const cachedProfile = JSON.parse(localStorage.getItem('fh_customer_session'));
+      assert.equal(cachedProfile.name, 'Original Name', 'Local profile cache must remain uncorrupted upon sync failure');
+
+    } finally {
+      // Always restore client to offline mode
+      setClientForTesting(null);
+    }
+  });
 });
 
 

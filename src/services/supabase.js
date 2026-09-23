@@ -59,6 +59,10 @@ export function getClient() {
   return supabaseInstance;
 }
 
+export function setClientForTesting(client) {
+  supabaseInstance = client;
+}
+
 // ==========================================================================
 // AUTHENTICATION METHODS
 // ==========================================================================

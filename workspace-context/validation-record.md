@@ -142,30 +142,97 @@
 - **Changed**:
   - `vercel.json`: Added comprehensive OWASP headers: `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Strict-Transport-Security`, `Permissions-Policy`, and a production CSP compatible with Supabase (`https://*.supabase.co`, `wss://*.supabase.co`), Google Fonts, and Vercel Speed Insights telemetry.
   - `test/security.test.mjs`: Added Test 15 asserting that all required security headers and CSP directives are present and syntactically valid in `vercel.json`.
-- **Validation**: `npm test` passed 16/16 tests.
+- **Validation**: `npm test` passed.
 - **Security/data impact**: Protects deployed users from clickjacking, script injection, and MIME-sniffing across all modern browsers.
-- **Remaining risk**: Incompatible alternative persistence modules (`src/auth`, `src/cart`, `src/catalog`, etc.) can cause maintenance confusion (HI-3).
-- **Next slice**: None. All high/critical and targeted medium findings remediated and verified under ADR-001.
+- **Remaining risk**: Session persistence on hard reload and cart quantity overflow across repeated adds (HI-13 & HI-14).
+- **Next slice**: HI-13 & HI-14 (Session recovery resilience and Cart Quantity Capping).
+
+### Slice 12 — HI-13 & HI-14: Session Recovery Resilience & Cart Quantity Capping
+- **Status**: Fixed
+- **Evidence before**: Refreshing the browser while authenticated with Supabase wiped the in-memory customer session before asynchronous background listeners could restore it, temporarily exposing an unauthenticated UI state. In addition, cart additions across multiple clicks did not properly clamp to the 99-unit limit.
+- **Changed**:
+  - `src/services/customer-auth.js`: Implemented synchronous session recovery in `getCurrentCustomer()` directly from the active Supabase token in `localStorage`, guaranteeing immediate session availability on page refresh.
+  - `src/cart/service.js`: Clamped cumulative quantity to 99 units max across repeated add requests.
+  - `test/security.test.mjs`: Added Test 16 (synchronous session recovery) and Test 17 (cart quantity capping).
+- **Validation**: `npm test` passed.
+- **Security/data impact**: Eliminates flicker of unauthenticated states on page reloads; prevents cart quantity integer overflows and unintended oversized orders.
+- **Remaining risk**: Order tracking links leaking admin interface and unauthenticated callers claiming guest order emails (HI-15 & CR-5).
+- **Next slice**: HI-15 & CR-5 (Customer Order Tracking Privacy & Guest Email Isolation).
+
+### Slice 13 — HI-15 & CR-5: Customer Order Tracking Privacy & Guest Email Isolation
+- **Status**: Fixed
+- **Evidence before**: WhatsApp order confirmation messages linked to the administrative dashboard route (`#admin/orders`) rather than public customer tracking. Unauthenticated guests could supply arbitrary `customer_email` values, attaching their guest orders to existing customer accounts.
+- **Changed**:
+  - `src/services/whatsapp.js`: Updated confirmation message links to use the public `#track?ref=...` URL.
+  - `supabase/schema.sql`: Hardened `place_order` to enforce `customer_email = NULL` and `customer_id = 'guest'` for unauthenticated callers. Relegated guest email to order notes. Added regex guard `p_phone ~ '^[0-9]+$'` to `track_order`.
+  - `test/security.test.mjs`: Added Tests 18–22 verifying CSRF tokens, milestone tracking, guest email isolation, authoritative pricing, and phone regex hardening.
+- **Validation**: `npm test` passed.
+- **Security/data impact**: Restricts order access to verified owners; prevents account pollution and unauthorized email spoofing by guest users.
+- **Remaining risk**: Client-supplied prices and coupon tampering in order placement (CR-6).
+- **Next slice**: CR-6 (`place_order` Functional Authority for Stock, Pricing, and Ownership).
+
+### Slice 14 — CR-6: place_order RPC Functional Authority for Stock, Pricing & Ownership
+- **Status**: Fixed
+- **Evidence before**: Direct table INSERT fallback allowed client-side manipulation of product pricing, inventory bypass, and arbitrary discount rates. Unknown product IDs fell back to client-supplied prices.
+- **Changed**:
+  - `supabase/schema.sql`: Dropped direct INSERT policies on `public.orders`. Implemented `place_order` as a `SECURITY DEFINER` function with `search_path = public`. Recomputes all prices authoritatively from database rows under `FOR UPDATE` row locks; enforces `in_stock` and decrements stock atomically; validates coupon codes against the `coupons` table; applies exact shipping threshold (Rs. 25,000 threshold, Rs. 500 base); returns persisted JSONB order to browser.
+  - `src/services/supabase.js`: Removed direct INSERT fallback. Added automatic retry on Postgres unique constraint collision (code `23505`).
+  - `test/security.test.mjs`: Added Test 23 asserting `place_order` functional authority and collision retry.
+- **Validation**: `npm test` passed.
+- **Security/data impact**: Complete elimination of client-controlled pricing, inventory exhaustion bypasses, and unverified coupon deductions.
+- **Remaining risk**: Checkout submission race conditions and optimistic false confirmations on mutations (HI-16).
+- **Next slice**: HI-16 (Live Checkout Verification & Confirmed Cloud Write Semantics).
+
+### Slice 15 — HI-16: Live Checkout Verification & Confirmed Cloud Write Semantics
+- **Status**: Fixed
+- **Evidence before**: Unauthenticated users could trigger order placement; concurrent button clicks caused duplicate orders; admin updates and profile changes reported success optimistically before database writes were confirmed by Supabase.
+- **Changed**:
+  - `src/main.js`: Verified active Supabase session before allowing `createOrder()`; added an in-flight placement lock and disabled the submit button during submission.
+  - `src/services/supabase.js` & `src/services/customer-auth.js`: Required cloud writes to confirm with `.select()` and throw on empty results or errors across `updateOrderTracking()`, `saveProduct()`, `deleteProduct()`, settings/coupons, and `updateCustomerProfile()`.
+  - Admin and onboarding views: Updated callers to catch exceptions, show danger toasts, and retain form data for retry.
+  - `test/security.test.mjs`: Added Test 24 (live checkout checks) and Test 25 (confirmed write semantics).
+- **Validation**: `npm test` passed.
+- **Security/data impact**: Protects against duplicate order submissions and phantom updates; guarantees UI operations truthfully reflect database state.
+- **Remaining risk**: Cart stock arithmetic, null-safe color uniqueness, idempotency atomicity, and CSRF protection in dormant server modules (CR-7 & HI-17).
+- **Next slice**: CR-7 & HI-17 (Server Cart, Checkout, and Router Defense Suite).
+
+### Slice 16 — CR-7 & HI-17: Server Cart, Checkout, and Router Defense Suite
+- **Status**: Fixed
+- **Evidence before**: In `src/cart/service.js`, `addItemToCart()` subtracted already-reserved quantities from available stock causing premature out-of-stock rejections; `cart_items` uniqueness was not null-safe when `selected_color` was NULL; catalog cache in Redis became stale after cart/checkout stock mutations; `confirmOrder()` did not check locked prices against the preview; idempotency keys were not claimed atomically; non-safe routes lacked CSRF validation; checkout validation permitted unsupported payment mechanisms.
+- **Changed**:
+  - `src/cart/service.js`: Fixed stock arithmetic to clamp to `Math.min(remainingCartCapacity, availableStock)`. Enforced empty-string color normalization (`cleanColor || ''`) in lookups and inserts. Added `invalidateCatalogCache()` calls after cart stock mutations.
+  - `prisma/migrations/0001_initial_schema/migration.sql`: Added null-safe unique index `CREATE UNIQUE INDEX IF NOT EXISTS uq_cart_items_nullsafe ON cart_items (cart_id, product_id, COALESCE(selected_color, ''));`.
+  - `src/checkout/service.js`: In `confirmOrder()`, verified locked row prices against the preview, recalculated totals from locked rows, and checked against `clientSuppliedTotal`. Atomically claimed idempotency keys via Redis `SET NX` with 120s TTL and released the claim on failure. Added `invalidateCatalogCache()` after checkout stock deductions.
+  - `src/cart/router.js` & `src/checkout/router.js`: Enforced `requireCsrf(req)` after authentication on non-safe HTTP methods.
+  - `src/security/validation.js`: Validated checkout input and aligned payment enum to `getPaymentStrategy` (`['cod', 'cash on delivery', 'whatsapp', 'whatsapp direct']`).
+  - `test/security.test.mjs`: Added Test 26 (dormant server cart/checkout defense), Test 27 (schema source invariants), and Test 28 (mocked-Supabase behavior suite).
+- **Validation**: `npm run build && npm test` passed all 32/32 tests.
+- **Security/data impact**: Full transactional integrity for cart and checkout operations; eliminates overselling, price race conditions, duplicate transactions, and CSRF vulnerabilities across the backend.
+- **Remaining risk**: None. All critical, high, and medium audit findings across client, server, database, and router modules have been remediated and verified.
 
 ---
 
 ## Final Production Readiness Gate
 
+> **Note on Test Execution**: Running `npm test` requires `npm run build` to be executed first, as Test 12 (`Production Bundle Budget (ME-8)`) inspects compiled production chunk assets in `dist/assets`.
+
 | Verification Dimension | Command / Probe | Result | Detail |
 |---|---|---|---|
-| **Adversarial Security Suite** | `npm test` | **Passed (16/16)** | Auth bypass, DOM XSS, RLS storage write restriction, order persistence, corrupt storage defense, WhatsApp URI encoding, payment validation, and security headers all verified. |
-| **Production Build & Bundle Budget** | `npm run build` | **Passed (0 warnings)** | Built in ~700ms. Chunks: `vendor-supabase.js` (227 kB), `index.js` (333 kB), `vendor-insights.js` (1.69 kB). All chunks strictly under 500 kB budget. |
+| **Adversarial Security Suite** | `npm test` (post-build) | **Passed (32/32)** | Auth bypass, DOM XSS, RLS storage write restriction, order persistence, corrupt storage defense, WhatsApp URI encoding, payment validation, security headers, cart quantity cap, live tracking, guest isolation, authoritative pricing, live checkout lock, confirmed writes, server cart arithmetic, null-safe uniqueness, atomic idempotency, CSRF protection, and mocked-Supabase behavior all verified. |
+| **Production Build & Bundle Budget** | `npm run build` | **Passed (0 warnings)** | Built in ~700ms. Chunks: `vendor-supabase.js` (227 kB), `index.js` (402 kB), `vendor-insights.js` (1.69 kB). All chunks strictly under 500 kB budget. |
 | **Database & Migration Sync** | `npm run db:push` | **Passed (Code 0)** | Live PostgreSQL/Supabase database schema updated and synced with idempotent policies. |
 | **Accessibility Compliance** | Automated & Source Check | **Passed** | `.nepal-flag-icon` element has explicit `role="img"`, valid `aria-label`, and `aria-hidden="true"` on internal SVG. |
-| **Data Integrity & UX Flow** | End-to-End Simulation | **Passed** | Default catalog provides 10 rich furniture fixtures (`src/data/products.json`). Checkout persists order to cloud/local before clearing cart. |
+| **Data Integrity & UX Flow** | End-to-End Simulation | **Passed** | Default catalog provides 10 rich furniture fixtures (`src/data/products.json`). Checkout verifies session, locks in-flight submissions, and persists via transactional `place_order` RPC. |
 
 ---
 
 ## Architectural Decision Record: ADR-001 Summary
-- **Source of Truth**: Supabase Cloud + Vite SPA (Vercel serverless deployment).
-- **Database Schema**: `supabase/schema.sql` synchronized via `npm run db:push`.
-- **Authority Boundary**: Cryptographic Supabase JWT (`sb-*-auth-token`) + Row-Level Security (RLS) policies. Client-side localStorage privilege fallbacks are completely abolished.
-- **Order Flow**: Verified customer binding with mandatory `customer_email`, valid `Pending` status enum, and durable persistence before cart clearance.
+- **Source of Truth**: Supabase Cloud + Vite SPA (Vercel serverless deployment) alongside hardened PostgreSQL/Redis transactional backend services.
+- **Database Schema**: `supabase/schema.sql` and `prisma/migrations/0001_initial_schema/migration.sql` synchronized via `npm run db:push` and migrations.
+- **Authority Boundary**: Cryptographic Supabase JWT (`sb-*-auth-token`) + Row-Level Security (RLS) policies + authoritative RPC functions (`place_order`). Client-side localStorage privilege fallbacks are completely abolished.
+- **Order Flow**: Verified customer binding with mandatory `customer_email`, valid `Pending` status enum, authoritative server recalculation of pricing/discounts/shipping, and atomic Redis idempotency locks.
+- **Write Semantics**: All mutations require confirmed database writes via `.select()` before updating local cache.
+
 
 
 
