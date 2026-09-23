@@ -268,7 +268,7 @@ events.on('order-placed', async (orderData = {}) => {
   // Push order directly into Supabase / local database first (source of truth)
   try {
     showGlobalBrandLoader('Finalizing order & preparing WhatsApp receipt...');
-    await createOrder({
+    const createdOrder = await createOrder({
       id: orderPayload.id,
       customer_name: orderPayload.name,
       customer_email: orderPayload.customerEmail,
@@ -277,18 +277,22 @@ events.on('order-placed', async (orderData = {}) => {
       items: orderPayload.items,
       total_amount: orderPayload.total,
       payment_method: orderPayload.paymentMethod,
+      coupon_code: state.couponApplied ? (state.couponCode || 'HUB10') : null,
       status: 'Pending',
       created_at: orderPayload.created_at
     });
 
     state.isCheckoutOpen = false;
     state.isReceiptOpen = true;
-    state.lastOrder = orderPayload;
+    state.lastOrder = {
+      ...orderPayload,
+      ...createdOrder
+    };
     state.cart = [];
     saveState();
-    saveCustomerOrder(orderPayload);
+    saveCustomerOrder(state.lastOrder);
     updateChrome();
-    showToast(`🎊 Order #${orderRef} placed successfully!`, 'success');
+    showToast(`🎊 Order #${state.lastOrder.id || orderRef} placed successfully!`, 'success');
 
     // Attempt auto-opening WhatsApp notification window if allowed by browser
     try {

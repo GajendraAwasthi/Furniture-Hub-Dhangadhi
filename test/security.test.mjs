@@ -684,11 +684,12 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     const path = await import('path');
     const schemaSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/schema.sql'), 'utf-8');
 
-    // Verification 1: RLS policy strictly rejects anon/null-JWT callers who supply a non-null customer_email
+    // Verification 1: Direct INSERT on orders table is removed, and place_order sets customer_email = NULL for unauthenticated callers
     assert.ok(
-      schemaSql.includes("(auth.role() = 'anon' OR auth.jwt() IS NULL)") &&
-      schemaSql.includes("customer_email IS NULL"),
-      'Orders RLS policy must mandate customer_email IS NULL for unauthenticated/guest branches'
+      schemaSql.includes('DROP POLICY IF EXISTS "Customers can create orders" ON public.orders;') &&
+      schemaSql.includes('v_customer_email := NULL;') &&
+      schemaSql.includes("v_customer_id := 'guest';"),
+      'Direct order INSERT policy must be removed and place_order must enforce customer_email IS NULL for guests'
     );
 
     // Verification 2: Ensure client createOrder service neutralizes unauthenticated email spoofing
@@ -706,7 +707,6 @@ describe('Security Verification & Adversarial Audit Suite', () => {
 
     const res = await createOrder(spoofOrderPayload);
     assert.ok(res, 'Guest order should succeed creation');
-    // In local state or notes, the contact info can be preserved without compromising account-ownership in DB
   });
 
   test('21. Authoritative Pricing & Guest Identity Integrity (place_order RPC)', async () => {
@@ -750,6 +750,71 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     assert.ok(
       pkgJson.scripts.build.includes('node scripts/convert-hero.js'),
       'Build script must generate optimized hero assets before bundling'
+    );
+  });
+
+  test('23. place_order Functional Authority: Stock, Pricing, Coupons, Shipping & Collision Retries', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const schemaSql = fs.readFileSync(path.resolve(process.cwd(), 'supabase/schema.sql'), 'utf-8');
+    const supabaseJs = fs.readFileSync(path.resolve(process.cwd(), 'src/services/supabase.js'), 'utf-8');
+
+    // 1. Schema migration includes nullable products.stock_quantity and orders.user_id
+    assert.ok(
+      schemaSql.includes('ALTER TABLE public.products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER;'),
+      'Schema must include nullable products.stock_quantity migration'
+    );
+    assert.ok(
+      schemaSql.includes('ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS user_id TEXT;'),
+      'Schema must include orders.user_id migration'
+    );
+
+    // 2. place_order enforces in_stock and stock decrements under FOR UPDATE, setting in_stock false at 0
+    assert.ok(
+      schemaSql.includes('IF NOT COALESCE(v_product_row.in_stock, true) THEN'),
+      'place_order must reject orders for out of stock items'
+    );
+    assert.ok(
+      schemaSql.includes('in_stock = (stock_quantity - v_qty > 0)') &&
+      schemaSql.includes('stock_quantity = stock_quantity - v_qty'),
+      'place_order must decrement counted stock and toggle in_stock to false at zero'
+    );
+    assert.ok(
+      schemaSql.includes('FOR UPDATE;'),
+      'place_order must lock rows under FOR UPDATE to prevent concurrency overselling'
+    );
+
+    // 3. Coupons store check and rejection of unknown codes
+    assert.ok(
+      schemaSql.includes('FROM public.coupons') &&
+      schemaSql.includes("RAISE EXCEPTION 'Invalid coupon code: %', v_coupon_code;"),
+      'place_order must query the coupons table and reject unknown codes'
+    );
+
+    // 4. Exact UI shipping threshold parity (25000 / 500)
+    assert.ok(
+      schemaSql.includes('CASE WHEN v_subtotal > 25000 THEN 0 ELSE 500 END'),
+      'place_order shipping threshold must match renderCartDrawer (Rs. 25,000 threshold, Rs. 500 base)'
+    );
+
+    // 5. Orders insert includes user_id and returns persisted order
+    assert.ok(
+      schemaSql.includes('user_id,') &&
+      schemaSql.includes('RETURN to_jsonb(v_created_order);'),
+      'place_order must insert user_id and return complete persisted JSONB order'
+    );
+
+    // 6. Direct INSERT fallback removed from client service
+    assert.ok(
+      !supabaseJs.includes("client.from('orders').insert"),
+      'createOrder must NOT contain any direct table INSERT fallback'
+    );
+
+    // 7. Collision retry for error code 23505
+    assert.ok(
+      supabaseJs.includes('23505') &&
+      supabaseJs.includes('isUniqueCollision'),
+      'createOrder must retry unique constraint collisions (23505) using the existing reference format'
     );
   });
 });

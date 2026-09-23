@@ -569,8 +569,11 @@ export async function createOrder(order) {
       customerEmail = null;
     }
 
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const initialId = order.id || ('FH-' + dateStr + '-' + Math.floor(100000 + Math.random() * 900000));
+
     const orderPayload = {
-      id: order.id,
+      id: initialId,
       customer_name: order.customer_name || order.name,
       customer_email: customerEmail,
       customer_phone: order.customer_phone || order.phone,
@@ -580,37 +583,71 @@ export async function createOrder(order) {
       payment_method: order.payment_method || order.paymentMethod || 'Cash on Delivery',
       status: order.status || 'Pending',
       notes: orderNotes,
+      coupon_code: order.coupon_code || order.couponCode || null,
       tracking_history: initialHistory
     };
 
-    // 1. Prefer transactional place_order RPC with authoritative server pricing & stock reservation
+    // Sole functional authority: transactional place_order RPC with authoritative pricing, stock & ownership
+    const MAX_RETRIES = 3;
     let persistedOrder = null;
-    try {
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       const { data: rpcData, error: rpcError } = await client.rpc('place_order', { p_order: orderPayload });
       if (!rpcError && rpcData) {
         persistedOrder = typeof rpcData === 'object' ? rpcData : orderPayload;
-      } else if (rpcError && rpcError.message && !rpcError.message.includes('function public.place_order') && !rpcError.message.includes('could not find function')) {
-        console.error('place_order RPC rejected order:', rpcError);
-        throw new Error(rpcError.message || 'Database rejected order creation. Please verify order details.');
+        break;
       }
-    } catch (e) {
-      if (e.message && !e.message.includes('function public.place_order') && !e.message.includes('could not find function')) {
-        throw e;
+
+      // Check for Postgres unique constraint collision (code 23505)
+      const isUniqueCollision = rpcError && (
+        rpcError.code === '23505' ||
+        (rpcError.message && (rpcError.message.includes('23505') || rpcError.message.toLowerCase().includes('duplicate key')))
+      );
+
+      if (isUniqueCollision && attempt < MAX_RETRIES - 1) {
+        const retryDateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        orderPayload.id = 'FH-' + retryDateStr + '-' + Math.floor(100000 + Math.random() * 900000);
+        continue;
       }
+
+      console.error('place_order RPC rejected order:', rpcError);
+      throw new Error(rpcError?.message || 'Database rejected order creation. Please verify order details.');
     }
 
-    // 2. Direct INSERT fallback when place_order RPC is not yet provisioned
-    if (!persistedOrder) {
-      const { data, error } = await client.from('orders').insert(orderPayload);
-      if (error) {
-        console.error('Supabase order creation error:', error);
-        throw new Error(error.message || 'Database rejected order creation. Please verify order details.');
-      }
-      persistedOrder = orderPayload;
-    }
+    // Hydrate returned order merging authoritative RPC result with caller-side presentation fields
+    const authoritativeTotal = persistedOrder && persistedOrder.total_amount != null 
+      ? Number(persistedOrder.total_amount) 
+      : (order.total_amount != null ? Number(order.total_amount) : Number(order.total || 0));
+
+    const authoritativeOrder = {
+      ...order,
+      ...(persistedOrder || {}),
+      id: persistedOrder?.id || orderPayload.id,
+      reference: persistedOrder?.id || orderPayload.id,
+      name: persistedOrder?.customer_name || order.customer_name || order.name,
+      customer_name: persistedOrder?.customer_name || order.customer_name || order.name,
+      phone: persistedOrder?.customer_phone || order.customer_phone || order.phone,
+      customer_phone: persistedOrder?.customer_phone || order.customer_phone || order.phone,
+      address: persistedOrder?.delivery_address || order.delivery_address || order.address,
+      delivery_address: persistedOrder?.delivery_address || order.delivery_address || order.address,
+      items: persistedOrder?.items || order.items,
+      total: authoritativeTotal,
+      total_amount: authoritativeTotal,
+      paymentMethod: persistedOrder?.payment_method || order.payment_method || order.paymentMethod,
+      payment_method: persistedOrder?.payment_method || order.payment_method || order.paymentMethod,
+      status: persistedOrder?.status || order.status || 'Pending',
+      tracking_history: persistedOrder?.tracking_history || initialHistory,
+      created_at: persistedOrder?.created_at || order.created_at || new Date().toISOString()
+    };
+
+    const local = getLocalOrders();
+    local.unshift(authoritativeOrder);
+    saveLocalOrders(local);
+
+    return authoritativeOrder;
   }
 
-  // Update local cache strictly after successful persistence
+  // Local fallback (when client is not configured, e.g. offline testing)
   const orderWithTracking = {
     ...order,
     tracking_history: initialHistory

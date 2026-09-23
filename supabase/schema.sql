@@ -89,8 +89,10 @@ CREATE TABLE IF NOT EXISTS public.customer_profiles (
 );
 
 -- Ensure schema migrations for pre-existing tables
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER;
 ALTER TABLE public.customer_profiles ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS user_id TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS customer_id TEXT;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS tracking_history JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.store_admins ADD COLUMN IF NOT EXISTS user_id TEXT;
 
@@ -210,7 +212,16 @@ BEGIN
 END;
 $$;
 
--- Transactional RPC to place orders with server-side price recalculation and inventory locking
+-- Ensure base promotional coupons are available in the coupons store
+INSERT INTO public.coupons (code, discount_percent, min_order_amount, is_active)
+VALUES 
+  ('HUB10', 10, 0, true),
+  ('FESTIVE2025', 10, 0, true)
+ON CONFLICT (code) DO UPDATE SET
+  discount_percent = EXCLUDED.discount_percent,
+  is_active = EXCLUDED.is_active;
+
+-- Transactional RPC to place orders with server-side price recalculation, inventory locking, and stock reservation
 CREATE OR REPLACE FUNCTION public.place_order(p_order jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -219,6 +230,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_order_id text;
+  v_user_id text;
   v_customer_id text;
   v_customer_email text;
   v_customer_phone text;
@@ -226,11 +238,16 @@ DECLARE
   v_delivery_address text;
   v_payment_method text;
   v_notes text;
+  v_coupon_code text;
   v_items jsonb;
   v_item jsonb;
   v_product_id text;
   v_qty int;
   v_product_row record;
+  v_coupon_row record;
+  v_subtotal numeric := 0;
+  v_discount_amount numeric := 0;
+  v_shipping_fee numeric := 0;
   v_calculated_total numeric := 0;
   v_order_items jsonb := '[]'::jsonb;
   v_created_order record;
@@ -238,11 +255,12 @@ DECLARE
 BEGIN
   -- 1. Extract and sanitize inputs
   v_order_id := COALESCE(p_order->>'id', 'FH-' || to_char(NOW(), 'YYYYMMDD-HH24MISS') || '-' || (FLOOR(1000 + RANDOM() * 9000)::text));
-  v_customer_name := TRIM(COALESCE(p_order->>'customer_name', ''));
-  v_customer_phone := TRIM(COALESCE(p_order->>'customer_phone', ''));
-  v_delivery_address := TRIM(COALESCE(p_order->>'delivery_address', ''));
-  v_payment_method := COALESCE(p_order->>'payment_method', 'WhatsApp Direct');
+  v_customer_name := TRIM(COALESCE(p_order->>'customer_name', p_order->>'name', ''));
+  v_customer_phone := TRIM(COALESCE(p_order->>'customer_phone', p_order->>'phone', ''));
+  v_delivery_address := TRIM(COALESCE(p_order->>'delivery_address', p_order->>'address', ''));
+  v_payment_method := COALESCE(p_order->>'payment_method', p_order->>'paymentMethod', 'WhatsApp Direct');
   v_notes := COALESCE(p_order->>'notes', '');
+  v_coupon_code := TRIM(COALESCE(p_order->>'coupon_code', p_order->>'couponCode', ''));
   v_items := p_order->'items';
 
   IF v_customer_name = '' THEN
@@ -265,10 +283,12 @@ BEGIN
   IF auth.uid() IS NOT NULL THEN
     v_caller_email := auth.jwt()->>'email';
     v_customer_email := v_caller_email;
+    v_user_id := auth.uid()::text;
     v_customer_id := auth.uid()::text;
   ELSE
     -- Unauthenticated guest checkout: customer_email is strictly NULL
     v_customer_email := NULL;
+    v_user_id := NULL;
     v_customer_id := 'guest';
   END IF;
 
@@ -283,7 +303,7 @@ BEGIN
     END IF;
 
     -- Lock product row to prevent race conditions & overselling
-    SELECT id, name, price, stock_quantity, image, category
+    SELECT id, name, price, stock_quantity, in_stock, image, category
     INTO v_product_row
     FROM public.products
     WHERE id = v_product_id
@@ -292,39 +312,87 @@ BEGIN
     -- Reject unknown product IDs to enforce authoritative database pricing
     IF NOT FOUND THEN
       RAISE EXCEPTION 'Unknown product: %', COALESCE(v_product_id, '(missing id)');
-    ELSE
-      -- Deduct inventory if stock is tracked
-      IF v_product_row.stock_quantity IS NOT NULL AND v_product_row.stock_quantity < v_qty THEN
+    END IF;
+
+    -- Enforce in_stock
+    IF NOT COALESCE(v_product_row.in_stock, true) THEN
+      RAISE EXCEPTION 'Product "%" is out of stock', v_product_row.name;
+    END IF;
+
+    -- Check and decrement counted stock under FOR UPDATE; set in_stock false at zero
+    IF v_product_row.stock_quantity IS NOT NULL THEN
+      IF v_product_row.stock_quantity < v_qty THEN
         RAISE EXCEPTION 'Insufficient stock for product "%". Requested: %, Available: %', v_product_row.name, v_qty, v_product_row.stock_quantity;
       END IF;
 
-      IF v_product_row.stock_quantity IS NOT NULL THEN
-        UPDATE public.products 
-        SET stock_quantity = stock_quantity - v_qty 
-        WHERE id = v_product_id;
-      END IF;
-
-      -- Add item with canonical price from database
-      v_calculated_total := v_calculated_total + (v_product_row.price * v_qty);
-      v_order_items := v_order_items || jsonb_build_array(jsonb_build_object(
-        'id', v_product_row.id,
-        'name', v_product_row.name,
-        'price', v_product_row.price,
-        'quantity', v_qty,
-        'image', v_product_row.image,
-        'category', v_product_row.category
-      ));
+      UPDATE public.products 
+      SET 
+        stock_quantity = stock_quantity - v_qty,
+        in_stock = (stock_quantity - v_qty > 0)
+      WHERE id = v_product_id;
     END IF;
+
+    -- Add item with canonical price from database
+    v_subtotal := v_subtotal + (v_product_row.price * v_qty);
+    v_order_items := v_order_items || jsonb_build_array(jsonb_build_object(
+      'id', v_product_row.id,
+      'name', v_product_row.name,
+      'price', v_product_row.price,
+      'quantity', v_qty,
+      'image', v_product_row.image,
+      'category', v_product_row.category
+    ));
   END LOOP;
 
-  -- Apply coupon discount if specified and verified
-  IF (p_order->>'coupon_code') = 'HUB10' THEN
-    v_calculated_total := ROUND(v_calculated_total * 0.90, 2);
+  -- 4. Check coupons store before hard-coding codes. Reject unknown codes.
+  IF v_coupon_code <> '' THEN
+    SELECT discount_percent, discount_fixed, min_order_amount, is_active, expiry_date
+    INTO v_coupon_row
+    FROM public.coupons
+    WHERE UPPER(code) = UPPER(v_coupon_code);
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Invalid coupon code: %', v_coupon_code;
+    END IF;
+
+    IF NOT v_coupon_row.is_active THEN
+      RAISE EXCEPTION 'Coupon code % is inactive', v_coupon_code;
+    END IF;
+
+    IF v_coupon_row.expiry_date IS NOT NULL AND v_coupon_row.expiry_date < CURRENT_DATE THEN
+      RAISE EXCEPTION 'Coupon code % has expired', v_coupon_code;
+    END IF;
+
+    IF v_subtotal < COALESCE(v_coupon_row.min_order_amount, 0) THEN
+      RAISE EXCEPTION 'Order amount must be at least Rs. % to use coupon %', v_coupon_row.min_order_amount, v_coupon_code;
+    END IF;
+
+    IF v_coupon_row.discount_percent > 0 THEN
+      v_discount_amount := ROUND(v_subtotal * (v_coupon_row.discount_percent::numeric / 100.0));
+    ELSIF v_coupon_row.discount_fixed > 0 THEN
+      v_discount_amount := LEAST(v_subtotal, v_coupon_row.discount_fixed);
+    END IF;
+
+    UPDATE public.coupons
+    SET usage_count = usage_count + 1
+    WHERE UPPER(code) = UPPER(v_coupon_code);
   END IF;
 
-  -- 4. Insert into public.orders authoritatively
+  -- 5. Copy shipping threshold comparison and base amount exactly from renderCartDrawer:
+  -- const shipping = subtotal > 0 ? (subtotal > 25000 ? 0 : 500) : 0;
+  v_shipping_fee := CASE 
+    WHEN v_subtotal > 0 THEN 
+      CASE WHEN v_subtotal > 25000 THEN 0 ELSE 500 END 
+    ELSE 0 
+  END;
+
+  -- const total = Math.max(0, subtotal - discount + shipping);
+  v_calculated_total := GREATEST(0, v_subtotal - v_discount_amount + v_shipping_fee);
+
+  -- 6. Insert into public.orders authoritatively
   INSERT INTO public.orders (
     id,
+    user_id,
     customer_id,
     customer_name,
     customer_email,
@@ -339,6 +407,7 @@ BEGIN
     created_at
   ) VALUES (
     v_order_id,
+    v_user_id,
     v_customer_id,
     v_customer_name,
     v_customer_email,
@@ -360,6 +429,7 @@ BEGIN
   )
   RETURNING * INTO v_created_order;
 
+  -- Return persisted order values to the browser
   RETURN to_jsonb(v_created_order);
 END;
 $$;
@@ -372,21 +442,11 @@ CREATE POLICY "Admins can manage products" ON public.products FOR ALL USING (
   public.is_admin()
 );
 
--- 2. Orders: customers create own orders; customers view own orders; admins manage all
-CREATE POLICY "Customers can create orders" ON public.orders FOR INSERT WITH CHECK (
-  (
-    (auth.jwt() IS NOT NULL AND (customer_email = (auth.jwt()->>'email') OR customer_email IS NULL))
-    OR (
-      (auth.role() = 'anon' OR auth.jwt() IS NULL)
-      AND customer_email IS NULL
-    )
-  )
-  AND customer_phone IS NOT NULL
-  AND customer_name IS NOT NULL
-  AND delivery_address IS NOT NULL
-  AND total_amount >= 0
-  AND status = 'Pending'
-);
+-- 2. Orders: All orders are created authoritatively through public.place_order RPC.
+-- Direct INSERT on public.orders table is completely disabled for security and data integrity.
+DROP POLICY IF EXISTS "Customers can create orders" ON public.orders;
+DROP POLICY IF EXISTS "Public can create orders" ON public.orders;
+
 CREATE POLICY "Customers view own orders" ON public.orders FOR SELECT USING (
   (auth.jwt() IS NOT NULL AND customer_email = (auth.jwt()->>'email'))
   OR public.is_admin()
