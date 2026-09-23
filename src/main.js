@@ -599,6 +599,134 @@ function updateChrome() {
   }
 }
 
+// Route resolution supporting both pathname and hash routes
+function resolveRoute() {
+  const hash = window.location.hash || '';
+  const [rawHashRoute, hashQuery] = hash.split('?');
+  const rawPathname = window.location.pathname || '/';
+  const pathname = rawPathname.replace(/\/+$/, '') || '/';
+
+  // Merge query parameters from pathname search (?...) and hash query (?...)
+  const params = new URLSearchParams(window.location.search || '');
+  if (hashQuery) {
+    const hp = new URLSearchParams(hashQuery);
+    hp.forEach((val, key) => params.set(key, val));
+  }
+
+  // 1. If explicit hash route is provided (e.g. #shop, #admin/orders)
+  if (rawHashRoute && rawHashRoute !== '#' && rawHashRoute !== '') {
+    // If navigating via hash while on an unknown path or subpath, clean the pathname to '/'
+    if (pathname !== '/' && pathname !== '/index.html') {
+      try {
+        window.history.replaceState(null, '', '/' + hash);
+      } catch (_) {}
+    }
+    return { route: rawHashRoute, params };
+  }
+
+  // 2. No hash route provided: evaluate pathname
+  if (pathname === '/' || pathname === '/index.html' || pathname === '/home') {
+    return { route: '#home', params };
+  }
+  if (pathname === '/shop') {
+    return { route: '#shop', params };
+  }
+  if (pathname === '/track' || pathname === '/track-order' || pathname === '/order-tracking') {
+    return { route: '#track', params };
+  }
+  if (pathname === '/product-detail') {
+    return { route: '#product-detail', params };
+  }
+  if (pathname === '/about') {
+    return { route: '#about', params };
+  }
+  if (pathname === '/faq' || pathname === '/faqs') {
+    return { route: '#faq', params };
+  }
+  if (pathname === '/terms' || pathname === '/terms-and-conditions') {
+    return { route: '#terms', params };
+  }
+  if (pathname === '/privacy' || pathname === '/privacy-policy') {
+    return { route: '#privacy', params };
+  }
+  if (pathname === '/onboarding' || pathname === '/complete-profile') {
+    return { route: '#onboarding', params };
+  }
+  if (pathname === '/customer' || pathname === '/customer/dashboard' || pathname === '/customer-dashboard' || pathname === '/account' || pathname === '/dashboard') {
+    return { route: '#customer/dashboard', params };
+  }
+  if (pathname === '/profile') {
+    return { route: '#profile', params };
+  }
+  if (pathname === '/login') {
+    return { route: '#login', params };
+  }
+  if (pathname === '/register') {
+    return { route: '#register', params };
+  }
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    return { route: '#' + pathname.replace(/^\/+/, ''), params };
+  }
+  if (pathname === '/404' || pathname === '/notfound' || pathname === '/not-found') {
+    return { route: '#404', params };
+  }
+
+  // Any unrecognized path (e.g. /sfaskdkasjjfasjfhjvjaksfjhvjbsj) routes to 404
+  return { route: '#404', params };
+}
+
+function updatePageMeta(route, params) {
+  let title = 'Furniture Hub Dhangadhi | #1 Furniture Store in Dhangadhi | फर्निचर हब';
+  let isNotFound = false;
+
+  if (route === '#shop') {
+    title = 'Shop Furniture Collection | Furniture Hub Dhangadhi';
+  } else if (route === '#track' || route === '#track-order' || route === '#order-tracking') {
+    title = 'Track Your Order | Furniture Hub Dhangadhi';
+  } else if (route === '#product-detail') {
+    const pid = params?.get('id');
+    const p = pid && Array.isArray(state.products) ? state.products.find(x => x.id === pid) : null;
+    title = p ? `${p.name} | Furniture Hub Dhangadhi` : 'Product Details | Furniture Hub Dhangadhi';
+  } else if (route === '#about') {
+    title = 'About Us | Furniture Hub Dhangadhi';
+  } else if (route === '#faq' || route === '#faqs') {
+    title = 'Frequently Asked Questions | Furniture Hub Dhangadhi';
+  } else if (route === '#terms') {
+    title = 'Terms & Conditions | Furniture Hub Dhangadhi';
+  } else if (route === '#privacy') {
+    title = 'Privacy Policy | Furniture Hub Dhangadhi';
+  } else if (route === '#admin' || route.startsWith('#admin/')) {
+    title = 'Admin Workspace | Furniture Hub Dhangadhi';
+  } else if (route === '#onboarding' || route === '#complete-profile') {
+    title = 'Complete Profile | Furniture Hub Dhangadhi';
+  } else if (route === '#customer/dashboard' || route === '#profile' || route === '#customer-dashboard' || route === '#account' || route === '#dashboard') {
+    title = 'Customer Dashboard | Furniture Hub Dhangadhi';
+  } else if (route === '#404' || route === '#notfound' || route === '#not-found') {
+    title = 'Page Not Found (404) | Furniture Hub Dhangadhi';
+    isNotFound = true;
+  } else if (route === '#home' || route === '' || route === '#') {
+    title = 'Furniture Hub Dhangadhi | #1 Furniture Store in Dhangadhi | फर्निचर हब';
+  } else {
+    title = 'Page Not Found (404) | Furniture Hub Dhangadhi';
+    isNotFound = true;
+  }
+
+  document.title = title;
+
+  // Manage robots meta tag to avoid indexing 404 pages
+  let robotsMeta = document.querySelector('meta[name="robots"]');
+  if (isNotFound) {
+    if (!robotsMeta) {
+      robotsMeta = document.createElement('meta');
+      robotsMeta.name = 'robots';
+      document.head.appendChild(robotsMeta);
+    }
+    robotsMeta.content = 'noindex, nofollow';
+  } else if (robotsMeta) {
+    robotsMeta.content = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+  }
+}
+
 // Router & View Rendering
 async function renderCurrentView() {
   const appContainer = document.getElementById('app-view');
@@ -609,19 +737,18 @@ async function renderCurrentView() {
   const floatingWaContainer = document.getElementById('floating-whatsapp-container');
   if (!appContainer) return;
 
-  const rawHash = window.location.hash || '#home';
-  const [route, queryString] = rawHash.split('?');
-  const params = new URLSearchParams(queryString || '');
-
   // If the URL contains an OAuth token, wait for Supabase to finish session processing
-  if (rawHash.includes('access_token=') || rawHash.includes('refresh_token=')) {
+  if (window.location.hash.includes('access_token=') || window.location.hash.includes('refresh_token=')) {
     return;
   }
+
+  const { route, params } = resolveRoute();
+  updatePageMeta(route, params);
 
   window.scrollTo({ top: 0, behavior: 'instant' });
 
   // Admin Portal Routes with Strict Role Guard
-  if (route.startsWith('#admin')) {
+  if (route === '#admin' || route.startsWith('#admin/')) {
     // Single Unified Portal redirection: #admin/login routes to unified portal
     if (route === '#admin/login') {
       state.customerAuthTab = 'login';
@@ -960,8 +1087,12 @@ events.on('products-updated', (updatedList) => {
 
 window.addEventListener('hashchange', () => {
   if (speedInsights?.setRoute) {
-    speedInsights.setRoute(window.location.hash || '#home');
+    speedInsights.setRoute(window.location.hash || window.location.pathname || '#home');
   }
+  renderCurrentView();
+});
+
+window.addEventListener('popstate', () => {
   renderCurrentView();
 });
 

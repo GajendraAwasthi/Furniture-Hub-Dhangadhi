@@ -18,7 +18,7 @@ export function renderNavbar(container, state, events) {
           </button>
 
           <!-- Logo from Figma Screenshot 1 -->
-          <a href="#home" class="figma-logo-wrap" id="nav-brand-logo">
+          <a href="/#home" class="figma-logo-wrap" id="nav-brand-logo">
             <img src="/images/furniture-hub-logo.png" alt="Furniture Hub Dhangadhi" class="figma-logo-img">
           </a>
         </div>
