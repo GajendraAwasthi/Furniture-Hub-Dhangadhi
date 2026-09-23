@@ -373,8 +373,11 @@ export async function fetchProducts() {
   if (client) {
     try {
       const { data, error } = await client.from('products').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         return data.map(normalizeProductFromDb);
+      }
+      if (error) {
+        console.warn('Supabase product fetch failed, using local store:', error);
       }
     } catch (e) {
       console.warn('Supabase product fetch failed, using local store:', e);
@@ -536,8 +539,11 @@ export async function fetchOrders() {
   if (client) {
     try {
       const { data, error } = await client.from('orders').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         return data;
+      }
+      if (error) {
+        console.warn('Supabase orders fetch error, using local:', error);
       }
     } catch (e) {
       console.warn('Supabase orders fetch error, using local:', e);
