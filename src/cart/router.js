@@ -1,4 +1,5 @@
 import { optionalAuth } from '../auth/middleware.js';
+import { requireCsrf } from '../security/csrf.js';
 import { 
   getOrCreateCart, 
   getCartDetails, 
@@ -18,6 +19,9 @@ export async function handleCartRequest(req) {
 
   // Attach session context if customer is logged in
   await optionalAuth(req);
+
+  // CSRF validation for non-safe state-changing methods
+  requireCsrf(req);
 
   // Extract signed cart session cookie
   let signedCartToken = null;

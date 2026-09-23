@@ -1,6 +1,8 @@
 import { requireAuth } from '../auth/middleware.js';
 import { generateOrderPreview, confirmOrder } from './service.js';
 import { createAddress, getUserAddresses, setDefaultAddress } from './address-service.js';
+import { requireCsrf } from '../security/csrf.js';
+import { validateCheckoutInput } from '../security/validation.js';
 
 export async function handleCheckoutRequest(req) {
   const method = (req.method || 'GET').toUpperCase();
@@ -10,6 +12,9 @@ export async function handleCheckoutRequest(req) {
 
   // Mandatory Authentication Check: Guest checkout is strictly gated
   await requireAuth(req);
+
+  // CSRF validation for non-safe state-changing methods
+  requireCsrf(req);
 
   // 1. GET /api/checkout/addresses — List user addresses
   if (method === 'GET' && path === '/api/checkout/addresses') {
@@ -56,15 +61,16 @@ export async function handleCheckoutRequest(req) {
 
   // 5. POST /api/checkout/confirm — Order confirmation & commit
   if (method === 'POST' && path === '/api/checkout/confirm') {
-    const idempotencyKey = req.headers?.['idempotency-key'] || req.headers?.['Idempotency-Key'] || req.body?.idempotencyKey || null;
-    const { addressId, paymentMethod, couponCode, clientSuppliedTotal } = req.body || {};
-
     try {
+      const validated = validateCheckoutInput(req.body || {});
+      const idempotencyKey = req.headers?.['idempotency-key'] || req.headers?.['Idempotency-Key'] || validated.idempotencyKey || null;
+      const clientSuppliedTotal = req.body?.clientSuppliedTotal;
+
       const order = await confirmOrder({
         userId: req.user.id,
-        addressId,
-        paymentMethod: paymentMethod || 'cod',
-        couponCode,
+        addressId: validated.addressId,
+        paymentMethod: validated.paymentMethod,
+        couponCode: validated.couponCode,
         idempotencyKey,
         clientSuppliedTotal
       });

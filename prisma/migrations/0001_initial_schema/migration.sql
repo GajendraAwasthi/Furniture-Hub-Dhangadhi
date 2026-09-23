@@ -113,6 +113,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_cart_product_color UNIQUE (cart_id, product_id, selected_color)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cart_items_nullsafe ON cart_items (cart_id, product_id, COALESCE(selected_color, ''));
 CREATE INDEX IF NOT EXISTS idx_cart_items_cart_id ON cart_items(cart_id);
 CREATE INDEX IF NOT EXISTS idx_cart_items_product_id ON cart_items(product_id);
 

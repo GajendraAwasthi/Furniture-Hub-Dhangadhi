@@ -83,9 +83,12 @@ export function validateCheckoutInput(input) {
     throw new Error('Shipping address ID is required.');
   }
 
-  const allowedPaymentMethods = ['whatsapp', 'WhatsApp Direct', 'cod', 'Cash on Delivery', 'card', 'esewa', 'khalti'];
-  const paymentMethod = (input.paymentMethod || 'WhatsApp Direct').trim();
-  if (!allowedPaymentMethods.includes(paymentMethod)) {
+  const paymentMethod = (input.paymentMethod !== undefined && input.paymentMethod !== null && input.paymentMethod !== '')
+    ? String(input.paymentMethod).trim()
+    : 'WhatsApp Direct';
+  const cleanMethod = paymentMethod.toLowerCase();
+  const allowedStrategies = ['cod', 'cash on delivery', 'whatsapp', 'whatsapp direct'];
+  if (!allowedStrategies.includes(cleanMethod)) {
     throw new Error(`Invalid payment method: ${paymentMethod}`);
   }
 

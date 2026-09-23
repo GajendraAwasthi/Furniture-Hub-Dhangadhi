@@ -974,6 +974,148 @@ describe('Security Verification & Adversarial Audit Suite', () => {
     const updatedCust = await updateCustProf({ name: 'Offline Updated', address: 'Main Road' });
     assert.equal(updatedCust.name, 'Offline Updated', 'updateCustomerProfile must succeed in offline mode');
   });
+
+  test('26. Server Cart, Checkout, and Router Defense Suite', async () => {
+    const { getDb } = await import('../src/db/client.js');
+    const { getRedis } = await import('../src/auth/redis.js');
+    const { addItemToCart, getOrCreateCart } = await import('../src/cart/service.js');
+    const { confirmOrder } = await import('../src/checkout/service.js');
+    const { handleCartRequest } = await import('../src/cart/router.js');
+    const { handleCheckoutRequest } = await import('../src/checkout/router.js');
+    const { validateCheckoutInput } = await import('../src/security/validation.js');
+    const { generateCsrfToken } = await import('../src/security/csrf.js');
+
+    const db = await getDb();
+    const redis = getRedis();
+
+    // Ensure all required dormant schema tables exist for cart and checkout tests
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS product_images (id TEXT PRIMARY KEY, product_id TEXT, url TEXT NOT NULL, alt_text TEXT, sort_order INTEGER DEFAULT 0, is_primary BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW());
+      CREATE TABLE IF NOT EXISTS addresses (id TEXT PRIMARY KEY, user_id TEXT, recipient_name TEXT, phone TEXT, address_line1 TEXT, address_line2 TEXT, city TEXT, state TEXT, postal_code TEXT, landmark TEXT, is_default BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+      CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, reference TEXT UNIQUE, user_id TEXT, shipping_address_id TEXT, status TEXT DEFAULT 'PLACED', subtotal_minor BIGINT, delivery_fee_minor BIGINT, discount_minor BIGINT, total_minor BIGINT, payment_method TEXT, payment_status TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+      CREATE TABLE IF NOT EXISTS order_items (id TEXT PRIMARY KEY, order_id TEXT, product_id TEXT, product_name_snapshot TEXT, sku_snapshot TEXT, unit_price_minor_snapshot BIGINT, quantity INTEGER, line_total_minor BIGINT, color TEXT);
+      CREATE TABLE IF NOT EXISTS order_status_history (id TEXT PRIMARY KEY, order_id TEXT, from_status TEXT, to_status TEXT, notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW());
+    `);
+
+    // 1. Repeated-Add Stock Arithmetic: When stock < 99, repeated additions clamp to total available without erroneous early rejection
+    await db.query(`INSERT INTO products (id, slug, sku, name, price_minor, is_active) VALUES ('prod-arith-1', 'prod-arith-1', 'SKU-ARITH-1', 'Arith Chair', 100000, true) ON CONFLICT (id) DO NOTHING;`);
+    await db.query(`INSERT INTO inventory (id, product_id, available_quantity, reserved_quantity) VALUES ('inv-arith-1', 'prod-arith-1', 50, 0) ON CONFLICT (id) DO UPDATE SET available_quantity = 50, reserved_quantity = 0;`);
+
+    const { cart } = await getOrCreateCart({ userId: 'usr-arith-test' });
+
+    // Add 30 items
+    const r1 = await addItemToCart(cart.id, { productId: 'prod-arith-1', quantity: 30 });
+    assert.equal(r1.clampedQty, 30);
+    assert.equal(r1.availableStock, 20);
+
+    // Add 30 more items — should clamp to 50 (30 + 20), not throw an out-of-stock or cap error!
+    const r2 = await addItemToCart(cart.id, { productId: 'prod-arith-1', quantity: 30 });
+    assert.equal(r2.clampedQty, 50, 'Repeated add must correctly use remaining available stock (20) to reach 50');
+    assert.equal(r2.availableStock, 0);
+
+    // Adding more now must throw since availableStock is 0
+    await assert.rejects(
+      async () => await addItemToCart(cart.id, { productId: 'prod-arith-1', quantity: 1 }),
+      /out of stock/i
+    );
+
+    // 2. Consistent Empty-String Null-Safe Cart Lookup & Insertion
+    const ciRes = await db.query(`SELECT selected_color FROM cart_items WHERE cart_id = $1 AND product_id = 'prod-arith-1';`, [cart.id]);
+    assert.ok(ciRes.rows.length === 1);
+    assert.equal(ciRes.rows[0].selected_color, '', 'Cart item selected_color must be stored as empty-string');
+
+    // 3. Catalog Cache Invalidation on Cart Stock Mutations
+    await redis.set('catalog:list:test-key', JSON.stringify({ cached: true }));
+    await db.query(`UPDATE inventory SET available_quantity = 50, reserved_quantity = 0 WHERE product_id = 'prod-arith-1';`);
+    await db.query(`DELETE FROM cart_items WHERE cart_id = $1;`, [cart.id]);
+    await addItemToCart(cart.id, { productId: 'prod-arith-1', quantity: 1 });
+    const cachedAfterAdd = await redis.get('catalog:list:test-key');
+    assert.equal(cachedAfterAdd, null, 'addItemToCart must invalidate catalog cache in Redis');
+
+    // 4. validateCheckoutInput: Matched payment enum against getPaymentStrategy
+    assert.throws(
+      () => validateCheckoutInput({ addressId: 'addr-1', paymentMethod: 'card' }),
+      /Invalid payment method: card/
+    );
+    assert.throws(
+      () => validateCheckoutInput({ addressId: 'addr-1', paymentMethod: 'esewa' }),
+      /Invalid payment method: esewa/
+    );
+    const validCod = validateCheckoutInput({ addressId: 'addr-1', paymentMethod: 'cod' });
+    assert.equal(validCod.paymentMethod, 'cod');
+    const validWa = validateCheckoutInput({ addressId: 'addr-1', paymentMethod: 'WhatsApp Direct' });
+    assert.equal(validWa.paymentMethod, 'WhatsApp Direct');
+
+    // 5. CSRF Protection on Non-Safe Cart & Checkout Methods
+    const postWithoutCsrf = {
+      method: 'POST',
+      url: '/api/cart/items',
+      headers: {},
+      body: { productId: 'prod-arith-1', quantity: 1 }
+    };
+    await assert.rejects(
+      async () => await handleCartRequest(postWithoutCsrf),
+      /Invalid or missing CSRF token/
+    );
+
+    const csrfToken = generateCsrfToken('anonymous');
+    const postWithCsrf = {
+      method: 'POST',
+      url: '/api/cart/items',
+      headers: { 'x-csrf-token': csrfToken },
+      body: { productId: 'prod-arith-1', quantity: 1 }
+    };
+    const cartPostRes = await handleCartRequest(postWithCsrf);
+    assert.equal(cartPostRes.status, 200, 'POST /api/cart/items with valid CSRF must succeed');
+
+    // 6. confirmOrder: Idempotency Key Claim Atomicity & Release on Failure
+    const failedKey = 'idem-fail-test-1';
+    await assert.rejects(
+      async () => await confirmOrder({
+        userId: 'usr-arith-test',
+        addressId: 'non-existent-address-id',
+        idempotencyKey: failedKey
+      })
+    );
+    const claimAfterFail = await redis.get(`idempotency:order:usr-arith-test:${failedKey}`);
+    assert.equal(claimAfterFail, null, 'Idempotency claim must be released upon failure to allow retry');
+
+    // 7. confirmOrder: Rejects Changed Price from Locked Row
+    const { generateOrderPreview } = await import('../src/checkout/service.js');
+    await db.query(`INSERT INTO addresses (id, user_id, recipient_name, phone, address_line1, city, state, postal_code) VALUES ('addr-price-test', 'usr-arith-test', 'Ram', '9800000000', 'Ward 1', 'Dhangadhi', 'Sudurpashchim', '10900') ON CONFLICT (id) DO NOTHING;`);
+    await db.query(`INSERT INTO products (id, slug, sku, name, price_minor, is_active) VALUES ('prod-price-lock', 'prod-price-lock', 'SKU-PRICE', 'Price Test Desk', 200000, true) ON CONFLICT (id) DO NOTHING;`);
+    await db.query(`INSERT INTO inventory (id, product_id, available_quantity, reserved_quantity) VALUES ('inv-price-1', 'prod-price-lock', 10, 0) ON CONFLICT (id) DO UPDATE SET available_quantity = 10, reserved_quantity = 0;`);
+    await db.query(`DELETE FROM cart_items WHERE cart_id = $1;`, [cart.id]);
+    await addItemToCart(cart.id, { productId: 'prod-price-lock', quantity: 1 });
+
+    // Establish preview with current price (200,000 minor units)
+    const preview = await generateOrderPreview({ userId: 'usr-arith-test', addressId: 'addr-price-test' });
+    assert.equal(preview.items[0].unitPriceMinor, 200000);
+
+    // Tamper the product price in database directly after preview was generated
+    await db.query(`UPDATE products SET price_minor = 250000 WHERE id = 'prod-price-lock';`);
+
+    await assert.rejects(
+      async () => await confirmOrder({
+        userId: 'usr-arith-test',
+        addressId: 'addr-price-test',
+        paymentMethod: 'cod',
+        preview
+      }),
+      /Price mismatch for product "Price Test Desk"/
+    );
+
+    // Also confirm clientSuppliedTotal mismatch rejection
+    await assert.rejects(
+      async () => await confirmOrder({
+        userId: 'usr-arith-test',
+        addressId: 'addr-price-test',
+        paymentMethod: 'cod',
+        clientSuppliedTotal: 12345
+      }),
+      /Payment total mismatch/
+    );
+  });
 });
 
 

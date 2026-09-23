@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { getDb, withTransaction } from '../db/client.js';
+import { invalidateCatalogCache } from '../catalog/service.js';
 
 const CART_SECRET = process.env.CART_SECRET || 'furniture-hub-cart-signing-secret-key-32b';
 export const CART_CONFIG = {
@@ -198,7 +199,7 @@ export async function addItemToCart(cartId, { productId, quantity = 1, color = '
   const reqQty = Math.max(1, parseInt(quantity, 10) || 1);
   const cleanColor = (color || '').trim();
 
-  return await withTransaction(async (tx) => {
+  const result = await withTransaction(async (tx) => {
     // 1. Lock the inventory row for update (Row-Level Locking prevents concurrent overselling)
     const invRes = await tx.query(
       `SELECT i.available_quantity, i.reserved_quantity, p.is_active, p.price_minor
@@ -223,21 +224,26 @@ export async function addItemToCart(cartId, { productId, quantity = 1, color = '
       throw new Error('This item is currently out of stock.');
     }
 
-    // Check existing item in this cart
+    // Check existing item in this cart (empty-string alternative maintains consistent lookup)
     const existingRes = await tx.query(
       `SELECT id, quantity 
        FROM cart_items 
-       WHERE cart_id = $1 AND product_id = $2 AND (selected_color = $3 OR ($3 = '' AND selected_color IS NULL));`,
+       WHERE cart_id = $1 AND product_id = $2 AND (selected_color = $3 OR ($3 = '' AND (selected_color IS NULL OR selected_color = '')));`,
       [cartId, productId, cleanColor]
     );
 
     const currentQtyInCart = existingRes.rows.length > 0 ? parseInt(existingRes.rows[0].quantity, 10) : 0;
 
-    // Strict bounds: 1..min(99, availableStock) on the aggregate cart item quantity
-    const maxAllowed = Math.min(CART_CONFIG.maxQuantityPerItem, availableStock);
-    const allowedToAdd = Math.max(0, maxAllowed - currentQtyInCart);
-    if (allowedToAdd <= 0) {
+    // Remaining capacity in cart for this item (capped at 99 max)
+    const remainingCartCapacity = Math.max(0, CART_CONFIG.maxQuantityPerItem - currentQtyInCart);
+    if (remainingCartCapacity <= 0) {
       throw new Error(`Cannot add more. You already have the maximum allowed quantity (${CART_CONFIG.maxQuantityPerItem}) in your cart.`);
+    }
+
+    // Allowed to add is bounded by remaining cart capacity and available unreserved stock
+    const allowedToAdd = Math.min(remainingCartCapacity, availableStock);
+    if (allowedToAdd <= 0) {
+      throw new Error('This item is currently out of stock.');
     }
 
     const qtyToAdd = Math.min(reqQty, allowedToAdd);
@@ -265,12 +271,15 @@ export async function addItemToCart(cartId, { productId, quantity = 1, color = '
       await tx.query(
         `INSERT INTO cart_items (id, cart_id, product_id, quantity, selected_color)
          VALUES ($1, $2, $3, $4, $5);`,
-        [itemId, cartId, productId, finalQty, cleanColor || null]
+        [itemId, cartId, productId, finalQty, cleanColor || '']
       );
     }
 
     return { success: true, clampedQty: finalQty, availableStock: availableStock - qtyToAdd };
   });
+
+  await invalidateCatalogCache();
+  return result;
 }
 
 /**
@@ -285,7 +294,7 @@ export async function updateCartItemQuantity(cartId, itemId, newQuantity) {
     return await removeCartItem(cartId, itemId);
   }
 
-  return await withTransaction(async (tx) => {
+  const result = await withTransaction(async (tx) => {
     const itemRes = await tx.query(
       `SELECT ci.quantity, ci.product_id, i.available_quantity
        FROM cart_items ci
@@ -326,13 +335,16 @@ export async function updateCartItemQuantity(cartId, itemId, newQuantity) {
 
     return { success: true, quantity: clampedQty, clamped: clampedQty !== targetQty };
   });
+
+  await invalidateCatalogCache();
+  return result;
 }
 
 /**
  * Removes an item from the cart and releases reserved stock back to available inventory.
  */
 export async function removeCartItem(cartId, itemId) {
-  return await withTransaction(async (tx) => {
+  const result = await withTransaction(async (tx) => {
     const itemRes = await tx.query(
       `SELECT product_id, quantity FROM cart_items WHERE id = $1 AND cart_id = $2;`,
       [itemId, cartId]
@@ -353,13 +365,16 @@ export async function removeCartItem(cartId, itemId) {
 
     return { success: true, removed: true };
   });
+
+  await invalidateCatalogCache();
+  return result;
 }
 
 /**
  * Clears all items from the cart and releases all reserved inventory.
  */
 export async function clearCart(cartId) {
-  return await withTransaction(async (tx) => {
+  const result = await withTransaction(async (tx) => {
     const itemsRes = await tx.query(`SELECT product_id, quantity FROM cart_items WHERE cart_id = $1;`, [cartId]);
     for (const item of itemsRes.rows) {
       await tx.query(
@@ -374,6 +389,9 @@ export async function clearCart(cartId) {
     await tx.query(`DELETE FROM cart_items WHERE cart_id = $1;`, [cartId]);
     return { success: true, cleared: true };
   });
+
+  await invalidateCatalogCache();
+  return result;
 }
 
 /**
@@ -430,8 +448,8 @@ export async function mergeCartsOnLogin({ userId, signedSessionToken }) {
       // Check if user already has this product and color in their cart
       const userItemRes = await db.query(
         `SELECT id, quantity FROM cart_items 
-         WHERE cart_id = $1 AND product_id = $2 AND (selected_color = $3 OR ($3 IS NULL AND selected_color IS NULL));`,
-        [userCartId, product_id, selected_color]
+         WHERE cart_id = $1 AND product_id = $2 AND (selected_color = $3 OR ((selected_color IS NULL OR selected_color = '') AND ($3 IS NULL OR $3 = '')));`,
+        [userCartId, product_id, selected_color || '']
       );
 
       if (userItemRes.rows.length > 0) {
@@ -458,7 +476,7 @@ export async function mergeCartsOnLogin({ userId, signedSessionToken }) {
         await db.query(
           `INSERT INTO cart_items (id, cart_id, product_id, quantity, selected_color)
            VALUES ($1, $2, $3, $4, $5);`,
-          [newItemId, userCartId, product_id, anonQty, selected_color]
+          [newItemId, userCartId, product_id, anonQty, selected_color || '']
         );
       }
     }
@@ -467,6 +485,7 @@ export async function mergeCartsOnLogin({ userId, signedSessionToken }) {
     await db.query(`DELETE FROM carts WHERE id = $1;`, [anonCartId]);
 
     await db.exec('COMMIT;');
+    await invalidateCatalogCache();
   } catch (err) {
     await db.exec('ROLLBACK;');
     throw err;
