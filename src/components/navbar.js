@@ -37,7 +37,6 @@ export function renderNavbar(container, state, events) {
             </li>
             <li><a href="#shop?filter=on-sale">On Sale</a></li>
             <li><a href="#shop?filter=new-arrivals">New Arrivals</a></li>
-            <li><a href="#track" style="font-weight: 600; color: #122d25;">Track Order</a></li>
             <li><a href="#about">About</a></li>
           </ul>
         </nav>
@@ -241,7 +240,6 @@ export function renderNavbar(container, state, events) {
         <div>
           <div class="mobile-cat-heading">Information & Help</div>
           <ul class="mobile-nav-list">
-            <li><a href="#track" class="mobile-nav-link" style="font-weight: 700; color: #122d25;">📍 Track Order Live</a></li>
             <li><a href="#about" class="mobile-nav-link">About Our Story</a></li>
             <li><a href="#faq" class="mobile-nav-link">Help & FAQs</a></li>
             <li><a href="#terms" class="mobile-nav-link">Terms & Privacy</a></li>
