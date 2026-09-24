@@ -48,6 +48,10 @@ test('order and tracking RPCs enforce identity, phone proof, and stock', async (
 
     await asUser(customerId, 'customer@example.test');
     await assert.rejects(place({ ...order, customer_phone: 'abcdefghij' }), /phone/i);
+    await assert.rejects(place({ ...order, items: {} }), /1 to 50 items/);
+    await assert.rejects(place({ ...order, items: Array(51).fill({ id: 'chair', quantity: 1 }) }), /1 to 50 items/);
+    await assert.rejects(place({ ...order, items: [{ id: 'chair', quantity: 1001 }] }), /quantity/i);
+    await assert.rejects(place({ ...order, notes: 'x'.repeat(65537) }), /payload exceeds allowed limits/);
     assert.equal(await stock(), 2);
 
     const placed = (await place(order)).rows[0].order_data;
@@ -74,10 +78,16 @@ test('order and tracking RPCs enforce identity, phone proof, and stock', async (
     } finally {
       await db.exec('RESET ROLE');
     }
+    await db.exec('GRANT SELECT, INSERT, UPDATE ON public.customer_profiles TO authenticated');
     await asUser(customerId, 'customer@example.test');
     await db.exec('SET ROLE authenticated');
     try {
       assert.equal((await db.query('SELECT id FROM public.orders')).rows.length, 1);
+      await assert.rejects(db.query(`INSERT INTO public.customer_profiles
+        (id, user_id, email, name) VALUES ('spoof', $1, 'victim@example.test', 'Other')`, [customerId]), /row-level security/i);
+      await db.query(`INSERT INTO public.customer_profiles
+        (id, user_id, email, name) VALUES ('mine', $1, 'customer@example.test', 'Customer')`, [customerId]);
+      await assert.rejects(db.query(`UPDATE public.customer_profiles SET email = 'victim@example.test' WHERE id = 'mine'`), /row-level security/i);
     } finally {
       await db.exec('RESET ROLE');
     }

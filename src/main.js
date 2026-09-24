@@ -29,7 +29,7 @@ import { renderTrackOrderView } from './views/track/track-order-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
 import { getBrandLoaderHtml, showGlobalBrandLoader, hideGlobalBrandLoader } from './components/brand-loader.js';
 import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient, fetchCoupons } from './services/supabase.js';
-import { generateWhatsAppLink } from './services/whatsapp.js';
+import { generateWhatsAppLink, syncSellerNumberFromCloud } from './services/whatsapp.js';
 import { 
   getCurrentCustomer, 
   authenticateUser,
@@ -328,6 +328,9 @@ events.on('order-placed', singleFlight(async (orderData = {}) => {
   let createdOrder = null;
   try {
     showGlobalBrandLoader('Finalizing order & preparing WhatsApp receipt...');
+    // Refresh the shared receiver before committing an order so an open tab
+    // cannot hand it off to a number that the store has since changed.
+    await syncSellerNumberFromCloud();
     createdOrder = await createOrder({
       id: orderPayload.id,
       customer_name: orderPayload.name,
@@ -1066,6 +1069,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.warn('Product database fetch error:', err);
     state.products = [];
+  }
+
+  try {
+    await syncSellerNumberFromCloud();
+  } catch (err) {
+    console.warn('Store WhatsApp receiver sync failed:', err);
   }
 
   // Sync verified Supabase cloud store_admins into local cache

@@ -1,5 +1,15 @@
 import { normalizeWhatsAppNumber } from '../services/whatsapp.js';
 import { getCustomerOrders, updateCustomerProfile } from '../services/customer-auth.js';
+import { escapeHtml } from '../utils/security.js';
+
+function safeWhatsAppUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'wa.me' ? url.href : null;
+  } catch {
+    return null;
+  }
+}
 
 export function renderUserProfileModal(container, state, events) {
   const customer = state.customerUser;
@@ -34,14 +44,14 @@ export function renderUserProfileModal(container, state, events) {
         <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(18, 45, 37, 0.08);">
           <div style="display: flex; align-items: center; gap: 12px;">
             <div class="customer-avatar-badge">
-              <span>${initials}</span>
+              <span>${escapeHtml(initials)}</span>
             </div>
             <div>
               <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--color-primary); margin: 0; line-height: 1.2;">
-                ${customer ? customer.name : (profile.name || 'Customer Account')}
+                ${escapeHtml(customer ? customer.name : (profile.name || 'Customer Account'))}
               </h3>
               <span style="font-size: 0.8rem; color: var(--color-text-subtle);">
-                ${customer ? customer.email : 'Customer Account'}
+                ${escapeHtml(customer ? customer.email : 'Customer Account')}
               </span>
             </div>
           </div>
@@ -61,7 +71,7 @@ export function renderUserProfileModal(container, state, events) {
             </svg>
             <div>
               <div style="font-weight: 700; font-size: 0.9rem; color: #075e54;">
-                WhatsApp Contact: <strong>${profile.phone || 'Not configured'}</strong>
+                WhatsApp Contact: <strong>${escapeHtml(profile.phone || 'Not configured')}</strong>
               </div>
               <div style="font-size: 0.76rem; color: #2e7d32;">
                 Used for dispatch notifications and delivery confirmation
@@ -88,17 +98,17 @@ export function renderUserProfileModal(container, state, events) {
           <form id="user-profile-form">
             <div class="form-group" style="margin-bottom: 12px;">
               <label class="form-label" style="font-weight: 700;">Full Name *</label>
-              <input type="text" class="form-input" id="up-name" required placeholder="e.g. Ram Bahadur" value="${profile.name || ''}">
+              <input type="text" class="form-input" id="up-name" required placeholder="e.g. Ram Bahadur" value="${escapeHtml(profile.name || '')}">
             </div>
 
             <div class="form-group" style="margin-bottom: 12px;">
               <label class="form-label" style="font-weight: 700;">WhatsApp Mobile Number *</label>
-              <input type="tel" class="form-input phone-highlight" id="up-phone" required placeholder="e.g. 98XXXXXXXX" value="${profile.phone || ''}">
+              <input type="tel" class="form-input phone-highlight" id="up-phone" required placeholder="e.g. 98XXXXXXXX" value="${escapeHtml(profile.phone || '')}">
             </div>
 
             <div class="form-group" style="margin-bottom: 12px;">
               <label class="form-label" style="font-weight: 700;">Default Delivery Address *</label>
-              <input type="text" class="form-input" id="up-address" required placeholder="e.g. Hasanpur Ward 5, Near Chauraha" value="${profile.address || ''}">
+              <input type="text" class="form-input" id="up-address" required placeholder="e.g. Hasanpur Ward 5, Near Chauraha" value="${escapeHtml(profile.address || '')}">
             </div>
 
             <div class="form-group" style="margin-bottom: 18px;">
@@ -142,8 +152,8 @@ export function renderUserProfileModal(container, state, events) {
                 <div class="customer-order-card" style="background: var(--color-bg-light); border: 1px solid rgba(18, 45, 37, 0.08); border-radius: 12px; padding: 14px 16px;">
                   <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                     <div>
-                      <strong style="font-family: monospace; font-size: 0.95rem; color: var(--color-primary);">#${order.id}</strong>
-                      <div style="font-size: 0.76rem; color: var(--color-text-subtle);">${order.date || 'Recent'}</div>
+                      <strong style="font-family: monospace; font-size: 0.95rem; color: var(--color-primary);">#${escapeHtml(order.id)}</strong>
+                      <div style="font-size: 0.76rem; color: var(--color-text-subtle);">${escapeHtml(order.date || 'Recent')}</div>
                     </div>
                     <span style="background: rgba(37, 211, 102, 0.15); color: #075e54; font-size: 0.74rem; font-weight: 800; padding: 2px 8px; border-radius: 10px;">
                       WhatsApp Dispatched
@@ -155,8 +165,8 @@ export function renderUserProfileModal(container, state, events) {
                       <span style="font-size: 0.78rem; color: var(--color-text-subtle);">Total:</span>
                       <strong style="color: var(--color-primary); font-size: 1rem; margin-left: 4px;">Rs. ${Number(order.total || 0).toLocaleString()}/-</strong>
                     </div>
-                    ${order.whatsappUrl ? `
-                      <a href="${order.whatsappUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background: #25D366; color: white; text-decoration: none; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                    ${safeWhatsAppUrl(order.whatsappUrl) ? `
+                      <a href="${escapeHtml(safeWhatsAppUrl(order.whatsappUrl))}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background: #25D366; color: white; text-decoration: none; padding: 6px 12px; font-size: 0.78rem; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
                         <span>Open WhatsApp</span>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
                       </a>

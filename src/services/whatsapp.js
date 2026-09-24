@@ -3,12 +3,36 @@
  * Implements strict 1800-character ceiling, progressive truncation,
  * and builds server-authoritative WhatsApp deep-links for placed orders.
  */
+import { getClient } from './supabase.js';
 
 export const WHATSAPP_CONFIG = {
   maxUrlLength: 1800,
   defaultSellerNumber: '9779841234567', // E.164 without '+'
   maxItemsBeforeTruncate: 8
 };
+
+let cloudSellerNumber = null;
+
+function validSellerNumber(number) {
+  const normalized = normalizeWhatsAppNumber(number);
+  return /^\d{10,15}$/.test(normalized) ? normalized : null;
+}
+
+export function setCloudSellerNumber(number) {
+  cloudSellerNumber = number ? validSellerNumber(number) : null;
+  return cloudSellerNumber;
+}
+
+export async function syncSellerNumberFromCloud() {
+  const client = getClient();
+  if (!client) return getSellerNumber();
+
+  const { data, error } = await client.from('store_settings')
+    .select('value').eq('key', 'general').maybeSingle();
+  if (error) throw error;
+  setCloudSellerNumber(data?.value?.whatsappNumber);
+  return getSellerNumber();
+}
 
 export function normalizeWhatsAppNumber(number) {
   if (!number) return WHATSAPP_CONFIG.defaultSellerNumber;
@@ -21,6 +45,14 @@ export function normalizeWhatsAppNumber(number) {
 }
 
 export function getSellerNumber() {
+  if (cloudSellerNumber) return cloudSellerNumber;
+
+  // When connected, browser-local settings cannot override the shared receiver.
+  if (getClient()) {
+    const envNumber = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SELLER_WHATSAPP_NUMBER) || WHATSAPP_CONFIG.defaultSellerNumber;
+    return validSellerNumber(envNumber) || WHATSAPP_CONFIG.defaultSellerNumber;
+  }
+
   // 1. Check Admin-configured WhatsApp number in localStorage
   if (typeof localStorage !== 'undefined') {
     const adminNum = localStorage.getItem('fh_seller_whatsapp');
@@ -48,7 +80,7 @@ export function getSellerNumber() {
 
 export function setSellerNumber(number) {
   if (typeof localStorage !== 'undefined' && number) {
-    const clean = normalizeWhatsAppNumber(number);
+    const clean = validSellerNumber(number);
     if (clean) {
       localStorage.setItem('fh_seller_whatsapp', clean);
       return clean;
@@ -194,4 +226,3 @@ export function generateWhatsAppLink(order, items = [], address = {}) {
     sellerNumber
   };
 }
-

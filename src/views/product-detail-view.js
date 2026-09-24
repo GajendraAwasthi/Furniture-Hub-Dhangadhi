@@ -68,9 +68,9 @@ export function renderProductDetailView(container, state, events, params) {
         <span class="separator">&gt;</span>
         <a href="#shop">Shop Now</a>
         <span class="separator">&gt;</span>
-        <a href="#shop?category=${encodeURIComponent(product.category || '')}">${product.category || 'Collection'}</a>
+        <a href="#shop?category=${encodeURIComponent(product.category || '')}">${escapeHtml(product.category || 'Collection')}</a>
         <span class="separator">&gt;</span>
-        <span>${product.name}</span>
+        <span>${escapeHtml(product.name)}</span>
       </nav>
 
       <!-- Main Product Detail Grid (From Figma Product Detail frame) -->
@@ -78,7 +78,7 @@ export function renderProductDetailView(container, state, events, params) {
         <!-- Gallery Column -->
         <div class="detail-gallery">
           <div class="detail-main-img" id="detail-main-img-wrap" style="position: relative; cursor: zoom-in;" title="Click to view full-resolution image">
-            <img id="detail-active-img" src="${selectedImage}" alt="${product.name} — Furniture Hub Dhangadhi" width="600" height="520" fetchpriority="high" decoding="async" onerror="this.src='/images/hero-living-room.png'">
+            <img id="detail-active-img" src="${escapeHtml(selectedImage)}" alt="${escapeHtml(product.name)} — Furniture Hub Dhangadhi" width="600" height="520" fetchpriority="high" decoding="async" onerror="this.src='/images/hero-living-room.png'">
             <span style="position: absolute; bottom: 12px; right: 12px; background: rgba(18,45,37,0.8); color: #ffffff; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; backdrop-filter: blur(4px); display: flex; align-items: center; gap: 4px; pointer-events: none;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
               <span>HQ Zoom</span>
@@ -88,8 +88,8 @@ export function renderProductDetailView(container, state, events, params) {
           <!-- Thumbnails -->
           <div class="detail-thumbnails" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;">
             ${gallery.map((imgUrl, idx) => `
-              <div class="detail-thumb ${imgUrl === selectedImage ? 'active' : ''}" data-img-url="${imgUrl}" style="cursor: pointer; flex-shrink: 0;" title="View angle ${idx + 1}">
-                <img src="${imgUrl}" alt="${product.name} thumbnail angle ${idx + 1}" width="80" height="80" loading="lazy" decoding="async" onerror="this.src='/images/hero-living-room.png'">
+              <div class="detail-thumb ${imgUrl === selectedImage ? 'active' : ''}" data-img-url="${escapeHtml(imgUrl)}" style="cursor: pointer; flex-shrink: 0;" title="View angle ${idx + 1}">
+                <img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(product.name)} thumbnail angle ${idx + 1}" width="80" height="80" loading="lazy" decoding="async" onerror="this.src='/images/hero-living-room.png'">
               </div>
             `).join('')}
           </div>
@@ -98,8 +98,8 @@ export function renderProductDetailView(container, state, events, params) {
         <!-- Product Information Column -->
         <div class="detail-info">
           <div>
-            <span class="badge-tag" style="margin-bottom: 8px;">${product.category}</span>
-            <h1 class="detail-title">${product.name}</h1>
+            <span class="badge-tag" style="margin-bottom: 8px;">${escapeHtml(product.category)}</span>
+            <h1 class="detail-title">${escapeHtml(product.name)}</h1>
             <div class="product-rating product-rating-interactive" id="detail-top-rating-trigger" style="margin-top: 10px; cursor: pointer;" title="Jump to customer reviews">
               <span class="stars">${renderStars(summary.average || product.rating)}</span>
               <span class="rating-count" style="font-size: 0.9rem;">${summary.average || product.rating} (${summary.total || product.reviewCount} Reviews) ▾</span>
@@ -119,7 +119,7 @@ export function renderProductDetailView(container, state, events, params) {
 
           <!-- Description -->
           <p class="detail-desc">
-            ${product.description}
+            ${escapeHtml(product.description)}
           </p>
 
           <!-- Specifications Card (From Figma Product Detail: Materials, Dimensions, Weight) -->
@@ -134,15 +134,15 @@ export function renderProductDetailView(container, state, events, params) {
             </div>
             <div class="spec-row">
               <span class="spec-label">Materials :</span>
-              <span class="spec-val">${product.materials || 'PU Leather, Metal Frame'}</span>
+              <span class="spec-val">${escapeHtml(product.materials || 'PU Leather, Metal Frame')}</span>
             </div>
             <div class="spec-row">
               <span class="spec-label">Dimensions :</span>
-              <span class="spec-val">${product.dimensions || '85cm, 65cm, 45cm'}</span>
+              <span class="spec-val">${escapeHtml(product.dimensions || '85cm, 65cm, 45cm')}</span>
             </div>
             <div class="spec-row">
               <span class="spec-label">Weight :</span>
-              <span class="spec-val">${product.weight || '22kg'}</span>
+              <span class="spec-val">${escapeHtml(product.weight || '22kg')}</span>
             </div>
             <div class="spec-row">
               <span class="spec-label">Warranty :</span>
@@ -153,13 +153,13 @@ export function renderProductDetailView(container, state, events, params) {
           <!-- Color Selector (From Figma: Color : Snow White / Red) -->
           <div class="selector-group">
             <label class="selector-label">
-              Color : <span id="detail-selected-color-label" style="font-weight: 500; color: var(--color-text-muted);">${selectedColor}</span>
+              Color : <span id="detail-selected-color-label" style="font-weight: 500; color: var(--color-text-muted);">${escapeHtml(selectedColor)}</span>
             </label>
             <div class="color-pills" id="detail-color-pills">
               ${(product.colors || []).map(col => `
-                <button class="color-pill-btn ${col.name === selectedColor ? 'active' : ''}" data-color-name="${col.name}">
-                  <span class="color-dot" style="background-color: ${col.hex};"></span>
-                  <span>${col.name}</span>
+                <button class="color-pill-btn ${col.name === selectedColor ? 'active' : ''}" data-color-name="${escapeHtml(col.name)}">
+                  <span class="color-dot" style="background-color: ${escapeHtml(col.hex)};"></span>
+                  <span>${escapeHtml(col.name)}</span>
                 </button>
               `).join('')}
             </div>
@@ -204,7 +204,7 @@ export function renderProductDetailView(container, state, events, params) {
         <div class="section-header" style="margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
           <div>
             <h2 class="heading-section">Customer Reviews & Ratings</h2>
-            <p class="text-subtitle">Reviews from customers who purchased ${product.name}</p>
+            <p class="text-subtitle">Reviews from customers who purchased ${escapeHtml(product.name)}</p>
           </div>
           <button type="button" class="btn btn-primary" id="detail-write-review-btn" style="padding: 10px 20px; font-weight: 700; border-radius: 10px;">
             ✍️ Write a Review
@@ -270,7 +270,7 @@ export function renderProductDetailView(container, state, events, params) {
             <div class="detail-review-card">
               <div class="rev-item-top">
                 <div class="rev-user-meta">
-                  <img src="${rev.userAvatar || '/images/social-user.png'}" alt="${rev.userName}" class="rev-user-avatar">
+                  <img src="${escapeHtml(rev.userAvatar || '/images/social-user.png')}" alt="${escapeHtml(rev.userName)}" class="rev-user-avatar">
                   <div>
                     <div class="rev-user-name-row">
                       <h4 class="rev-user-name">${escapeHtml(rev.userName)}</h4>
@@ -297,21 +297,21 @@ export function renderProductDetailView(container, state, events, params) {
 
         <div class="product-grid">
           ${related.map(p => `
-            <div class="product-card" data-id="${p.id}">
+            <div class="product-card" data-id="${escapeHtml(p.id)}">
               <div class="product-media">
-                <span class="product-badge-overlay badge-tag">${p.category}</span>
-                <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" class="product-navigate-trigger" data-id="${p.id}" onerror="this.src='/images/hero-living-room.png'">
+                <span class="product-badge-overlay badge-tag">${escapeHtml(p.category)}</span>
+                <img src="${escapeHtml(resolveCloudImageUrl(p.image))}" alt="${escapeHtml(p.name)}" class="product-navigate-trigger" data-id="${escapeHtml(p.id)}" onerror="this.src='/images/hero-living-room.png'">
               </div>
               <div class="product-info">
-                <span class="product-category-label">${p.category}</span>
-                <h3 class="product-title product-navigate-trigger" data-id="${p.id}">${p.name}</h3>
-                <div class="product-rating product-rating-interactive" data-open-reviews-pid="${p.id}" title="View ${p.name} reviews">
+                <span class="product-category-label">${escapeHtml(p.category)}</span>
+                <h3 class="product-title product-navigate-trigger" data-id="${escapeHtml(p.id)}">${escapeHtml(p.name)}</h3>
+                <div class="product-rating product-rating-interactive" data-open-reviews-pid="${escapeHtml(p.id)}" title="View ${escapeHtml(p.name)} reviews">
                   <span class="stars">${renderStars(p.rating)}</span>
                   <span class="rating-count">(${p.reviewCount} reviews)</span>
                 </div>
                 <div class="product-price-row">
                   <span class="price-current">Rs. ${p.price.toLocaleString()}/-</span>
-                  <button class="card-add-btn" data-add-id="${p.id}" title="Add to Cart">
+                  <button class="card-add-btn" data-add-id="${escapeHtml(p.id)}" title="Add to Cart">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                       <line x1="12" y1="5" x2="12" y2="19"></line>
                       <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -332,9 +332,9 @@ export function renderProductDetailView(container, state, events, params) {
       </button>
       
       <div style="max-width: 90vw; max-height: 88vh; position: relative; display: flex; flex-direction: column; align-items: center;">
-        <img id="lightbox-full-img" src="${selectedImage}" alt="${product.name}" style="max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+        <img id="lightbox-full-img" src="${escapeHtml(selectedImage)}" alt="${escapeHtml(product.name)}" style="max-width: 100%; max-height: 82vh; object-fit: contain; border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
         <div style="color: #ffffff; margin-top: 14px; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px; opacity: 0.9;">
-          ${product.name} • High Resolution Studio View
+          ${escapeHtml(product.name)} • High Resolution Studio View
         </div>
       </div>
     </div>

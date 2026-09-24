@@ -255,6 +255,17 @@ BEGIN
   v_coupon_code := TRIM(COALESCE(p_order->>'coupon_code', p_order->>'couponCode', ''));
   v_items := p_order->'items';
 
+  -- Bound work and stored text for authenticated clients calling this RPC directly.
+  IF octet_length(p_order::text) > 65536
+    OR length(v_order_id) > 64
+    OR length(v_customer_name) > 120
+    OR length(v_delivery_address) > 500
+    OR length(v_notes) > 2000
+    OR length(v_payment_method) > 80
+    OR length(v_coupon_code) > 80 THEN
+    RAISE EXCEPTION 'Order payload exceeds allowed limits';
+  END IF;
+
   IF v_customer_name = '' THEN
     RAISE EXCEPTION 'Customer name is required';
   END IF;
@@ -267,8 +278,9 @@ BEGIN
     RAISE EXCEPTION 'Delivery address is required';
   END IF;
 
-  IF v_items IS NULL OR jsonb_array_length(v_items) = 0 THEN
-    RAISE EXCEPTION 'Order must contain at least one item';
+  IF v_items IS NULL OR jsonb_typeof(v_items) <> 'array'
+    OR jsonb_array_length(v_items) = 0 OR jsonb_array_length(v_items) > 50 THEN
+    RAISE EXCEPTION 'Order must contain 1 to 50 items';
   END IF;
 
   -- Require a verified account; browser-side login state is never an authority.
@@ -286,7 +298,7 @@ BEGIN
     v_product_id := COALESCE(v_item->>'id', v_item->'product'->>'id');
     v_qty := COALESCE((v_item->>'quantity')::int, 1);
 
-    IF v_qty <= 0 THEN
+    IF v_qty <= 0 OR v_qty > 1000 THEN
       RAISE EXCEPTION 'Invalid item quantity: %', v_qty;
     END IF;
 
@@ -487,14 +499,17 @@ CREATE POLICY "Users can view own profile" ON public.customer_profiles FOR SELEC
 CREATE POLICY "Users can insert own profile" ON public.customer_profiles FOR INSERT WITH CHECK (
   auth.uid() IS NOT NULL 
   AND user_id = (auth.uid())::text
+  AND lower(email) = lower(auth.jwt()->>'email')
 );
 
 CREATE POLICY "Users can update own profile" ON public.customer_profiles FOR UPDATE USING (
   auth.uid() IS NOT NULL 
   AND user_id = (auth.uid())::text
+  AND lower(email) = lower(auth.jwt()->>'email')
 ) WITH CHECK (
   auth.uid() IS NOT NULL 
   AND user_id = (auth.uid())::text
+  AND lower(email) = lower(auth.jwt()->>'email')
 );
 
 CREATE POLICY "Users can delete own profile" ON public.customer_profiles FOR DELETE USING (
