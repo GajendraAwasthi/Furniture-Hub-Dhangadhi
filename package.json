@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "node scripts/convert-hero.js && vite build && node scripts/generate-sitemap-and-prerender.js",
     "preview": "vite preview",
-    "test": "node --test test/security.test.mjs",
+    "test": "node --test test/*.test.mjs",
     "test:seo": "node scripts/seo-audit.js",
     "db:push": "node scripts/db-push.js",
     "db:watch": "node scripts/db-push.js --watch",

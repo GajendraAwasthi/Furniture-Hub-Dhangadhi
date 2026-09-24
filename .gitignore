@@ -17,6 +17,7 @@ test/
 !test/
 test/*
 !test/security.test.mjs
+!test/supabase-rpc.test.mjs
 fig_assets/
 *.fig
 *.py

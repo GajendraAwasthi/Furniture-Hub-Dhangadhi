@@ -213,15 +213,6 @@ BEGIN
 END;
 $$;
 
--- Ensure base promotional coupons are available in the coupons store
-INSERT INTO public.coupons (code, discount_percent, min_order_amount, is_active)
-VALUES 
-  ('HUB10', 10, 0, true),
-  ('FESTIVE2025', 10, 0, true)
-ON CONFLICT (code) DO UPDATE SET
-  discount_percent = EXCLUDED.discount_percent,
-  is_active = EXCLUDED.is_active;
-
 -- Transactional RPC to place orders with server-side price recalculation, inventory locking, and stock reservation
 CREATE OR REPLACE FUNCTION public.place_order(p_order jsonb)
 RETURNS jsonb
@@ -268,8 +259,8 @@ BEGIN
     RAISE EXCEPTION 'Customer name is required';
   END IF;
 
-  IF v_customer_phone = '' OR length(v_customer_phone) < 10 THEN
-    RAISE EXCEPTION 'Valid 10-digit customer phone number is required';
+  IF v_customer_phone !~ '^[0-9]{10,15}$' THEN
+    RAISE EXCEPTION 'A valid 10 to 15 digit customer phone number is required';
   END IF;
 
   IF v_delivery_address = '' THEN

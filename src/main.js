@@ -45,6 +45,7 @@ import {
   saveCustomerOrder 
 } from './services/customer-auth.js';
 import { safeGetJson, safeSetJson } from './utils/security.js';
+import { singleFlight } from './checkout/single-flight.js';
 import { SEO_CONFIG } from './config/seo-config.js';
 import { 
   updateDocumentMeta, 
@@ -258,12 +259,7 @@ events.on('close-checkout', () => {
   updateChrome();
 });
 
-let isPlacingOrder = false;
-
-events.on('order-placed', async (orderData = {}) => {
-  // Prevent duplicate placement while in flight
-  if (isPlacingOrder) return;
-
+events.on('order-placed', singleFlight(async (orderData = {}) => {
   if (!state.customerUser) {
     showToast('🔒 Please sign in to complete your order.', 'danger');
     state.customerAuthTab = 'login';
@@ -299,8 +295,7 @@ events.on('order-placed', async (orderData = {}) => {
     return;
   }
 
-  // Lock placement in flight and disable submit button
-  isPlacingOrder = true;
+  // Disable submit while the single-flight handler is in progress.
   const submitBtn = document.querySelector('#checkout-submit-btn');
   if (submitBtn) {
     submitBtn.disabled = true;
@@ -342,7 +337,7 @@ events.on('order-placed', async (orderData = {}) => {
       items: orderPayload.items,
       total_amount: orderPayload.total,
       payment_method: orderPayload.paymentMethod,
-      coupon_code: orderData.couponCode || (state.couponApplied ? (state.couponCode || null) : null),
+      coupon_code: orderData.couponCode ?? null,
       status: 'Pending',
       created_at: orderPayload.created_at
     });
@@ -354,7 +349,6 @@ events.on('order-placed', async (orderData = {}) => {
       submitBtn.style.opacity = '1';
       submitBtn.style.pointerEvents = 'auto';
     }
-    isPlacingOrder = false;
     hideGlobalBrandLoader();
     showToast(`❌ Failed to place order: ${err.message || 'Please check your connection and try again.'}`, 'danger');
     return;
@@ -414,10 +408,9 @@ events.on('order-placed', async (orderData = {}) => {
     updateChrome();
     showToast(`🎊 Order #${ref} placed successfully!`, 'success');
   } finally {
-    isPlacingOrder = false;
     hideGlobalBrandLoader();
   }
-});
+}));
 
 events.on('close-receipt', () => {
   state.isReceiptOpen = false;

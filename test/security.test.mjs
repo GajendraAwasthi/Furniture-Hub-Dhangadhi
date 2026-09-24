@@ -5,6 +5,7 @@ import { createOrder, fetchCoupons, fetchOrderByReference, setClientForTesting }
 import { renderCartDrawer } from '../src/components/cart-drawer.js';
 import { renderNavbar } from '../src/components/navbar.js';
 import { signCartSession, verifyCartSession } from '../src/cart/service.js';
+import { singleFlight } from '../src/checkout/single-flight.js';
 
 const cart = [{ product: { price: 10000 }, quantity: 2 }];
 
@@ -48,6 +49,31 @@ test('cart sessions require a private signing secret', () => {
     if (previous === undefined) delete process.env.CART_SECRET;
     else process.env.CART_SECRET = previous;
   }
+});
+
+test('checkout starts only one request while session verification is pending', async () => {
+  let release;
+  let calls = 0;
+  const pending = new Promise(resolve => { release = resolve; });
+  const placeOnce = singleFlight(async () => {
+    calls++;
+    await pending;
+  });
+  const first = placeOnce();
+  await placeOnce();
+  assert.equal(calls, 1);
+  release();
+  await first;
+  await placeOnce();
+  assert.equal(calls, 2);
+
+  let attempts = 0;
+  const retryable = singleFlight(async () => {
+    if (++attempts === 1) throw new Error('session unavailable');
+  });
+  await assert.rejects(retryable(), /session unavailable/);
+  await retryable();
+  assert.equal(attempts, 2);
 });
 
 test('checkout refuses a missing authenticated session instead of creating a local order', async () => {
