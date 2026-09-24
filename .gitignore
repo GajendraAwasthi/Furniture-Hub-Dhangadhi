@@ -14,6 +14,9 @@ docs/
 unwanted_scripts/
 scratch/
 test/
+!test/
+test/*
+!test/security.test.mjs
 fig_assets/
 *.fig
 *.py

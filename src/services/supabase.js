@@ -554,6 +554,9 @@ export async function fetchOrders() {
 
 export async function createOrder(order) {
   const client = getClient();
+  if (!client) {
+    throw new Error('Order service is unavailable. Please try again later.');
+  }
   const initialHistory = Array.isArray(order.tracking_history) && order.tracking_history.length > 0
     ? order.tracking_history
     : [
@@ -575,25 +578,12 @@ export async function createOrder(order) {
       const session = (await client.auth.getSession())?.data?.session;
       const authedEmail = session?.user?.email;
       if (!authedEmail) {
-        // Unauthenticated / guest caller: do not assign account-ownership customer_email
-        // Store guest contact email in notes if provided so store admins can see it
-        if (customerEmail) {
-          orderNotes = orderNotes 
-            ? `${orderNotes} | Contact Email: ${customerEmail}`
-            : `Contact Email: ${customerEmail}`;
-        }
-        customerEmail = null;
-      } else {
-        // Authenticated caller: bind to verified session email
-        customerEmail = authedEmail;
+        throw new Error('Please sign in before placing an order.');
       }
-    } catch {
-      if (customerEmail) {
-        orderNotes = orderNotes 
-          ? `${orderNotes} | Contact Email: ${customerEmail}`
-          : `Contact Email: ${customerEmail}`;
-      }
-      customerEmail = null;
+      // Authenticated caller: bind to verified session email.
+      customerEmail = authedEmail;
+    } catch (error) {
+      throw new Error(error?.message || 'Unable to verify your session. Please sign in again.');
     }
 
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -674,16 +664,7 @@ export async function createOrder(order) {
     return authoritativeOrder;
   }
 
-  // Local fallback (when client is not configured, e.g. offline testing)
-  const orderWithTracking = {
-    ...order,
-    tracking_history: initialHistory
-  };
-  const local = getLocalOrders();
-  local.unshift(orderWithTracking);
-  saveLocalOrders(local);
-
-  return orderWithTracking;
+  throw new Error('Order service is unavailable. Please try again later.');
 }
 
 export async function fetchOrderByReference(orderRef, phone = null) {
@@ -702,9 +683,12 @@ export async function fetchOrderByReference(orderRef, phone = null) {
       if (!error && Array.isArray(data) && data.length > 0) {
         return data[0];
       }
+      if (error) throw error;
     } catch (e) {
-      console.warn('RPC track_order lookup fallback:', e);
+      console.warn('Order tracking lookup failed:', e);
+      throw new Error('Unable to verify order tracking at this time.');
     }
+    return null;
   }
 
   // 2. Fallback to local storage order records
@@ -712,7 +696,8 @@ export async function fetchOrderByReference(orderRef, phone = null) {
   const foundLocal = localOrders.find(o => {
     const idMatch = (o.id && (o.id.toLowerCase() === cleanRef.toLowerCase() || o.id.toLowerCase() === `fh-${cleanRef}`.toLowerCase())) ||
       (o.reference && (o.reference.toLowerCase() === cleanRef.toLowerCase() || o.reference.toLowerCase() === `fh-${cleanRef}`.toLowerCase()));
-    const phoneMatch = !cleanPhone || (o.customer_phone && o.customer_phone.includes(cleanPhone)) || (o.phone && o.phone.includes(cleanPhone));
+    const phoneMatch = /^\d{10,15}$/.test(cleanPhone || '') &&
+      String(o.customer_phone || o.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone.slice(-10);
     return idMatch && phoneMatch;
   });
   if (foundLocal) return foundLocal;
@@ -724,7 +709,9 @@ export async function fetchOrderByReference(orderRef, phone = null) {
       const foundCust = custOrders.find(o => {
         const idMatch = (o.id && (o.id.toLowerCase() === cleanRef.toLowerCase() || o.id.toLowerCase() === `fh-${cleanRef}`.toLowerCase())) ||
           (o.reference && (o.reference.toLowerCase() === cleanRef.toLowerCase() || o.reference.toLowerCase() === `fh-${cleanRef}`.toLowerCase()));
-        return idMatch;
+        const phoneMatch = /^\d{10,15}$/.test(cleanPhone || '') &&
+          String(o.customer_phone || o.phone || '').replace(/\D/g, '').slice(-10) === cleanPhone.slice(-10);
+        return idMatch && phoneMatch;
       });
       if (foundCust) return foundCust;
     } catch (_) {}
@@ -873,32 +860,27 @@ export async function saveStoreSettings(settings) {
   return settings;
 }
 
-const DEFAULT_COUPONS = [
-  { code: 'HUB10', discountPercent: 10, minOrderAmount: 5000, isActive: true, usageCount: 0 }
-];
-
 export async function fetchCoupons() {
   const client = getClient();
   if (client) {
-    try {
-      const { data, error } = await client.from('coupons').select('*');
-      if (!error && data && data.length > 0) {
-        return data.map(r => ({
-          code: r.code,
-          discountPercent: r.discount_percent,
-          minOrderAmount: Number(r.min_order_amount || 0),
-          isActive: Boolean(r.is_active),
-          usageCount: r.usage_count || 0
-        }));
-      }
-    } catch { /* ignore */ }
+    const { data, error } = await client.from('coupons').select('*');
+    if (error) throw error;
+    return (data || []).map(r => ({
+      code: r.code,
+      discountPercent: Number(r.discount_percent || 0),
+      discountFixed: Number(r.discount_fixed || 0),
+      minOrderAmount: Number(r.min_order_amount || 0),
+      expiryDate: r.expiry_date,
+      isActive: Boolean(r.is_active),
+      usageCount: r.usage_count || 0
+    }));
   }
 
   const stored = localStorage.getItem(STORAGE_LOCAL_COUPONS);
   if (stored) {
     try { return JSON.parse(stored); } catch { /* ignore */ }
   }
-  return DEFAULT_COUPONS;
+  return [];
 }
 
 export async function saveCoupon(coupon) {

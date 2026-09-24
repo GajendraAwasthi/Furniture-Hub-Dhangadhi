@@ -75,6 +75,7 @@ const state = {
   lastOrder: null,
   couponCode: '',
   couponApplied: false,
+  coupon: null,
   searchQuery: ''
 };
 
@@ -112,15 +113,16 @@ function showToast(message, type = 'success') {
   if (!container) return;
 
   const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
+  toast.className = `toast toast-${['success', 'danger', 'info'].includes(type) ? type : 'info'}`;
   toast.innerHTML = `
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       ${type === 'success' 
         ? '<polyline points="20 6 9 17 4 12"></polyline>' 
         : '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>'}
     </svg>
-    <span>${message}</span>
+    <span></span>
   `;
+  toast.querySelector('span').textContent = String(message);
   container.appendChild(toast);
 
   // Trigger animation
@@ -196,16 +198,26 @@ events.on('toggle-wishlist', (productId) => {
 events.on('apply-coupon', async (code) => {
   try {
     const coupons = await fetchCoupons();
-    const found = coupons.find(c => c.code.toUpperCase() === code.toUpperCase() && c.isActive !== false);
-    if (!found) {
+    const found = coupons.find(c => c.code.toUpperCase() === String(code || '').trim().toUpperCase());
+    const subtotal = state.cart.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0);
+    const today = new Date().toISOString().slice(0, 10);
+    if (!found || found.isActive === false || (found.expiryDate && found.expiryDate < today)) {
+      state.couponApplied = false;
+      state.coupon = null;
+      state.couponCode = '';
+      updateChrome();
       showToast('❌ Invalid or expired coupon code.', 'danger');
+      return;
+    }
+    if (subtotal < found.minOrderAmount) {
+      showToast(`This coupon requires a subtotal of Rs. ${found.minOrderAmount.toLocaleString()}/-.`, 'danger');
       return;
     }
     state.couponCode = found.code;
     state.couponApplied = true;
-    state.couponDiscount = found.discountPercent;
+    state.coupon = found;
     updateChrome();
-    showToast(`🎉 Coupon ${found.code} applied! ${found.discountPercent}% discount added.`);
+    showToast(`🎉 Coupon ${found.code} applied!`);
   } catch (e) {
     console.warn('Coupon lookup failed:', e);
     showToast('❌ Could not validate coupon. Please try again.', 'danger');
@@ -266,7 +278,8 @@ events.on('order-placed', async (orderData = {}) => {
     try {
       const { data: sessionData, error: sessionErr } = await client.auth.getSession();
       const activeSession = sessionData?.session;
-      if (sessionErr || !activeSession || !activeSession.user) {
+      if (sessionErr || !activeSession?.user ||
+          activeSession.user.email?.toLowerCase() !== state.customerUser.email?.toLowerCase()) {
         // Local customer exists without a Supabase session: clear local session and state.customerUser, open customer-auth-modal, and stop.
         localStorage.removeItem('fh_customer_session');
         state.customerUser = null;
@@ -278,7 +291,12 @@ events.on('order-placed', async (orderData = {}) => {
       }
     } catch (sessionCheckErr) {
       console.warn('Session verification check failed:', sessionCheckErr);
+      showToast('Unable to verify your session. Please try again.', 'danger');
+      return;
     }
+  } else {
+    showToast('Order service is unavailable. Please try again later.', 'danger');
+    return;
   }
 
   // Lock placement in flight and disable submit button
@@ -294,7 +312,7 @@ events.on('order-placed', async (orderData = {}) => {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const orderRef = 'FH-' + dateStr + '-' + Math.floor(100000 + Math.random() * 900000);
   const orderItems = [...state.cart];
-  const orderTotal = orderData.total || 15000;
+  const orderTotal = Number(orderData.total) || 0;
 
   const orderPayload = {
     id: orderRef,
@@ -1225,4 +1243,3 @@ document.addEventListener('submit', (e) => {
     }
   }
 });
-
