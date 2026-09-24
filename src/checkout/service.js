@@ -229,10 +229,12 @@ export async function confirmOrder({
       }
       const recalculatedDeliveryFeeMinor = recalculatedSubtotalMinor > 0n ? 50000n : 0n;
       let recalculatedDiscountMinor = 0n;
-      if (preview.appliedCoupon && preview.appliedCoupon.code === 'HUB10') {
-        recalculatedDiscountMinor = (recalculatedSubtotalMinor * 10n) / 100n;
+      if (preview.appliedCoupon && preview.appliedCoupon.discountPercent > 0) {
+        const pct = BigInt(preview.appliedCoupon.discountPercent);
+        recalculatedDiscountMinor = (recalculatedSubtotalMinor * pct) / 100n;
       }
       const recalculatedTotalMinor = recalculatedSubtotalMinor - recalculatedDiscountMinor + recalculatedDeliveryFeeMinor;
+
 
       if (clientSuppliedTotal !== null && clientSuppliedTotal !== undefined) {
         const clientVal = Number(clientSuppliedTotal);

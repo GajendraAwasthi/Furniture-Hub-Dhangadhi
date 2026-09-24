@@ -463,17 +463,17 @@ export function renderCartDrawer(container, state, events) {
     });
   });
 
-  // Coupon code
+  // Coupon code — validated dynamically against the live coupons store
   const couponBtn = container.querySelector('#cart-coupon-apply-btn');
   const couponInput = container.querySelector('#cart-coupon-input');
   if (couponBtn && couponInput) {
     couponBtn.addEventListener('click', () => {
       const code = couponInput.value.trim().toUpperCase();
-      if (code === 'HUB10' || code === 'FESTIVE2025') {
-        events.emit('apply-coupon', code);
-      } else {
-        events.emit('toast', { message: 'Invalid coupon code. Try HUB10', type: 'danger' });
+      if (!code) {
+        events.emit('toast', { message: 'Please enter a coupon code.', type: 'danger' });
+        return;
       }
+      events.emit('apply-coupon', code);
     });
   }
 
@@ -561,7 +561,7 @@ export function renderCartDrawer(container, state, events) {
         phone: customerPhone,
         address: fullAddress,
         paymentMethod: 'WhatsApp Direct',
-        couponCode: state.couponApplied ? (state.couponCode || 'HUB10') : null
+        couponCode: state.couponApplied ? (state.couponCode || null) : null
       });
     });
   }

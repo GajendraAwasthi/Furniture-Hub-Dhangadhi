@@ -28,7 +28,7 @@ import { renderOnboardingView } from './views/customer/customer-onboarding-view.
 import { renderTrackOrderView } from './views/track/track-order-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
 import { getBrandLoaderHtml, showGlobalBrandLoader, hideGlobalBrandLoader } from './components/brand-loader.js';
-import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient } from './services/supabase.js';
+import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient, fetchCoupons } from './services/supabase.js';
 import { generateWhatsAppLink } from './services/whatsapp.js';
 import { 
   getCurrentCustomer, 
@@ -193,11 +193,23 @@ events.on('toggle-wishlist', (productId) => {
   renderCurrentView();
 });
 
-events.on('apply-coupon', (code) => {
-  state.couponCode = code;
-  state.couponApplied = true;
-  updateChrome();
-  showToast('🎉 Coupon HUB10 applied! 10% discount added.');
+events.on('apply-coupon', async (code) => {
+  try {
+    const coupons = await fetchCoupons();
+    const found = coupons.find(c => c.code.toUpperCase() === code.toUpperCase() && c.isActive !== false);
+    if (!found) {
+      showToast('❌ Invalid or expired coupon code.', 'danger');
+      return;
+    }
+    state.couponCode = found.code;
+    state.couponApplied = true;
+    state.couponDiscount = found.discountPercent;
+    updateChrome();
+    showToast(`🎉 Coupon ${found.code} applied! ${found.discountPercent}% discount added.`);
+  } catch (e) {
+    console.warn('Coupon lookup failed:', e);
+    showToast('❌ Could not validate coupon. Please try again.', 'danger');
+  }
 });
 
 events.on('open-cart', () => {
@@ -312,7 +324,7 @@ events.on('order-placed', async (orderData = {}) => {
       items: orderPayload.items,
       total_amount: orderPayload.total,
       payment_method: orderPayload.paymentMethod,
-      coupon_code: orderData.couponCode || (state.couponApplied ? (state.couponCode || 'HUB10') : null),
+      coupon_code: orderData.couponCode || (state.couponApplied ? (state.couponCode || null) : null),
       status: 'Pending',
       created_at: orderPayload.created_at
     });

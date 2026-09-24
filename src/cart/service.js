@@ -165,16 +165,29 @@ export async function getCartDetails(cartId, couponCode = null) {
   const STANDARD_DELIVERY_FEE = 50000n;
   const deliveryFeeMinor = subtotalMinor > 0n ? STANDARD_DELIVERY_FEE : 0n;
 
-  // Discount calculation (server-side verified):
+  // Discount calculation — query coupons table dynamically (zero hardcoding)
   let discountMinor = 0n;
   let appliedCoupon = null;
   if (couponCode) {
     const cleanCode = couponCode.trim().toUpperCase();
-    if (cleanCode === 'HUB10') {
-      discountMinor = (subtotalMinor * 10n) / 100n; // 10%
-      appliedCoupon = { code: 'HUB10', discountPercent: 10 };
+    const couponRes = await db.query(
+      `SELECT code, discount_percent, min_order_amount, is_active
+       FROM coupons
+       WHERE UPPER(code) = $1 AND is_active = true
+       LIMIT 1;`,
+      [cleanCode]
+    );
+    if (couponRes.rows.length > 0) {
+      const coupon = couponRes.rows[0];
+      const minOrder = BigInt(Math.round((coupon.min_order_amount || 0) * 100));
+      if (subtotalMinor >= minOrder) {
+        const pct = BigInt(coupon.discount_percent || 0);
+        discountMinor = (subtotalMinor * pct) / 100n;
+        appliedCoupon = { code: coupon.code, discountPercent: Number(pct) };
+      }
     }
   }
+
 
   const totalMinor = subtotalMinor - discountMinor + deliveryFeeMinor;
 
