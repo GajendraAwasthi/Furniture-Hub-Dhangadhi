@@ -2,6 +2,7 @@ import { fetchOrderByReference, fetchStoreSettings } from '../../services/supaba
 import { escapeHtml } from '../../utils/security.js';
 import { resolveCloudImageUrl } from '../../utils/cloud-image-resolver.js';
 import { getBrandLoaderHtml } from '../../components/brand-loader.js';
+import { isCurrentAdmin } from '../../services/customer-auth.js';
 
 export async function renderTrackOrderView(container, state, events, params) {
   const queryRef = params?.get('ref') || params?.get('id') || params?.get('order') || '';
@@ -28,9 +29,30 @@ export async function renderTrackOrderView(container, state, events, params) {
     render();
 
     try {
-      order = await fetchOrderByReference(ref, phone);
-      if (!order) {
+      const fetched = await fetchOrderByReference(ref, phone);
+      if (!fetched) {
         searchError = `No order found with reference "${ref}". Please check your order number or contact support.`;
+        order = null;
+      } else {
+        // Ownership check: admin can see any order; customers can only see their own
+        const currentUser = state.customerUser;
+        const admin = isCurrentAdmin();
+        if (!admin && currentUser) {
+          const userEmail = (currentUser.email || '').toLowerCase().trim();
+          const userPhone = (currentUser.phone || '').trim();
+          const orderEmail = (fetched.customer_email || '').toLowerCase().trim();
+          const orderPhone = (fetched.customer_phone || fetched.phone || '').trim();
+          const emailMatch = userEmail && orderEmail && userEmail === orderEmail;
+          const phoneMatch = userPhone && orderPhone && orderPhone.includes(userPhone);
+          if (!emailMatch && !phoneMatch) {
+            searchError = 'Access denied. You can only track orders placed under your account.';
+            order = null;
+          } else {
+            order = fetched;
+          }
+        } else {
+          order = fetched;
+        }
       }
     } catch (err) {
       console.error('Order tracking fetch error:', err);

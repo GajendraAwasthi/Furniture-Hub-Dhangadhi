@@ -1010,7 +1010,16 @@ async function renderCurrentView() {
   if (route === '#shop') {
     renderShopView(appContainer, state, events, params);
   } else if (route === '#track' || route === '#track-order' || route === '#order-tracking') {
+    // Guard: only signed-in customers and admins can track orders
+    if (!state.customerUser && !isCurrentAdmin()) {
+      showToast('🔒 Please sign in to track your order.', 'danger');
+      state.customerAuthTab = 'login';
+      state.isCustomerAuthOpen = true;
+      updateChrome();
+      return;
+    }
     renderTrackOrderView(appContainer, state, events, params);
+
   } else if (route === '#product-detail') {
     renderProductDetailView(appContainer, state, events, params);
   } else if (route === '#about') {
