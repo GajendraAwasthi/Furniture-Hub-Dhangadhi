@@ -1,5 +1,4 @@
 {
-  "$schema": "https://agenticresourcediscovery.org/schemas/v1/ai-catalog.schema.json",
   "specVersion": "1.0",
   "host": {
     "displayName": "Furniture Hub Dhangadhi",
@@ -7,9 +6,9 @@
   },
   "entries": [
     {
-      "identifier": "urn:ai:furniturehubdhangadhi.com:catalog:products",
+      "identifier": "urn:air:furniturehubdhangadhi.com:catalog:products",
       "displayName": "Furniture Catalog & Product Inventory",
-      "type": "application/json",
+      "type": "application/ai-catalog+json",
       "url": "https://www.furniturehubdhangadhi.com/data/products.json",
       "description": "Handcrafted wooden furniture, modern sofas, beds, dining tables, and office seating catalog in Dhangadhi, Kailali, Nepal.",
       "representativeQueries": [
@@ -21,9 +20,9 @@
       ]
     },
     {
-      "identifier": "urn:ai:furniturehubdhangadhi.com:catalog:sitemap",
+      "identifier": "urn:air:furniturehubdhangadhi.com:catalog:sitemap",
       "displayName": "Store Canonical Sitemap",
-      "type": "application/xml",
+      "type": "application/ai-catalog+json",
       "url": "https://www.furniturehubdhangadhi.com/sitemap.xml",
       "description": "Index of all canonical product pages, category collections, and store support documentation.",
       "representativeQueries": [
