@@ -262,24 +262,24 @@ export function renderCartDrawer(container, state, events) {
 
           <!-- Customer Auth Status Banner -->
           ${state.customerUser ? `
-            <div style="background: rgba(37, 211, 102, 0.08); border: 1px solid rgba(37, 211, 102, 0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
-              <div style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #075e54; font-weight: 600;">
+            <div class="checkout-auth-banner signed-in">
+              <div style="display: flex; align-items: center; gap: 8px;">
                 <span class="variant-dot" style="background: #25D366;"></span>
                 <span>Signed in as <strong>${state.customerUser.name}</strong></span>
               </div>
-              <span style="font-size: 0.74rem; color: #2e7d32; font-weight: 700;">Pre-filled</span>
+              <span class="auth-prefill-badge">Pre-filled</span>
             </div>
           ` : `
-            <div style="background: var(--color-bg-light); border: 1px dashed rgba(18, 45, 37, 0.15); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem;">
-              <span style="color: var(--color-text-muted);">Have a customer account?</span>
-              <button type="button" id="checkout-signin-shortcut" style="color: var(--color-primary); font-weight: 800; text-decoration: underline; background: none; border: none; cursor: pointer;">
+            <div class="checkout-auth-banner guest">
+              <span>Have a customer account?</span>
+              <button type="button" id="checkout-signin-shortcut" class="auth-shortcut-btn">
                 Sign In to Auto-Fill
               </button>
             </div>
           `}
 
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">
+            <label class="form-label">
               Full Name <span class="required-star">*</span>
             </label>
             <input type="text" class="form-input" id="checkout-name" required placeholder="e.g. Ram Bahadur Thapa" value="${state.customerUser?.name || state.customerProfile?.name || ''}">
@@ -287,7 +287,7 @@ export function renderCartDrawer(container, state, events) {
 
           <div class="form-group">
             <div class="form-label-row">
-              <label class="form-label" style="font-weight: 700;">
+              <label class="form-label">
                 WhatsApp Mobile Number <span class="required-star">*</span>
               </label>
               <span class="phone-hint-badge">🇳🇵 10-digit Nepal Mobile</span>
@@ -297,14 +297,14 @@ export function renderCartDrawer(container, state, events) {
           </div>
 
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">
+            <label class="form-label">
               Delivery Address <span class="required-star">*</span>
             </label>
             <input type="text" class="form-input" id="checkout-address" required placeholder="Street address, ward number, or landmark" value="${state.customerUser?.address || state.customerProfile?.address || ''}">
           </div>
 
           <div class="form-group">
-            <label class="form-label" style="font-weight: 700;">
+            <label class="form-label">
               City / Delivery Region <span class="required-star">*</span>
             </label>
             <select class="form-input checkout-select" id="checkout-city">
