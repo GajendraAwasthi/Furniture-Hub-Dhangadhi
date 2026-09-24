@@ -28,10 +28,10 @@ export function openProductReviewsModal(product, events) {
         <!-- Header -->
         <div class="product-reviews-header">
           <div class="product-reviews-header-info">
-            <img src="${resolveCloudImageUrl(product.image)}" alt="${product.name}" class="product-reviews-thumb" onerror="this.src='/images/hero-living-room.png'">
+            <img src="${escapeHtml(resolveCloudImageUrl(product.image))}" alt="${escapeHtml(product.name)}" class="product-reviews-thumb" onerror="this.src='/images/hero-living-room.png'">
             <div>
-              <span class="product-reviews-cat">${product.category || 'Furniture'}</span>
-              <h3 id="p-rev-title" class="product-reviews-title">${product.name} Reviews</h3>
+              <span class="product-reviews-cat">${escapeHtml(product.category || 'Furniture')}</span>
+              <h3 id="p-rev-title" class="product-reviews-title">${escapeHtml(product.name)} Reviews</h3>
               <div class="product-reviews-score-line">
                 <span class="product-reviews-score">${summary.average}</span>
                 <span class="product-reviews-stars">${renderStars(summary.average, 16)}</span>
@@ -76,8 +76,8 @@ export function openProductReviewsModal(product, events) {
         <div class="write-review-container" id="write-review-container" style="display: none;">
           <form id="submit-customer-review-form" class="customer-review-form">
             <div class="review-form-title-row">
-              <h4>Share Your Experience with ${product.name}</h4>
-              <span class="review-form-author">Posting as <strong>${currentUser ? (currentUser.name || currentUser.email) : 'Guest (Sign in required)'}</strong></span>
+              <h4>Share Your Experience with ${escapeHtml(product.name)}</h4>
+              <span class="review-form-author">Posting as <strong>${escapeHtml(currentUser ? (currentUser.name || currentUser.email) : 'Guest (Sign in required)')}</strong></span>
             </div>
             
             <div class="rating-picker-row">
@@ -110,7 +110,7 @@ export function openProductReviewsModal(product, events) {
             <div class="product-review-item">
               <div class="rev-item-top">
                 <div class="rev-user-meta">
-                  <img src="${rev.userAvatar || '/images/social-user.png'}" alt="${rev.userName}" class="rev-user-avatar">
+                  <img src="${escapeHtml(rev.userAvatar || '/images/social-user.png')}" alt="${escapeHtml(rev.userName)}" class="rev-user-avatar">
                   <div>
                     <div class="rev-user-name-row">
                       <h4 class="rev-user-name">${escapeHtml(rev.userName)}</h4>

@@ -3,6 +3,7 @@ import { isCurrentAdmin } from '../services/customer-auth.js';
 import { getTopReviews } from '../services/reviews.js';
 import { openProductReviewsModal } from '../components/product-reviews-modal.js';
 import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
+import { escapeHtml } from '../utils/security.js';
 
 export function renderHomeView(container, state, events) {
   function renderStars(rating = 5) {
@@ -17,19 +18,19 @@ export function renderHomeView(container, state, events) {
   // Exact product card matching user Screenshot 2 and 3 with interactive reviews trigger
   function renderExactCard(product) {
     return `
-      <div class="figma-product-card" data-id="${product.id}">
+      <div class="figma-product-card" data-id="${escapeHtml(product.id)}">
         <div class="figma-card-img-wrap">
-          <img src="${resolveCloudImageUrl(product.image)}" alt="${product.name} — Furniture Hub Dhangadhi" width="300" height="260" loading="lazy" decoding="async" onerror="this.src='/images/hero-living-room.png'">
+          <img src="${escapeHtml(resolveCloudImageUrl(product.image))}" alt="${escapeHtml(product.name)} — Furniture Hub Dhangadhi" width="300" height="260" loading="lazy" decoding="async" onerror="this.src='/images/hero-living-room.png'">
         </div>
-        <span class="figma-card-category">${product.category || 'Decorations'}</span>
-        <h3 class="figma-card-title"><a href="/products/${product.id}" style="color: inherit; text-decoration: none;">${product.name}</a></h3>
-        <div class="figma-card-rating figma-card-rating-interactive" data-open-reviews-pid="${product.id}" title="View verified customer reviews">
+        <span class="figma-card-category">${escapeHtml(product.category || 'Decorations')}</span>
+        <h3 class="figma-card-title"><a href="/products/${escapeHtml(product.id)}" style="color: inherit; text-decoration: none;">${escapeHtml(product.name)}</a></h3>
+        <div class="figma-card-rating figma-card-rating-interactive" data-open-reviews-pid="${escapeHtml(product.id)}" title="View verified customer reviews">
           <span class="stars">${renderStars(product.rating || 5)}</span>
           <span class="count">(${product.reviewCount || 8} reviews)</span>
         </div>
         <div class="figma-card-price-row" style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; gap: 8px;">
           <div class="figma-card-price">Rs. ${(product.price || 15000).toLocaleString()}/-</div>
-          <button class="card-add-btn home-card-add-btn" data-add-pid="${product.id}" title="Add to Cart" aria-label="Add ${product.name} to cart">
+          <button class="card-add-btn home-card-add-btn" data-add-pid="${escapeHtml(product.id)}" title="Add to Cart" aria-label="Add ${escapeHtml(product.name)} to cart">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -250,19 +251,19 @@ export function renderHomeView(container, state, events) {
 
         <div class="figma-reviews-grid" id="figma-reviews-grid" style="${reviewsData.length === 0 ? 'display: block; text-align: center;' : ''}">
           ${reviewsData.length > 0 ? reviewsData.map((rev, idx) => `
-            <div class="figma-review-card ${idx === 1 ? 'featured-review' : ''}" data-review-index="${idx}" data-review-pid="${rev.productId}">
+            <div class="figma-review-card ${idx === 1 ? 'featured-review' : ''}" data-review-index="${idx}" data-review-pid="${escapeHtml(rev.productId)}">
               <div>
                 <div class="figma-review-header">
                   <div class="figma-avatar-circle">
-                    <img src="${rev.userAvatar}" alt="${rev.userName}">
+                    <img src="${escapeHtml(rev.userAvatar)}" alt="${escapeHtml(rev.userName)}">
                   </div>
                   <div>
-                    <h4 class="figma-review-name">${rev.userName}</h4>
-                    <span class="figma-review-product-name" data-nav-pid="${rev.productId}" title="View ${rev.productName}" style="cursor: pointer; display: block; font-size: 0.82rem; font-weight: 700; color: var(--color-primary); margin-top: 2px;">${rev.productName}</span>
+                    <h4 class="figma-review-name">${escapeHtml(rev.userName)}</h4>
+                    <span class="figma-review-product-name" data-nav-pid="${escapeHtml(rev.productId)}" title="View ${escapeHtml(rev.productName)}" style="cursor: pointer; display: block; font-size: 0.82rem; font-weight: 700; color: var(--color-primary); margin-top: 2px;">${escapeHtml(rev.productName)}</span>
                   </div>
                 </div>
                 <p class="figma-review-quote">
-                  "${rev.comment}"
+                  "${escapeHtml(rev.comment)}"
                 </p>
               </div>
               <div class="figma-review-rating-row">

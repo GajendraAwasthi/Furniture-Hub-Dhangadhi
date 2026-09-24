@@ -77,7 +77,7 @@ export async function renderAdminProductsView(container, state, events) {
             <div class="gallery-item-card" style="position: relative; border-radius: 10px; overflow: hidden; background: #ffffff; border: ${isCover ? '2px solid var(--color-primary)' : '1px solid rgba(18,45,37,0.15)'}; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; flex-direction: column;">
               <!-- Image Thumbnail -->
               <div style="position: relative; height: 110px; background: #f5f5f5; overflow: hidden;">
-                <img src="${displayUrl}" alt="Gallery angle ${idx + 1}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.src='/images/hero-living-room.png'">
+                <img src="${escapeHtml(displayUrl)}" alt="Gallery angle ${idx + 1}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.src='/images/hero-living-room.png'">
                 
                 ${isCover ? `
                   <span style="position: absolute; top: 6px; left: 6px; background: var(--color-primary); color: #ffffff; font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
@@ -248,21 +248,21 @@ export async function renderAdminProductsView(container, state, events) {
                     <tr>
                       <td>
                         <div class="product-row-flex">
-                          <img src="${displayThumb}" alt="${p.name}" class="product-table-thumb" onerror="this.src='/images/hero-living-room.png'">
+                          <img src="${escapeHtml(displayThumb)}" alt="${escapeHtml(p.name)}" class="product-table-thumb" onerror="this.src='/images/hero-living-room.png'">
                           <div>
-                            <div style="font-weight: 700; color: var(--color-primary);">${p.name}</div>
-                            <div style="font-size: 0.75rem; color: var(--color-text-subtle);">ID: ${p.id}</div>
+                            <div style="font-weight: 700; color: var(--color-primary);">${escapeHtml(p.name)}</div>
+                            <div style="font-size: 0.75rem; color: var(--color-text-subtle);">ID: ${escapeHtml(p.id)}</div>
                           </div>
                         </div>
                       </td>
                       <td>
                         <span class="badge-tag" style="background: var(--color-bg-light); color: var(--color-primary); border: 1px solid rgba(18,45,37,0.15);">
-                          ${p.category}
+                          ${escapeHtml(p.category)}
                         </span>
                       </td>
                       <td>
-                        <strong>${currency} ${p.price.toLocaleString()}</strong>
-                        ${p.originalPrice ? `<div style="font-size: 0.76rem; color: var(--color-text-subtle); text-decoration: line-through;">${currency} ${p.originalPrice.toLocaleString()}</div>` : ''}
+                        <strong>${escapeHtml(currency)} ${p.price.toLocaleString()}</strong>
+                        ${p.originalPrice ? `<div style="font-size: 0.76rem; color: var(--color-text-subtle); text-decoration: line-through;">${escapeHtml(currency)} ${p.originalPrice.toLocaleString()}</div>` : ''}
                       </td>
                       <td>
                         <span class="badge-tag" style="font-size: 0.75rem; font-weight: 700; background: rgba(18,45,37,0.06); color: var(--color-primary);">
@@ -271,7 +271,7 @@ export async function renderAdminProductsView(container, state, events) {
                       </td>
                       <td>
                         <div style="font-size: 0.8rem; color: var(--color-text-muted);">
-                          ${p.materials || 'Standard wood/metal'} • ${p.dimensions || 'Standard size'}
+                          ${escapeHtml(p.materials || 'Standard wood/metal')} • ${escapeHtml(p.dimensions || 'Standard size')}
                         </div>
                       </td>
                       <td>
@@ -281,13 +281,13 @@ export async function renderAdminProductsView(container, state, events) {
                       </td>
                       <td style="text-align: right;">
                         <div style="display: inline-flex; gap: 8px;">
-                          <button class="action-icon-btn btn-edit-product" data-id="${p.id}" title="Edit product details">
+                          <button class="action-icon-btn btn-edit-product" data-id="${escapeHtml(p.id)}" title="Edit product details">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                           </button>
-                          <button class="action-icon-btn danger btn-delete-product" data-id="${p.id}" title="Delete product">
+                          <button class="action-icon-btn danger btn-delete-product" data-id="${escapeHtml(p.id)}" title="Delete product">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <polyline points="3 6 5 6 21 6"></polyline>
                               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>

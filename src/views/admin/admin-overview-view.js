@@ -2,6 +2,7 @@ import { fetchProducts, fetchOrders, fetchStoreSettings, updateOrderStatus } fro
 import { getSellerNumber } from '../../services/whatsapp.js';
 import { resolveCloudImageUrl } from '../../utils/cloud-image-resolver.js';
 import { getBrandLoaderHtml } from '../../components/brand-loader.js';
+import { escapeHtml } from '../../utils/security.js';
 
 export async function renderAdminOverviewView(container, state, events) {
   container.innerHTML = getBrandLoaderHtml({
@@ -60,7 +61,7 @@ export async function renderAdminOverviewView(container, state, events) {
         <div class="admin-kpi-card">
           <div>
             <div class="kpi-title">Total Sales Volume</div>
-            <div class="kpi-val">${currency} ${totalRevenue.toLocaleString()}</div>
+            <div class="kpi-val">${escapeHtml(currency)} ${totalRevenue.toLocaleString()}</div>
             <div class="kpi-sub" style="color: #2e7d32;">From recorded orders</div>
           </div>
           <div class="kpi-icon-box">
@@ -129,7 +130,7 @@ export async function renderAdminOverviewView(container, state, events) {
           </div>
           <div>
             <div style="font-weight: 800; font-size: 1.05rem; color: #122d25;">
-              WhatsApp Order Receiver: Active (+${sellerPhone})
+              WhatsApp Order Receiver: Active (+${escapeHtml(sellerPhone)})
             </div>
             <div style="font-size: 0.84rem; color: var(--color-text-muted);">
               All customer checkouts and orders route directly to this WhatsApp mobile number.
@@ -170,28 +171,28 @@ export async function renderAdminOverviewView(container, state, events) {
               ${orders.slice(0, 5).map(o => `
                 <tr>
                   <td>
-                    <strong style="color: var(--color-primary);">${o.id}</strong>
+                    <strong style="color: var(--color-primary);">${escapeHtml(o.id)}</strong>
                     <div style="font-size: 0.75rem; color: var(--color-text-subtle);">
                       ${new Date(o.created_at || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                   </td>
                   <td>
-                    <div style="font-weight: 700;">${o.customer_name}</div>
-                    <div style="font-size: 0.8rem; color: var(--color-text-muted);">${o.customer_phone || ''} • ${o.delivery_address || ''}</div>
+                    <div style="font-weight: 700;">${escapeHtml(o.customer_name)}</div>
+                    <div style="font-size: 0.8rem; color: var(--color-text-muted);">${escapeHtml(o.customer_phone || '')} • ${escapeHtml(o.delivery_address || '')}</div>
                   </td>
                   <td>
-                    <span style="font-weight: 600; font-size: 0.82rem;">${o.payment_method || 'COD'}</span>
+                    <span style="font-weight: 600; font-size: 0.82rem;">${escapeHtml(o.payment_method || 'COD')}</span>
                   </td>
                   <td>
-                    <strong style="font-size: 0.95rem;">${currency} ${Number(o.total_amount || 0).toLocaleString()}</strong>
+                    <strong style="font-size: 0.95rem;">${escapeHtml(currency)} ${Number(o.total_amount || 0).toLocaleString()}</strong>
                   </td>
                   <td>
-                    <span class="status-badge ${(o.status || 'Pending').toLowerCase()}">
-                      ${o.status || 'Pending'}
+                    <span class="status-badge ${['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].includes(o.status) ? o.status.toLowerCase() : 'pending'}">
+                      ${escapeHtml(o.status || 'Pending')}
                     </span>
                   </td>
                   <td style="text-align: right;">
-                    <select class="settings-select order-quick-status" data-order-id="${o.id}" style="width: auto; padding: 4px 8px; font-size: 0.8rem;">
+                    <select class="settings-select order-quick-status" data-order-id="${escapeHtml(o.id)}" style="width: auto; padding: 4px 8px; font-size: 0.8rem;">
                       <option value="Pending" ${o.status === 'Pending' ? 'selected' : ''}>Pending</option>
                       <option value="Processing" ${o.status === 'Processing' ? 'selected' : ''}>Processing</option>
                       <option value="Shipped" ${o.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
@@ -234,24 +235,24 @@ export async function renderAdminOverviewView(container, state, events) {
                 <tr>
                   <td>
                     <div class="product-row-flex">
-                      <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" class="product-table-thumb" onerror="this.src='/images/hero-living-room.png'">
+                      <img src="${escapeHtml(resolveCloudImageUrl(p.image))}" alt="${escapeHtml(p.name)}" class="product-table-thumb" onerror="this.src='/images/hero-living-room.png'">
                       <div>
-                        <div style="font-weight: 700;">${p.name}</div>
-                        <div style="font-size: 0.76rem; color: var(--color-text-subtle);">ID: ${p.id}</div>
+                        <div style="font-weight: 700;">${escapeHtml(p.name)}</div>
+                        <div style="font-size: 0.76rem; color: var(--color-text-subtle);">ID: ${escapeHtml(p.id)}</div>
                       </div>
                     </div>
                   </td>
                   <td>
                     <span class="badge-tag" style="background: var(--color-bg-light); color: var(--color-primary); border: 1px solid rgba(18,45,37,0.12);">
-                      ${p.category}
+                      ${escapeHtml(p.category)}
                     </span>
                   </td>
                   <td>
-                    <strong>${currency} ${p.price.toLocaleString()}</strong>
+                    <strong>${escapeHtml(currency)} ${p.price.toLocaleString()}</strong>
                   </td>
                   <td>
                     <span class="badge-tag ${p.badge === 'Best Seller' ? 'badge-sale' : ''}">
-                      ${p.badge || 'Standard'}
+                      ${escapeHtml(p.badge || 'Standard')}
                     </span>
                   </td>
                   <td>

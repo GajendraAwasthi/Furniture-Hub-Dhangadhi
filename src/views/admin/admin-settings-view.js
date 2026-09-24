@@ -3,9 +3,11 @@ import {
   saveStoreSettings, 
   fetchCoupons,
   saveCoupon,
-  deleteCoupon
+  deleteCoupon,
+  getClient
 } from '../../services/supabase.js';
-import { getSellerNumber, setSellerNumber, normalizeWhatsAppNumber } from '../../services/whatsapp.js';
+import { getSellerNumber, setSellerNumber, setCloudSellerNumber, normalizeWhatsAppNumber } from '../../services/whatsapp.js';
+import { escapeHtml } from '../../utils/security.js';
 
 export async function renderAdminSettingsView(container, state, events) {
   let settings = await fetchStoreSettings();
@@ -120,22 +122,22 @@ export async function renderAdminSettingsView(container, state, events) {
             <div class="settings-form-grid">
               <div class="settings-form-group">
                 <label class="settings-label" for="st-name">Store Name *</label>
-                <input type="text" id="st-name" class="settings-input" value="${settings.storeName || 'Furniture Hub Dhangadhi'}" required>
+                <input type="text" id="st-name" class="settings-input" value="${escapeHtml(settings.storeName || 'Furniture Hub Dhangadhi')}" required>
               </div>
 
               <div class="settings-form-group">
                 <label class="settings-label" for="st-currency">Currency Symbol / Code *</label>
-                <input type="text" id="st-currency" class="settings-input" value="${settings.currency || 'Rs.'}" required>
+                <input type="text" id="st-currency" class="settings-input" value="${escapeHtml(settings.currency || 'Rs.')}" required>
               </div>
 
               <div class="settings-form-group">
                 <label class="settings-label" for="st-email">Support Email *</label>
-                <input type="email" id="st-email" class="settings-input" value="${settings.contactEmail || 'support@furniturehubdhangadhi.com'}" required>
+                <input type="email" id="st-email" class="settings-input" value="${escapeHtml(settings.contactEmail || 'support@furniturehubdhangadhi.com')}" required>
               </div>
 
               <div class="settings-form-group">
                 <label class="settings-label" for="st-phone">Customer Helpline / Mobile *</label>
-                <input type="text" id="st-phone" class="settings-input" value="${settings.phone || '+977 9841234567'}" required>
+                <input type="text" id="st-phone" class="settings-input" value="${escapeHtml(settings.phone || '+977 9841234567')}" required>
               </div>
 
               <div class="settings-form-group">
@@ -148,12 +150,12 @@ export async function renderAdminSettingsView(container, state, events) {
 
               <div class="settings-form-group full-width">
                 <label class="settings-label" for="st-address">Main Warehouse & Showroom Address</label>
-                <input type="text" id="st-address" class="settings-input" value="${settings.address || 'Main Road, Ward 1, Dhangadhi, Kailali, Nepal'}" required>
+                <input type="text" id="st-address" class="settings-input" value="${escapeHtml(settings.address || 'Main Road, Ward 1, Dhangadhi, Kailali, Nepal')}" required>
               </div>
 
               <div class="settings-form-group full-width">
                 <label class="settings-label" for="st-hours">Operating & Delivery Window</label>
-                <input type="text" id="st-hours" class="settings-input" value="${settings.operatingHours || 'Sun - Fri, 9:00 AM - 7:00 PM'}" required>
+                <input type="text" id="st-hours" class="settings-input" value="${escapeHtml(settings.operatingHours || 'Sun - Fri, 9:00 AM - 7:00 PM')}" required>
               </div>
             </div>
 
@@ -196,7 +198,7 @@ export async function renderAdminSettingsView(container, state, events) {
               <tbody>
                 ${coupons.map(c => `
                   <tr>
-                    <td><strong style="font-family: monospace; font-size: 1rem; color: var(--color-primary);">${c.code}</strong></td>
+                    <td><strong style="font-family: monospace; font-size: 1rem; color: var(--color-primary);">${escapeHtml(c.code)}</strong></td>
                     <td><strong>${c.discountPercent}% OFF</strong></td>
                     <td>Rs. ${(c.minOrderAmount || 0).toLocaleString()}</td>
                     <td>${c.usageCount || 0} times</td>
@@ -206,7 +208,7 @@ export async function renderAdminSettingsView(container, state, events) {
                       </span>
                     </td>
                     <td style="text-align: right;">
-                      <button class="action-icon-btn danger btn-del-coupon" data-code="${c.code}" title="Delete coupon">
+                      <button class="action-icon-btn danger btn-del-coupon" data-code="${escapeHtml(c.code)}" title="Delete coupon">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <polyline points="3 6 5 6 21 6"></polyline>
                           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -308,7 +310,7 @@ export async function renderAdminSettingsView(container, state, events) {
                   type="text" 
                   id="cat-hero-text" 
                   class="settings-input" 
-                  value="${settings.heroSubtitle || 'Browse through our diverse range of meticulously crafted furnitures in Nepal.'}"
+                  value="${escapeHtml(settings.heroSubtitle || 'Browse through our diverse range of meticulously crafted furnitures in Nepal.')}"
                 >
               </div>
             </div>
@@ -336,7 +338,7 @@ export async function renderAdminSettingsView(container, state, events) {
             <div class="settings-form-grid">
               <div class="settings-form-group">
                 <label class="settings-label" for="low-stock-limit">Low-Stock Warning Threshold</label>
-                <input type="number" id="low-stock-limit" class="settings-input" value="${settings.lowStockThreshold ?? 3}" min="1" max="50">
+                <input type="number" id="low-stock-limit" class="settings-input" value="${escapeHtml(settings.lowStockThreshold ?? 3)}" min="1" max="50">
                 <span style="font-size: 0.78rem; color: var(--color-text-subtle);">Products with remaining units below this number trigger inventory alert badges.</span>
               </div>
 
@@ -395,7 +397,6 @@ export async function renderAdminSettingsView(container, state, events) {
       quickWaSaveBtn.addEventListener('click', async () => {
         const raw = quickWaInput.value.trim();
         const clean = normalizeWhatsAppNumber(raw);
-        setSellerNumber(clean);
         quickWaInput.value = clean;
         if (formWaInput) formWaInput.value = clean;
         if (quickWaPreview) quickWaPreview.textContent = `https://wa.me/${clean}`;
@@ -406,6 +407,8 @@ export async function renderAdminSettingsView(container, state, events) {
         };
         try {
           await saveStoreSettings(updated);
+          setSellerNumber(clean);
+          if (getClient()) setCloudSellerNumber(clean);
           settings = updated;
           events.emit('toast', { 
             message: `✅ Store WhatsApp receiver updated to +${clean}! All orders will now route to this number.`, 
@@ -439,7 +442,6 @@ export async function renderAdminSettingsView(container, state, events) {
         e.preventDefault();
         const waVal = container.querySelector('#st-whatsapp') ? container.querySelector('#st-whatsapp').value.trim() : '9779841234567';
         const cleanWa = normalizeWhatsAppNumber(waVal);
-        setSellerNumber(cleanWa);
 
         const updated = {
           ...settings,
@@ -453,6 +455,8 @@ export async function renderAdminSettingsView(container, state, events) {
         };
         try {
           await saveStoreSettings(updated);
+          setSellerNumber(cleanWa);
+          if (getClient()) setCloudSellerNumber(cleanWa);
           settings = updated;
           events.emit('toast', { message: `Store profile & WhatsApp number (+${cleanWa}) saved!`, type: 'success' });
         } catch (err) {
