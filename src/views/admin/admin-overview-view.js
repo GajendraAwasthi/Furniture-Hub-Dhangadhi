@@ -61,7 +61,7 @@ export async function renderAdminOverviewView(container, state, events) {
           <div>
             <div class="kpi-title">Total Sales Volume</div>
             <div class="kpi-val">${currency} ${totalRevenue.toLocaleString()}</div>
-            <div class="kpi-sub" style="color: #2e7d32;">↑ 14.8% vs last month</div>
+            <div class="kpi-sub" style="color: #2e7d32;">From recorded orders</div>
           </div>
           <div class="kpi-icon-box">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

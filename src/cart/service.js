@@ -2,7 +2,13 @@ import crypto from 'crypto';
 import { getDb, withTransaction } from '../db/client.js';
 import { invalidateCatalogCache } from '../catalog/service.js';
 
-const CART_SECRET = process.env.CART_SECRET || 'furniture-hub-cart-signing-secret-key-32b';
+function getCartSecret() {
+  const secret = process.env.CART_SECRET;
+  if (!secret || Buffer.byteLength(secret) < 32) {
+    throw new Error('CART_SECRET must be configured with at least 32 bytes');
+  }
+  return secret;
+}
 export const CART_CONFIG = {
   cookieName: 'fh_cart_session',
   maxQuantityPerItem: 99,
@@ -20,7 +26,7 @@ export const CART_CONFIG = {
  */
 export function signCartSession(rawToken) {
   const signature = crypto
-    .createHmac('sha256', CART_SECRET)
+    .createHmac('sha256', getCartSecret())
     .update(rawToken)
     .digest('base64url');
   return `${rawToken}.${signature}`;
@@ -37,7 +43,7 @@ export function verifyCartSession(signedToken) {
 
   const [rawToken, signature] = parts;
   const expectedSig = crypto
-    .createHmac('sha256', CART_SECRET)
+    .createHmac('sha256', getCartSecret())
     .update(rawToken)
     .digest('base64url');
 

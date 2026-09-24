@@ -204,7 +204,8 @@ BEGIN
   )
   AND (
     -- Require valid digits only to prevent wildcard '%' or empty string bypass
-    (p_phone IS NOT NULL AND p_phone ~ '^[0-9]+$' AND (o.customer_phone = p_phone OR o.customer_phone LIKE '%' || p_phone))
+    (p_phone IS NOT NULL AND p_phone ~ '^[0-9]{10,15}$'
+      AND right(regexp_replace(o.customer_phone, '[^0-9]', '', 'g'), 10) = right(p_phone, 10))
     OR (auth.uid() IS NOT NULL AND o.customer_email = (auth.jwt()->>'email'))
     OR public.is_admin()
   )
@@ -279,18 +280,14 @@ BEGIN
     RAISE EXCEPTION 'Order must contain at least one item';
   END IF;
 
-  -- 2. Handle identity binding: check auth.uid() because anon requests carry a non-null anon JWT
-  IF auth.uid() IS NOT NULL THEN
-    v_caller_email := auth.jwt()->>'email';
-    v_customer_email := v_caller_email;
-    v_user_id := auth.uid()::text;
-    v_customer_id := auth.uid()::text;
-  ELSE
-    -- Unauthenticated guest checkout: customer_email is strictly NULL
-    v_customer_email := NULL;
-    v_user_id := NULL;
-    v_customer_id := 'guest';
+  -- Require a verified account; browser-side login state is never an authority.
+  IF auth.uid() IS NULL OR NULLIF(auth.jwt()->>'email', '') IS NULL THEN
+    RAISE EXCEPTION 'Sign in to place an order';
   END IF;
+  v_caller_email := auth.jwt()->>'email';
+  v_customer_email := v_caller_email;
+  v_user_id := auth.uid()::text;
+  v_customer_id := auth.uid()::text;
 
   -- 3. Validate items, lock product inventory, recalculate pricing authoritatively
   FOR v_item IN SELECT * FROM jsonb_array_elements(v_items)
@@ -553,4 +550,3 @@ FOR DELETE USING (
 -- ARE MANAGED DIRECTLY THROUGH YOUR STORE ADMIN DASHBOARD.
 -- NO HARDCODED OR DUMMY SEED DATA IS INSERTED.
 -- ==========================================================================
-

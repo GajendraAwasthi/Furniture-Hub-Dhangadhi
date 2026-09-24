@@ -1,5 +1,6 @@
 import { fetchCustomerOrders, getCustomerOrders, updateCustomerProfile, logoutUser } from '../../services/customer-auth.js';
 import { resolveCloudImageUrl } from '../../utils/cloud-image-resolver.js';
+import { escapeHtml } from '../../utils/security.js';
 
 export async function renderCustomerDashboardView(container, state, events, activeTab = 'orders') {
   const customer = state.customerUser;
@@ -40,21 +41,21 @@ export async function renderCustomerDashboardView(container, state, events, acti
         <div class="cust-dash-hero">
           <div class="cust-dash-hero-profile">
             <div class="cust-dash-avatar">
-              <span>${initials}</span>
+              <span>${escapeHtml(initials)}</span>
             </div>
             <div class="cust-dash-hero-info">
               <div class="cust-dash-title-row">
-                <h2>Welcome back, ${customer.name.trim().split(' ')[0]}!</h2>
+                <h2>Welcome back, ${escapeHtml(customer.name.trim().split(' ')[0])}!</h2>
                 <span class="cust-dash-badge">Customer Account</span>
               </div>
               <p class="cust-dash-subtitle">
-                ${customer.email} &bull; Member ID: <code style="background: rgba(18,45,37,0.06); padding: 2px 6px; border-radius: 4px;">${customer.id}</code>
+                ${escapeHtml(customer.email)} &bull; Member ID: <code style="background: rgba(18,45,37,0.06); padding: 2px 6px; border-radius: 4px;">${escapeHtml(customer.id)}</code>
               </p>
               <div class="cust-dash-wa-status">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="#25D366">
                   <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.19 8.19 0 0 1-5.82 2.42c-1.42 0-2.82-.37-4.06-1.07l-.29-.17-3.02.79.81-2.94-.19-.3a8.14 8.14 0 0 1-1.25-4.5c0-4.54 3.7-8.24 8.24-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.65.81-.8 1-.15.19-.3.21-.55.08-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.25-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.45.06-.69.32-.23.25-.9.88-.9 2.14 0 1.26.92 2.48 1.05 2.65.13.17 1.81 2.76 4.38 3.87.61.27 1.09.43 1.46.55.62.2 1.18.17 1.62.11.5-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.17-.48-.29z"/>
                 </svg>
-                <span>WhatsApp Delivery Sync: <strong>+${customer.phone || '9841234567'}</strong> (${customer.city || 'Kathmandu Valley'})</span>
+                <span>Delivery contact: <strong>${escapeHtml(customer.phone || 'Phone not provided')}</strong> (${escapeHtml(customer.city || 'City not provided')})</span>
               </div>
             </div>
           </div>
@@ -171,12 +172,12 @@ export async function renderCustomerDashboardView(container, state, events, acti
                 <div class="cust-order-card">
                   <div class="cust-order-header">
                     <div>
-                      <span class="cust-order-ref">Order Reference: <strong>#${order.reference || order.id}</strong></span>
-                      <span class="cust-order-date">${order.date || new Date().toLocaleDateString()}</span>
+                      <span class="cust-order-ref">Order Reference: <strong>#${escapeHtml(order.reference || order.id)}</strong></span>
+                      <span class="cust-order-date">${escapeHtml(order.date || new Date().toLocaleDateString())}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                      <span class="cust-status-badge status-${(order.status || 'CONFIRMED').toLowerCase().replace(/\s+/g, '-')}">
-                        ${order.status || 'CONFIRMED'}
+                      <span class="cust-status-badge status-${['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].includes(order.status) ? order.status.toLowerCase() : 'pending'}">
+                        ${escapeHtml(order.status || 'Pending')}
                       </span>
                     </div>
                   </div>
@@ -190,10 +191,10 @@ export async function renderCustomerDashboardView(container, state, events, acti
                       const color = item.color || item.variant || '';
                       return `
                         <div class="cust-order-item-row">
-                          <img src="${img}" alt="${name}" class="cust-order-thumb" onerror="this.src='/images/hero-living-room.png'">
+                          <img src="${escapeHtml(img)}" alt="${escapeHtml(name)}" class="cust-order-thumb" onerror="this.src='/images/hero-living-room.png'">
                           <div class="cust-order-item-info">
-                            <h4>${name}</h4>
-                            <span class="cust-order-meta">Qty: ${qty} ${color ? `&bull; Color: ${color}` : ''}</span>
+                            <h4>${escapeHtml(name)}</h4>
+                            <span class="cust-order-meta">Qty: ${Number(qty)} ${color ? `&bull; Color: ${escapeHtml(color)}` : ''}</span>
                           </div>
                           <div class="cust-order-item-price">
                             Rs. ${(unitPrice * qty).toLocaleString()}/-
@@ -206,7 +207,7 @@ export async function renderCustomerDashboardView(container, state, events, acti
                   <div class="cust-order-footer">
                     <div class="cust-order-delivery-info">
                       <span style="color: var(--color-text-subtle); font-size: 0.8rem;">Delivery To:</span>
-                      <strong>${order.address || order.delivery_address || customer.address || 'Kathmandu Valley'}</strong>
+                      <strong>${escapeHtml(order.address || order.delivery_address || customer.address || 'Kathmandu Valley')}</strong>
                     </div>
 
                     <div style="display: flex; align-items: center; gap: 16px;">
@@ -225,8 +226,8 @@ export async function renderCustomerDashboardView(container, state, events, acti
                         <span>Track Live</span>
                       </a>
 
-                      ${order.whatsappUrl ? `
-                        <a href="${order.whatsappUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background: #25D366; color: white; border: none; padding: 8px 14px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                      ${typeof order.whatsappUrl === 'string' && order.whatsappUrl.startsWith('https://wa.me/') ? `
+                        <a href="${escapeHtml(order.whatsappUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background: #25D366; color: white; border: none; padding: 8px 14px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.19 8.19 0 0 1-5.82 2.42c-1.42 0-2.82-.37-4.06-1.07l-.29-.17-3.02.79.81-2.94-.19-.3a8.14 8.14 0 0 1-1.25-4.5c0-4.54 3.7-8.24 8.24-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.65.81-.8 1-.15.19-.3.21-.55.08-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.25-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.45.06-.69.32-.23.25-.9.88-.9 2.14 0 1.26.92 2.48 1.05 2.65.13.17 1.81 2.76 4.38 3.87.61.27 1.09.43 1.46.55.62.2 1.18.17 1.62.11.5-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.17-.48-.29z"/>
                           </svg>
@@ -280,7 +281,7 @@ export async function renderCustomerDashboardView(container, state, events, acti
                       <span class="field-icon">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                       </span>
-                      <input type="text" class="enhanced-input" id="cp-name" required value="${customer.name || ''}" placeholder="e.g. Gajendra Awasthi">
+                      <input type="text" class="enhanced-input" id="cp-name" required value="${escapeHtml(customer.name || '')}" placeholder="e.g. Gajendra Awasthi">
                     </div>
                   </div>
 
@@ -296,7 +297,7 @@ export async function renderCustomerDashboardView(container, state, events, acti
                       <span class="field-icon">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
                       </span>
-                      <input type="email" class="enhanced-input" id="cp-email" value="${customer.email || ''}" readonly>
+                      <input type="email" class="enhanced-input" id="cp-email" value="${escapeHtml(customer.email || '')}" readonly>
                       <span class="lock-indicator" title="Linked to your Google OAuth login">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                       </span>
@@ -324,7 +325,7 @@ export async function renderCustomerDashboardView(container, state, events, acti
                     </div>
                     <div class="enhanced-input-wrap phone-wrap">
                       <span class="phone-prefix">+977</span>
-                      <input type="tel" class="enhanced-input phone-input" id="cp-phone" required value="${customer.phone || ''}" placeholder="e.g. 9848123456" maxlength="10">
+                      <input type="tel" class="enhanced-input phone-input" id="cp-phone" required value="${escapeHtml(customer.phone || '')}" placeholder="e.g. 9848123456" maxlength="10">
                       <span class="wa-badge-icon" title="WhatsApp Delivery Tracking Enabled">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.27-2.42 5.82a8.19 8.19 0 0 1-5.82 2.42c-1.42 0-2.82-.37-4.06-1.07l-.29-.17-3.02.79.81-2.94-.19-.3a8.14 8.14 0 0 1-1.25-4.5c0-4.54 3.7-8.24 8.24-8.24m4.53 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.65.81-.8 1-.15.19-.3.21-.55.08-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.25-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.45.06-.69.32-.23.25-.9.88-.9 2.14 0 1.26.92 2.48 1.05 2.65.13.17 1.81 2.76 4.38 3.87.61.27 1.09.43 1.46.55.62.2 1.18.17 1.62.11.5-.07 1.47-.6 1.68-1.18.21-.58.21-1.08.15-1.18-.06-.1-.23-.17-.48-.29z"/></svg>
                       </span>
@@ -370,7 +371,7 @@ export async function renderCustomerDashboardView(container, state, events, acti
                     <span class="field-icon">
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                     </span>
-                    <input type="text" class="enhanced-input" id="cp-address" required value="${customer.address || ''}" placeholder="e.g. Main Road, Ward 1, Dhangadhi (Near City Center)">
+                    <input type="text" class="enhanced-input" id="cp-address" required value="${escapeHtml(customer.address || '')}" placeholder="e.g. Main Road, Ward 1, Dhangadhi (Near City Center)">
                   </div>
                   <span class="field-helper-text">Building name, house number, ward or prominent landmark for our delivery drivers.</span>
                 </div>
@@ -413,17 +414,17 @@ export async function renderCustomerDashboardView(container, state, events, acti
                 if (!p) return '';
                 return `
                   <div class="cust-wishlist-card">
-                    <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" class="cust-wishlist-img" onerror="this.src='/images/hero-living-room.png'">
+                    <img src="${escapeHtml(resolveCloudImageUrl(p.image))}" alt="${escapeHtml(p.name)}" class="cust-wishlist-img" onerror="this.src='/images/hero-living-room.png'">
                     <div class="cust-wishlist-details">
-                      <span class="cust-wishlist-cat">${p.category}</span>
-                      <h4>${p.name}</h4>
-                      <div class="cust-wishlist-price">Rs. ${p.price.toLocaleString()}/-</div>
+                      <span class="cust-wishlist-cat">${escapeHtml(p.category)}</span>
+                      <h4>${escapeHtml(p.name)}</h4>
+                      <div class="cust-wishlist-price">Rs. ${Number(p.price).toLocaleString()}/-</div>
                     </div>
                     <div class="cust-wishlist-actions">
-                      <button class="btn btn-primary btn-sm cust-wishlist-add-btn" data-id="${p.id}" style="width: 100%;">
+                      <button class="btn btn-primary btn-sm cust-wishlist-add-btn" data-id="${escapeHtml(p.id)}" style="width: 100%;">
                         <span>+ Add to Bag</span>
                       </button>
-                      <button class="btn btn-secondary btn-sm cust-wishlist-remove-btn" data-id="${p.id}" style="width: 100%; color: #d32f2f;">
+                      <button class="btn btn-secondary btn-sm cust-wishlist-remove-btn" data-id="${escapeHtml(p.id)}" style="width: 100%; color: #d32f2f;">
                         <span>Remove</span>
                       </button>
                     </div>

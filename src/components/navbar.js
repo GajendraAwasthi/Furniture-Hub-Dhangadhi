@@ -1,5 +1,6 @@
 import { isCurrentAdmin } from '../services/customer-auth.js';
 import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
+import { escapeHtml } from '../utils/security.js';
 
 export function renderNavbar(container, state, events) {
   const cartCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -68,13 +69,13 @@ export function renderNavbar(container, state, events) {
               <span class="nav-user-name" style="font-weight: 700; color: #122d25;">Admin</span>
             </a>
           ` : state.customerUser ? `
-            <a href="#customer/dashboard" class="nav-user-badge-btn" id="nav-user-btn" title="Customer Dashboard: ${state.customerUser.name}" style="text-decoration: none;">
+            <a href="#customer/dashboard" class="nav-user-badge-btn" id="nav-user-btn" title="Customer Dashboard: ${escapeHtml(state.customerUser.name)}" style="text-decoration: none;">
               <span class="nav-user-avatar">
-                ${(state.customerUser.name.trim().split(' ').length > 1 
+                ${escapeHtml((state.customerUser.name.trim().split(' ').length > 1
                   ? state.customerUser.name.trim().split(' ')[0][0] + state.customerUser.name.trim().split(' ').slice(-1)[0][0]
-                  : state.customerUser.name.slice(0, 2)).toUpperCase()}
+                  : state.customerUser.name.slice(0, 2)).toUpperCase())}
               </span>
-              <span class="nav-user-name">${state.customerUser.name.trim().split(' ')[0]}</span>
+              <span class="nav-user-name">${escapeHtml(state.customerUser.name.trim().split(' ')[0])}</span>
             </a>
           ` : `
             <button class="figma-action-btn nav-signin-btn" id="nav-user-btn" title="Sign In (Customer & Store Management)">
@@ -199,7 +200,7 @@ export function renderNavbar(container, state, events) {
                       ? state.customerUser.name.trim().split(' ')[0][0] + state.customerUser.name.trim().split(' ').slice(-1)[0][0]
                       : state.customerUser.name.slice(0, 2)).toUpperCase()}
                   </span>
-                  <span>${state.customerUser.name}</span>
+                  <span>${escapeHtml(state.customerUser.name)}</span>
                 </div>
                 <span style="font-size: 0.72rem; color: #2e7d32; font-weight: 700;">Dashboard & Orders</span>
               </a>
@@ -346,20 +347,20 @@ export function renderNavbar(container, state, events) {
     if (matches.length === 0) {
       searchResultsList.innerHTML = `
         <div style="padding: 24px 0; text-align: center; color: var(--color-text-subtle);">
-          No products found matching "<strong>${query}</strong>". Try another keyword.
+          No products found matching "<strong>${escapeHtml(query)}</strong>". Try another keyword.
         </div>
       `;
       return;
     }
 
     searchResultsList.innerHTML = matches.slice(0, 5).map(p => `
-      <a href="#product-detail?id=${p.id}" class="search-result-row" data-id="${p.id}">
-        <img src="${resolveCloudImageUrl(p.image)}" alt="${p.name}" class="search-result-img" onerror="this.src='/images/hero-living-room.png'">
+      <a href="#product-detail?id=${encodeURIComponent(p.id)}" class="search-result-row" data-id="${escapeHtml(p.id)}">
+        <img src="${escapeHtml(resolveCloudImageUrl(p.image))}" alt="${escapeHtml(p.name)}" class="search-result-img" onerror="this.src='/images/hero-living-room.png'">
         <div class="search-result-info">
-          <div class="search-result-title">${p.name}</div>
-          <div class="search-result-meta">${p.category} &bull; Rating: ${p.rating} ★</div>
+          <div class="search-result-title">${escapeHtml(p.name)}</div>
+          <div class="search-result-meta">${escapeHtml(p.category)} &bull; Rating: ${Number(p.rating)} ★</div>
         </div>
-        <div class="search-result-price">Rs. ${p.price.toLocaleString()}/-</div>
+        <div class="search-result-price">Rs. ${Number(p.price).toLocaleString()}/-</div>
       </a>
     `).join('');
 
