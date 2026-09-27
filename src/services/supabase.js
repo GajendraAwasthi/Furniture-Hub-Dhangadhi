@@ -292,7 +292,7 @@ export async function getCurrentUser() {
     const { data: { user } } = await client.auth.getUser();
     if (user) return user;
   }
-  const demo = localStorage.getItem(STORAGE_DEMO_USER);
+  const demo = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_DEMO_USER) : null;
   if (demo) {
     try {
       return JSON.parse(demo);

@@ -12,6 +12,8 @@ import { renderUserProfileModal } from '../src/components/user-profile-modal.js'
 import { renderAdminOverviewView } from '../src/views/admin/admin-overview-view.js';
 import { renderAdminProductsView } from '../src/views/admin/admin-products-view.js';
 import { renderAdminSettingsView } from '../src/views/admin/admin-settings-view.js';
+import { renderAdminLayout } from '../src/views/admin/admin-layout.js';
+import { isCurrentAdmin, setVerifiedAdminUser, clearVerifiedAdminUser } from '../src/services/customer-auth.js';
 import { generateWhatsAppLink, getSellerNumber, setSellerNumber, setCloudSellerNumber, syncSellerNumberFromCloud } from '../src/services/whatsapp.js';
 
 const cart = [{ product: { price: 10000 }, quantity: 2 }];
@@ -225,3 +227,71 @@ test('an empty remote coupon list stays empty and remote errors fail closed', as
   setClientForTesting({ from: () => ({ select: async () => ({ data: null, error: new Error('network unavailable') }) }) });
   await assert.rejects(fetchCoupons(), /network unavailable/);
 });
+
+test('admin layout renders View Public Store link with href="#home" and smooth in-app navigation', async () => {
+  setClientForTesting({ auth: { getUser: async () => ({ data: { user: null } }) } });
+  const previousWindow = globalThis.window;
+  globalThis.window = {
+    location: { hash: '#admin/overview' }
+  };
+  try {
+    let clickListener = null;
+    const mockLink = {
+      addEventListener: (evt, fn) => { if (evt === 'click') clickListener = fn; }
+    };
+    const mockContainer = {
+      innerHTML: '',
+      querySelector: (sel) => {
+        if (sel === '#admin-view-store-link') return mockLink;
+        return null;
+      },
+      querySelectorAll: () => []
+    };
+
+    await renderAdminLayout(mockContainer, {}, { on: () => {}, emit: () => {} }, 'overview', () => {});
+
+    // Ensure link targets #home directly without target="_blank"
+    assert.match(mockContainer.innerHTML, /id="admin-view-store-link"/);
+    assert.match(mockContainer.innerHTML, /href="#home"/);
+    assert.doesNotMatch(mockContainer.innerHTML, /id="admin-view-store-link"[^>]*target="_blank"/);
+
+    // Simulate clicking View Public Store
+    assert.ok(clickListener, 'Expected click listener to be attached to View Public Store link');
+    let defaultPrevented = false;
+    clickListener({ preventDefault: () => { defaultPrevented = true; } });
+    assert.equal(defaultPrevented, true);
+    assert.equal(globalThis.window.location.hash, '#home');
+  } finally {
+    globalThis.window = previousWindow;
+  }
+});
+
+test('isCurrentAdmin safely validates in-memory admin state without wiping storage', () => {
+  const previousStorage = globalThis.localStorage;
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, val) => values.set(key, String(val)),
+    removeItem: key => values.delete(key)
+  };
+
+  try {
+    clearVerifiedAdminUser();
+    // Simulate an existing session in localStorage
+    values.set('fh_demo_admin_user', JSON.stringify({ role: 'admin' }));
+
+    // When no admin user is in memory, isCurrentAdmin returns false without deleting localStorage keys
+    assert.equal(isCurrentAdmin(), false);
+    assert.ok(values.has('fh_demo_admin_user'), 'isCurrentAdmin check must not wipe storage');
+
+    // When admin user is verified, isCurrentAdmin returns true
+    setVerifiedAdminUser({ role: 'admin', email: 'admin@furniturehubdhangadhi.com' });
+    assert.equal(isCurrentAdmin(), true);
+
+    clearVerifiedAdminUser();
+    assert.equal(isCurrentAdmin(), false);
+  } finally {
+    globalThis.localStorage = previousStorage;
+  }
+});
+
