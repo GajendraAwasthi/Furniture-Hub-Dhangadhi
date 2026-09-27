@@ -67,7 +67,7 @@ export async function renderAdminLayout(container, state, events, activeSubView,
             </div>
           </li>
           <li class="admin-nav-item">
-            <a href="#home" target="_blank" title="Open live public storefront in new tab">
+            <a href="/#home" target="_blank" rel="noopener noreferrer" id="admin-view-store-link" title="Open live public storefront in new tab">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                 <polyline points="15 3 21 3 21 9"></polyline>

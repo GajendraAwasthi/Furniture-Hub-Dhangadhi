@@ -293,6 +293,7 @@ export async function authenticateOAuthUser(provider = 'google', profile = null)
         avatar: userProfile.avatar || '/images/social-user.png',
         provider: cleanProvider
       };
+      setVerifiedAdminUser(adminSession);
       localStorage.setItem(STORAGE_ADMIN_SESSION, JSON.stringify(adminSession));
       localStorage.removeItem(STORAGE_CUSTOMER_SESSION);
       return { success: true, role: 'admin', user: adminSession };

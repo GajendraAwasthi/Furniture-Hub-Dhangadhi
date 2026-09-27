@@ -37,6 +37,7 @@ import {
   authenticateAuthorizedPerson,
   isCurrentAdmin,
   verifyAdminSession,
+  setVerifiedAdminUser,
   customerLogin, 
   customerRegister, 
   customerLogout, 
@@ -432,13 +433,39 @@ events.on('close-customer-auth', () => {
   updateChrome();
 });
 
-function applyAuthenticatedSession(res, welcomeMsg = null) {
+function applyAuthenticatedSession(res, welcomeMsg = null, isExplicitLogin = false) {
   state.isCustomerAuthOpen = false;
   if (res.role === 'admin') {
     state.customerUser = null;
+    if (res.user) {
+      setVerifiedAdminUser(res.user);
+    }
     updateChrome();
-    showToast(welcomeMsg || 'Welcome back, Store Administrator!', 'success');
-    window.location.hash = '#admin/overview';
+
+    const currentHash = (window.location.hash || '').toLowerCase();
+    const currentPath = (window.location.pathname || '/').toLowerCase();
+    const isStorefront =
+      currentHash === '#home' ||
+      currentHash === '' ||
+      currentHash === '#' ||
+      currentHash.startsWith('#shop') ||
+      currentHash.startsWith('#product-detail') ||
+      currentHash === '#about' ||
+      currentHash === '#faq' ||
+      currentHash === '#faqs' ||
+      currentHash === '#terms' ||
+      currentHash === '#privacy' ||
+      currentHash.startsWith('#track') ||
+      (currentPath === '/' && (currentHash === '' || currentHash === '#'));
+
+    if (isExplicitLogin || !isStorefront) {
+      if (!currentHash.startsWith('#admin/') || currentHash === '#admin' || currentHash === '#admin/' || currentHash === '#admin/login') {
+        window.location.hash = '#admin/overview';
+      }
+      if (welcomeMsg) {
+        showToast(welcomeMsg, 'success');
+      }
+    }
     renderCurrentView();
   } else {
     state.customerUser = res.user;
@@ -526,7 +553,7 @@ events.on('oauth-direct-login', async ({ identifier }) => {
 events.on('user-login', async ({ identifier, password }) => {
   try {
     const res = await authenticateUser(identifier, password);
-    applyAuthenticatedSession(res);
+    applyAuthenticatedSession(res, null, true);
   } catch (err) {
     showToast(err.message || 'Login failed. Please verify credentials.', 'danger');
   }
@@ -1124,7 +1151,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
             avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
           });
-          applyAuthenticatedSession(res, 'Welcome back, Store Administrator!');
+          applyAuthenticatedSession(res, null, false);
         } else if (!state.customerUser && !isCurrentAdmin()) {
           const res = await authenticateOAuthUser('google', {
             id: u.id,
@@ -1147,7 +1174,8 @@ window.addEventListener('DOMContentLoaded', async () => {
               name: u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0],
               avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
             });
-            applyAuthenticatedSession(res, 'Welcome back, Store Administrator!');
+            const welcomeMsg = event === 'SIGNED_IN' ? 'Welcome back, Store Administrator!' : null;
+            applyAuthenticatedSession(res, welcomeMsg, event === 'SIGNED_IN');
           } else if (!isCurrentAdmin()) {
             const sbEmail = (u.email || '').toLowerCase().trim();
             const sessionMatchesSbUser =
