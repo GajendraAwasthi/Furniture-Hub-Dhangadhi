@@ -458,13 +458,16 @@ function applyAuthenticatedSession(res, welcomeMsg = null, isExplicitLogin = fal
       currentHash.startsWith('#track') ||
       (currentPath === '/' && (currentHash === '' || currentHash === '#'));
 
-    if (isExplicitLogin || !isStorefront) {
+    // Strictly preserve public storefront routes (#home, #shop, etc.) so admins can browse the live store
+    if (!isStorefront) {
       if (!currentHash.startsWith('#admin/') || currentHash === '#admin' || currentHash === '#admin/' || currentHash === '#admin/login') {
         window.location.hash = '#admin/overview';
       }
       if (welcomeMsg) {
         showToast(welcomeMsg, 'success');
       }
+    } else if (welcomeMsg && isExplicitLogin) {
+      showToast(welcomeMsg, 'success');
     }
     renderCurrentView();
   } else {
@@ -1118,7 +1121,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const { data: { user } } = await client.auth.getUser();
       if (user) {
         const isSb = await checkIsSupabaseAdmin(user);
-        if (isSb && !isCurrentAdmin()) {
+        if (isSb) {
           const adminSession = {
             id: user.id,
             email: user.email,
@@ -1127,6 +1130,7 @@ window.addEventListener('DOMContentLoaded', async () => {
             avatar: user.user_metadata?.avatar_url || '/images/social-user.png',
             provider: user.app_metadata?.provider || 'google'
           };
+          setVerifiedAdminUser(adminSession);
           localStorage.setItem('fh_demo_admin_user', JSON.stringify(adminSession));
           localStorage.removeItem('fh_customer_session');
           state.customerUser = null;
@@ -1175,7 +1179,7 @@ window.addEventListener('DOMContentLoaded', async () => {
               avatar: u.user_metadata?.avatar_url || '/images/social-user.png'
             });
             const welcomeMsg = event === 'SIGNED_IN' ? 'Welcome back, Store Administrator!' : null;
-            applyAuthenticatedSession(res, welcomeMsg, event === 'SIGNED_IN');
+            applyAuthenticatedSession(res, welcomeMsg, false);
           } else if (!isCurrentAdmin()) {
             const sbEmail = (u.email || '').toLowerCase().trim();
             const sessionMatchesSbUser =

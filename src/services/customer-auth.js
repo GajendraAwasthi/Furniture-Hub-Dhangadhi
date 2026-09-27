@@ -98,11 +98,6 @@ export function isCurrentAdmin() {
   if (_verifiedAdminUser && typeof _verifiedAdminUser === 'object' && _verifiedAdminUser.role === 'admin') {
     return true;
   }
-  // Wipe any rogue admin session in localStorage
-  if (typeof localStorage !== 'undefined') {
-    localStorage.removeItem(STORAGE_ADMIN_SESSION);
-    localStorage.removeItem('fh_demo_admin_user');
-  }
   return false;
 }
 
