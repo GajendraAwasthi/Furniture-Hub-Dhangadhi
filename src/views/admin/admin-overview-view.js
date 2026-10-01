@@ -20,7 +20,11 @@ export async function renderAdminOverviewView(container, state, events) {
   ]);
 
   const currency = settings.currency || 'Rs.';
-  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+  const excludedStatuses = ['cancelled'];
+  const totalRevenue = orders.reduce((sum, o) => {
+    if (excludedStatuses.includes((o.status || '').toLowerCase())) return sum;
+    return sum + Number(o.total_amount || 0);
+  }, 0);
   const lowStockThreshold = Number(settings.lowStockThreshold || 3);
   const lowStockCount = products.filter(p => !p.inStock).length;
   const sellerPhone = getSellerNumber();
@@ -62,7 +66,7 @@ export async function renderAdminOverviewView(container, state, events) {
           <div>
             <div class="kpi-title">Total Sales Volume</div>
             <div class="kpi-val">${escapeHtml(currency)} ${totalRevenue.toLocaleString()}</div>
-            <div class="kpi-sub" style="color: #2e7d32;">From recorded orders</div>
+            <div class="kpi-sub" style="color: #2e7d32;">Excluding cancelled orders</div>
           </div>
           <div class="kpi-icon-box">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

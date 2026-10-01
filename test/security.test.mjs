@@ -288,10 +288,55 @@ test('isCurrentAdmin safely validates in-memory admin state without wiping stora
     setVerifiedAdminUser({ role: 'admin', email: 'admin@furniturehubdhangadhi.com' });
     assert.equal(isCurrentAdmin(), true);
 
-    clearVerifiedAdminUser();
+  clearVerifiedAdminUser();
     assert.equal(isCurrentAdmin(), false);
   } finally {
     globalThis.localStorage = previousStorage;
   }
+});
+
+test('Total Sales Volume excludes cancelled orders from the revenue total', async () => {
+  const responses = {
+    products: [{ id: 'p1', name: 'Chair', category: 'Seatings', price: 10000, image: '/chair.png' }],
+    orders: [
+      { id: 'FH-001', customer_name: 'A', customer_phone: '980', delivery_address: 'Kathmandu', payment_method: 'COD', status: 'Cancelled', total_amount: 60000, created_at: new Date().toISOString() },
+      { id: 'FH-002', customer_name: 'B', customer_phone: '981', delivery_address: 'Lalitpur', payment_method: 'COD', status: 'Delivered', total_amount: 10000, created_at: new Date().toISOString() },
+      { id: 'FH-003', customer_name: 'C', customer_phone: '982', delivery_address: 'Bhaktapur', payment_method: 'COD', status: 'Pending', total_amount: 5000, created_at: new Date().toISOString() }
+    ],
+    store_settings: [{ value: { currency: 'Rs.' } }]
+  };
+  setClientForTesting({
+    from: table => ({
+      select: () => table === 'store_settings'
+        ? Promise.resolve({ data: responses[table], error: null })
+        : { order: async () => ({ data: responses[table], error: null }) }
+    })
+  });
+
+  const container = { innerHTML: '', querySelectorAll: () => [] };
+  await renderAdminOverviewView(container, {}, { emit: () => {} });
+
+  // Rs. 10,000 (Delivered) + Rs. 5,000 (Pending) = Rs. 15,000. Cancelled Rs. 60,000 must NOT appear.
+  assert.match(container.innerHTML, /15,000/, 'Total should be 15,000 (10000 + 5000), excluding cancelled 60000');
+  assert.doesNotMatch(container.innerHTML, /75,000/, 'Cancelled order amount must not be summed into total');
+
+  // Scenario 2: All orders cancelled → total should be 0
+  const allCancelled = {
+    products: responses.products,
+    orders: [
+      { id: 'FH-X', customer_name: 'D', customer_phone: '983', delivery_address: 'Dhangadhi', payment_method: 'COD', status: 'Cancelled', total_amount: 60000, created_at: new Date().toISOString() }
+    ],
+    store_settings: responses.store_settings
+  };
+  setClientForTesting({
+    from: table => ({
+      select: () => table === 'store_settings'
+        ? Promise.resolve({ data: allCancelled[table], error: null })
+        : { order: async () => ({ data: allCancelled[table], error: null }) }
+    })
+  });
+  await renderAdminOverviewView(container, {}, { emit: () => {} });
+  // When all orders are cancelled, the KPI value should show 0
+  assert.match(container.innerHTML, /kpi-val[^>]*>Rs\.\s*0</, 'All-cancelled scenario should show Rs. 0');
 });
 
