@@ -131,3 +131,55 @@ export function validateProductInput(input) {
     sku: input.sku ? String(input.sku).trim().toUpperCase() : null
   };
 }
+
+/**
+ * Validates category creation/update payload.
+ * Defends against prototype pollution, XSS injection, invalid slug characters, and duplicate names/slugs.
+ */
+export function validateCategoryInput(input, existingCategories = []) {
+  checkPrototypePollution(input);
+  if (!input || typeof input !== 'object') {
+    throw new Error('Invalid category payload');
+  }
+
+  const name = (input.name || '').trim();
+  if (!name || name.length < 2 || name.length > 50) {
+    throw new Error('Category name must be between 2 and 50 characters.');
+  }
+
+  // Derive or validate slug
+  let slug = (input.slug || '').trim().toLowerCase();
+  if (!slug) {
+    slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  if (!slug || !SLUG_REGEX.test(slug)) {
+    throw new Error('Category slug may only contain lowercase alphanumeric characters and hyphens.');
+  }
+
+  // Check uniqueness against existing categories (excluding current category if updating)
+  const currentId = input.id ? String(input.id).trim() : null;
+  const existing = Array.isArray(existingCategories) ? existingCategories : [];
+  const isDuplicate = existing.some(c => {
+    if (currentId && String(c.id) === currentId) return false;
+    const sameSlug = (c.slug && c.slug.toLowerCase() === slug);
+    const sameName = (c.name && c.name.toLowerCase() === name.toLowerCase());
+    return sameSlug || sameName;
+  });
+
+  if (isDuplicate) {
+    throw new Error(`A category with name "${name}" or slug "${slug}" already exists.`);
+  }
+
+  const rawIcon = typeof input.icon === 'string' ? input.icon.trim().slice(0, 10) : '🏷️';
+  const icon = sanitizeString(rawIcon) || '🏷️';
+  const description = input.description ? sanitizeString(String(input.description).trim().slice(0, 300)) : '';
+
+  return {
+    id: currentId || slug,
+    name: sanitizeString(name),
+    slug,
+    icon,
+    description,
+    createdAt: input.createdAt || new Date().toISOString()
+  };
+}

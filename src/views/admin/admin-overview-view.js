@@ -28,6 +28,9 @@ export async function renderAdminOverviewView(container, state, events) {
   const lowStockThreshold = Number(settings.lowStockThreshold || 3);
   const lowStockCount = products.filter(p => !p.inStock).length;
   const sellerPhone = getSellerNumber();
+  const activeCategoriesCount = Array.isArray(settings?.categories) && settings.categories.length > 0
+    ? settings.categories.length
+    : new Set(products.map(p => p.category).filter(Boolean)).size;
 
   container.innerHTML = `
     <div>
@@ -95,7 +98,7 @@ export async function renderAdminOverviewView(container, state, events) {
           <div>
             <div class="kpi-title">Catalog Inventory</div>
             <div class="kpi-val">${products.length} Items</div>
-            <div class="kpi-sub">Active in 6 Categories</div>
+            <div class="kpi-sub">Active in ${activeCategoriesCount} ${activeCategoriesCount === 1 ? 'Category' : 'Categories'}</div>
           </div>
           <div class="kpi-icon-box">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

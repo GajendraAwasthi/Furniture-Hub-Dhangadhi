@@ -22,7 +22,7 @@ export function renderHomeView(container, state, events) {
         <div class="figma-card-img-wrap">
           <img src="${escapeHtml(resolveCloudImageUrl(product.image))}" alt="${escapeHtml(product.name)} — Furniture Hub Dhangadhi" width="300" height="260" loading="lazy" decoding="async" onerror="this.src='/images/hero-living-room.png'">
         </div>
-        <span class="figma-card-category">${escapeHtml(product.category || 'Decorations')}</span>
+        ${product.category ? `<span class="figma-card-category">${escapeHtml(product.category)}</span>` : ''}
         <h3 class="figma-card-title"><a href="/products/${escapeHtml(product.id)}" style="color: inherit; text-decoration: none;">${escapeHtml(product.name)}</a></h3>
         <div class="figma-card-rating figma-card-rating-interactive" data-open-reviews-pid="${escapeHtml(product.id)}" title="View verified customer reviews">
           <span class="stars">${renderStars(product.rating || 5)}</span>
@@ -214,31 +214,29 @@ export function renderHomeView(container, state, events) {
       <div class="site-container">
         <h2 class="figma-section-title-white">Browse by Category</h2>
 
-        <div class="figma-category-grid">
-          <!-- Row 1: Seatings & Surfaces -->
-          <div class="figma-cat-row">
-            <a href="/category/seatings" class="figma-cat-card w-small" data-category="Seatings" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); text-decoration: none; color: inherit;">
-              <span class="figma-cat-title" style="font-size: 1.45rem; font-weight: 800;">Seatings</span>
-              <span style="font-size: 2.5rem; align-self: flex-end; opacity: 0.85;">🪑</span>
-            </a>
-            <a href="/category/surfaces" class="figma-cat-card w-large" data-category="Surfaces" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); text-decoration: none; color: inherit;">
-              <span class="figma-cat-title" style="font-size: 1.45rem; font-weight: 800;">Surfaces</span>
-              <span style="font-size: 2.5rem; align-self: flex-end; opacity: 0.85;">🪵</span>
+        ${Array.isArray(state?.categories) && state.categories.length > 0 ? `
+          <div class="figma-category-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+            ${state.categories.map(cat => {
+              const name = typeof cat === 'string' ? cat : cat.name;
+              const icon = typeof cat === 'object' && cat.icon ? cat.icon : '🏷️';
+              return `
+                <a href="#shop?category=${encodeURIComponent(name)}" class="figma-cat-card" data-category="${escapeHtml(name)}" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; min-height: 140px; border-radius: 16px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.08); text-decoration: none; color: inherit; transition: transform 0.2s, background 0.2s;">
+                  <span class="figma-cat-title" style="font-size: 1.35rem; font-weight: 800; color: #ffffff;">${escapeHtml(name)}</span>
+                  <span style="font-size: 2.2rem; align-self: flex-end; opacity: 0.9;">${escapeHtml(icon)}</span>
+                </a>
+              `;
+            }).join('')}
+          </div>
+        ` : `
+          <div style="text-align: center; padding: 36px 20px; background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%); border-radius: 16px; border: 1px solid rgba(255,255,255,0.08);">
+            <p style="color: rgba(255,255,255,0.8); font-size: 1rem; margin-bottom: 18px;">
+              Explore handcrafted solid wooden furniture crafted for your home and office in Dhangadhi.
+            </p>
+            <a href="#shop" class="figma-pill-btn" style="background: #c9933f; color: white; display: inline-block; padding: 10px 24px; text-decoration: none; font-weight: 700; border-radius: 30px;">
+              Explore Full Catalog
             </a>
           </div>
-
-          <!-- Row 2: Decorations & Greens -->
-          <div class="figma-cat-row">
-            <a href="/category/decorations" class="figma-cat-card w-half" data-category="Decorations" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); text-decoration: none; color: inherit;">
-              <span class="figma-cat-title" style="font-size: 1.45rem; font-weight: 800;">Decorations</span>
-              <span style="font-size: 2.5rem; align-self: flex-end; opacity: 0.85;">✨</span>
-            </a>
-            <a href="/category/greens" class="figma-cat-card w-half" data-category="Greens" style="display: flex; flex-direction: column; justify-content: space-between; padding: 26px; background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); text-decoration: none; color: inherit;">
-              <span class="figma-cat-title" style="font-size: 1.45rem; font-weight: 800;">Greens</span>
-              <span style="font-size: 2.5rem; align-self: flex-end; opacity: 0.85;">🌿</span>
-            </a>
-          </div>
-        </div>
+        `}
 
         <h2 class="figma-a-new-way">A New Way of Living</h2>
       </div>

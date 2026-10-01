@@ -28,7 +28,7 @@ import { renderOnboardingView } from './views/customer/customer-onboarding-view.
 import { renderTrackOrderView } from './views/track/track-order-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
 import { getBrandLoaderHtml, showGlobalBrandLoader, hideGlobalBrandLoader } from './components/brand-loader.js';
-import { getCurrentUser, createOrder, fetchProducts, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient, fetchCoupons } from './services/supabase.js';
+import { getCurrentUser, createOrder, fetchProducts, fetchCategories, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient, fetchCoupons } from './services/supabase.js';
 import { generateWhatsAppLink, syncSellerNumberFromCloud } from './services/whatsapp.js';
 import { 
   getCurrentCustomer, 
@@ -78,7 +78,8 @@ const state = {
   couponCode: '',
   couponApplied: false,
   coupon: null,
-  searchQuery: ''
+  searchQuery: '',
+  categories: []
 };
 
 // Event Bus
@@ -139,6 +140,11 @@ function showToast(message, type = 'success') {
 }
 
 // Event Listeners
+events.on('categories-updated', (newCats) => {
+  state.categories = Array.isArray(newCats) ? newCats : [];
+  updateChrome();
+});
+
 events.on('toast', ({ message, type }) => {
   showToast(message, type);
 });
@@ -945,8 +951,11 @@ async function renderCurrentView() {
         await renderAdminProductsView(slot, state, events);
       } else if (subView === 'orders') {
         await renderAdminOrdersView(slot, state, events);
+      } else if (subView === 'categories') {
+        await renderAdminSettingsView(slot, state, events, 'categories');
       } else if (subView === 'settings') {
-        await renderAdminSettingsView(slot, state, events);
+        const initialTab = params.get('tab') || 'general';
+        await renderAdminSettingsView(slot, state, events, initialTab);
       } else {
         await renderAdminOverviewView(slot, state, events);
       }
@@ -1099,6 +1108,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.warn('Product database fetch error:', err);
     state.products = [];
+  }
+
+  try {
+    const dbCategories = await fetchCategories();
+    state.categories = Array.isArray(dbCategories) ? dbCategories : [];
+  } catch (err) {
+    console.warn('Category database fetch error:', err);
+    state.categories = [];
   }
 
   try {

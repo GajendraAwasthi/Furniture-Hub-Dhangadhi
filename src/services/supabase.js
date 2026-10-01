@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import initialProducts from '../data/products.json' with { type: 'json' };
+import { validateCategoryInput } from '../security/validation.js';
+import { isCurrentAdmin } from './customer-auth.js';
 
 // Configuration keys
 const STORAGE_DEMO_USER = 'fh_demo_admin_user';
@@ -344,17 +346,35 @@ export async function testSupabaseConnection() {
 // PRODUCTS DATABASE CRUD
 // ==========================================================================
 
+const LEGACY_CATEGORIES = ['seatings', 'combos', 'surfaces', 'decorations', 'greens', 'long sofa'];
+
+function stripLegacyProductCategory(prod) {
+  if (!prod) return prod;
+  const cat = (prod.category || '').toLowerCase().trim();
+  if (LEGACY_CATEGORIES.includes(cat)) {
+    return { ...prod, category: '', tag: '' };
+  }
+  return prod;
+}
+
 function getLocalProducts() {
   try {
     localStorage.removeItem('fh_local_products'); // Clean any legacy demo products cache
     const stored = localStorage.getItem(STORAGE_LOCAL_PRODUCTS);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const cleaned = parsed.map(stripLegacyProductCategory);
+        // Sync cleaned state back to localStorage
+        try {
+          localStorage.setItem(STORAGE_LOCAL_PRODUCTS, JSON.stringify(cleaned));
+        } catch { /* ignore */ }
+        return cleaned;
+      }
     }
   } catch { /* ignore */ }
   const fallback = Array.isArray(initialProducts) && initialProducts.length > 0 
-    ? [...initialProducts] 
+    ? initialProducts.map(stripLegacyProductCategory) 
     : [];
   if (fallback.length > 0) {
     try {
@@ -387,15 +407,17 @@ export async function fetchProducts() {
 }
 
 function normalizeProductFromDb(row) {
+  const rawCat = (row.category || '').toLowerCase().trim();
+  const cleanCategory = LEGACY_CATEGORIES.includes(rawCat) ? '' : (row.category || '');
   return {
     id: row.id,
     name: row.name,
-    category: row.category,
+    category: cleanCategory,
     price: Number(row.price),
     originalPrice: row.original_price ? Number(row.original_price) : undefined,
     rating: Number(row.rating || 5),
     reviewCount: Number(row.review_count || 0),
-    tag: row.tag || row.category,
+    tag: LEGACY_CATEGORIES.includes((row.tag || '').toLowerCase().trim()) ? '' : (row.tag || cleanCategory),
     description: row.description || '',
     materials: row.materials || '',
     dimensions: row.dimensions || '',
@@ -812,7 +834,8 @@ const DEFAULT_SETTINGS = {
   outsideValleyFee: 500,
   freeShippingThreshold: 0,
   lowStockThreshold: 3,
-  maintenanceMode: false
+  maintenanceMode: false,
+  categories: []
 };
 
 export async function fetchStoreSettings() {
@@ -827,6 +850,9 @@ export async function fetchStoreSettings() {
             Object.assign(merged, row.value);
           }
         });
+        if (!Array.isArray(merged.categories)) {
+          merged.categories = [];
+        }
         return merged;
       }
     } catch { /* ignore */ }
@@ -834,9 +860,16 @@ export async function fetchStoreSettings() {
 
   const stored = localStorage.getItem(STORAGE_LOCAL_SETTINGS);
   if (stored) {
-    try { return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }; } catch { /* ignore */ }
+    try {
+      const parsed = JSON.parse(stored);
+      return {
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+        categories: Array.isArray(parsed.categories) ? parsed.categories : []
+      };
+    } catch { /* ignore */ }
   }
-  return DEFAULT_SETTINGS;
+  return { ...DEFAULT_SETTINGS };
 }
 
 export async function saveStoreSettings(settings) {
@@ -858,6 +891,70 @@ export async function saveStoreSettings(settings) {
 
   localStorage.setItem(STORAGE_LOCAL_SETTINGS, JSON.stringify(settings));
   return settings;
+}
+
+export async function fetchCategories() {
+  const settings = await fetchStoreSettings();
+  return Array.isArray(settings.categories) ? settings.categories : [];
+}
+
+export async function saveCategory(categoryInput) {
+  if (!isCurrentAdmin()) {
+    throw new Error('Unauthorized: Administrator authentication required to create or modify categories.');
+  }
+
+  const settings = await fetchStoreSettings();
+  const currentCategories = Array.isArray(settings.categories) ? settings.categories : [];
+
+  const validated = validateCategoryInput(categoryInput, currentCategories);
+
+  const existingIdx = currentCategories.findIndex(c =>
+    String(c.id) === String(validated.id) ||
+    (c.slug && c.slug.toLowerCase() === validated.slug.toLowerCase())
+  );
+
+  let updatedList;
+  if (existingIdx >= 0) {
+    updatedList = [...currentCategories];
+    updatedList[existingIdx] = { ...updatedList[existingIdx], ...validated };
+  } else {
+    updatedList = [...currentCategories, validated];
+  }
+
+  const updatedSettings = {
+    ...settings,
+    categories: updatedList
+  };
+
+  await saveStoreSettings(updatedSettings);
+  return validated;
+}
+
+export async function deleteCategory(categoryIdOrSlug) {
+  if (!isCurrentAdmin()) {
+    throw new Error('Unauthorized: Administrator authentication required to delete categories.');
+  }
+
+  const cleanTarget = String(categoryIdOrSlug || '').trim().toLowerCase();
+  if (!cleanTarget) {
+    throw new Error('Valid category identifier is required for deletion.');
+  }
+
+  const settings = await fetchStoreSettings();
+  const currentCategories = Array.isArray(settings.categories) ? settings.categories : [];
+
+  const updatedList = currentCategories.filter(c =>
+    String(c.id).toLowerCase() !== cleanTarget &&
+    String(c.slug || '').toLowerCase() !== cleanTarget
+  );
+
+  const updatedSettings = {
+    ...settings,
+    categories: updatedList
+  };
+
+  await saveStoreSettings(updatedSettings);
+  return updatedList;
 }
 
 export async function fetchCoupons() {

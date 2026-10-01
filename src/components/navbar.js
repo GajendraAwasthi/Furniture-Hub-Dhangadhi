@@ -100,40 +100,70 @@ export function renderNavbar(container, state, events) {
       <!-- Mega Menu Dropdown -->
       <div class="figma-mega-menu" id="mega-menu-dropdown">
         <div class="mega-grid-inner">
-          <div>
-            <div class="mega-title">Seatings</div>
-            <ul class="mega-items-list">
-              <li><a href="#shop?category=Seatings">Argo Office Chair</a></li>
-              <li><a href="#shop?category=Seatings">Valentina Accent Chair</a></li>
-              <li><a href="#shop?category=Seatings">Nordic Lounge Bench</a></li>
-            </ul>
-          </div>
-          <div>
-            <div class="mega-title">Surfaces</div>
-            <ul class="mega-items-list">
-              <li><a href="#shop?category=Surfaces">Winnie Side Table</a></li>
-              <li><a href="#shop?category=Surfaces">Scandinavian Dining Table</a></li>
-            </ul>
-          </div>
-          <div>
-            <div class="mega-title">Decorations & Greens</div>
-            <ul class="mega-items-list">
-              <li><a href="#shop?category=Greens">Botanical Indoor Green</a></li>
-              <li><a href="#shop?category=Decorations">Artisan Ceramic Vase</a></li>
-              <li><a href="#shop?category=Decorations">Halo Standing Lamp</a></li>
-            </ul>
-          </div>
-          <div style="background: var(--color-bg-light); border-radius: 12px; padding: 20px;">
-            <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-primary); margin-bottom: 6px;">
-              Premium Living Combos
+          ${(Array.isArray(state?.categories) && state.categories.length > 0) ? `
+            ${state.categories.slice(0, 3).map(cat => {
+              const catName = typeof cat === 'string' ? cat : cat.name;
+              const catIcon = typeof cat === 'object' && cat.icon ? cat.icon : '';
+              const catProducts = (Array.isArray(state?.products) ? state.products : [])
+                .filter(p => p.category && p.category.toLowerCase() === catName.toLowerCase())
+                .slice(0, 3);
+              return `
+                <div>
+                  <div class="mega-title">
+                    <a href="#shop?category=${encodeURIComponent(catName)}" style="color: inherit; text-decoration: none;">
+                      ${catIcon ? `${escapeHtml(catIcon)} ` : ''}${escapeHtml(catName)}
+                    </a>
+                  </div>
+                  <ul class="mega-items-list">
+                    ${catProducts.length > 0 ? catProducts.map(p => `
+                      <li><a href="#product-detail?id=${encodeURIComponent(p.id)}">${escapeHtml(p.name)}</a></li>
+                    `).join('') : `
+                      <li><a href="#shop?category=${encodeURIComponent(catName)}" style="color: var(--color-text-muted);">Explore All in ${escapeHtml(catName)} →</a></li>
+                    `}
+                  </ul>
+                </div>
+              `;
+            }).join('')}
+            <div style="background: var(--color-bg-light); border-radius: 12px; padding: 20px;">
+              <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-primary); margin-bottom: 6px;">
+                Handcrafted Collection
+              </div>
+              <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 12px;">
+                Quality wooden furniture handcrafted in Dhangadhi with delivery across Nepal.
+              </p>
+              <a href="#shop" class="figma-pill-btn dark-outline" style="padding: 6px 18px; font-size: 0.8rem;">
+                Shop Catalog
+              </a>
             </div>
-            <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 12px;">
-              Coordinated furniture sets curated to elevate your space.
-            </p>
-            <a href="#shop?category=Combos" class="figma-pill-btn dark-outline" style="padding: 6px 18px; font-size: 0.8rem;">
-              View Combos
-            </a>
-          </div>
+          ` : `
+            <div>
+              <div class="mega-title">Explore Store</div>
+              <ul class="mega-items-list">
+                <li><a href="#shop">All Furniture</a></li>
+                <li><a href="#shop?filter=new-arrivals">New Arrivals</a></li>
+                <li><a href="#shop?filter=best-sellers">Best Sellers</a></li>
+              </ul>
+            </div>
+            <div>
+              <div class="mega-title">Customer Care</div>
+              <ul class="mega-items-list">
+                <li><a href="#track">Track Order</a></li>
+                <li><a href="#about">About Our Workshop</a></li>
+                <li><a href="#faq">Delivery &amp; Assembly FAQ</a></li>
+              </ul>
+            </div>
+            <div style="background: var(--color-bg-light); border-radius: 12px; padding: 20px;">
+              <div style="font-weight: 700; font-size: 0.95rem; color: var(--color-primary); margin-bottom: 6px;">
+                Furniture Hub Dhangadhi
+              </div>
+              <p style="font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 12px;">
+                Solid wood furniture directly from manufacturer with delivery across Nepal.
+              </p>
+              <a href="#shop" class="figma-pill-btn dark-outline" style="padding: 6px 18px; font-size: 0.8rem;">
+                Explore Catalog
+              </a>
+            </div>
+          `}
         </div>
       </div>
     </header>
@@ -227,11 +257,21 @@ export function renderNavbar(container, state, events) {
         <div>
           <div class="mobile-cat-heading">Categories</div>
           <ul class="mobile-nav-list">
-            <li><a href="#shop?category=Seatings" class="mobile-nav-link">Seatings & Chairs</a></li>
-            <li><a href="#shop?category=Surfaces" class="mobile-nav-link">Surfaces & Tables</a></li>
-            <li><a href="#shop?category=Decorations" class="mobile-nav-link">Decorations & Lamps</a></li>
-            <li><a href="#shop?category=Greens" class="mobile-nav-link">Greens & Botanicals</a></li>
-            <li><a href="#shop?category=Combos" class="mobile-nav-link">Living Combos</a></li>
+            ${(Array.isArray(state?.categories) && state.categories.length > 0) ? state.categories.map(cat => {
+              const name = typeof cat === 'string' ? cat : cat.name;
+              const icon = typeof cat === 'object' && cat.icon ? cat.icon : '';
+              return `
+                <li>
+                  <a href="#shop?category=${encodeURIComponent(name)}" class="mobile-nav-link">
+                    ${icon ? `${escapeHtml(icon)} ` : ''}${escapeHtml(name)}
+                  </a>
+                </li>
+              `;
+            }).join('') : `
+              <li><a href="#shop" class="mobile-nav-link">All Furniture</a></li>
+              <li><a href="#shop?filter=new-arrivals" class="mobile-nav-link">New Arrivals</a></li>
+              <li><a href="#shop?filter=best-sellers" class="mobile-nav-link">Best Sellers</a></li>
+            `}
           </ul>
         </div>
 

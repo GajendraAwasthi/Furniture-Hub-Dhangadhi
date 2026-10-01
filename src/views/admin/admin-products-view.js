@@ -166,7 +166,10 @@ export async function renderAdminProductsView(container, state, events) {
 
   function render() {
     const list = getFilteredProducts();
-    const categories = ['All', 'Seatings', 'Surfaces', 'Decorations', 'Greens', 'Long Sofa', 'Combos'];
+    const dynamicCats = Array.isArray(settings?.categories)
+      ? settings.categories.map(c => typeof c === 'string' ? c : c.name).filter(Boolean)
+      : [];
+    const categories = ['All', ...dynamicCats];
 
     container.innerHTML = `
       <div>
@@ -181,13 +184,21 @@ export async function renderAdminProductsView(container, state, events) {
             </p>
           </div>
 
-          <button class="btn btn-primary" id="btn-add-product">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Add New Furniture</span>
-          </button>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <a href="#admin/categories" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Manage Categories (${dynamicCats.length})</span>
+            </a>
+            <button class="btn btn-primary" id="btn-add-product">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Add New Furniture</span>
+            </button>
+          </div>
         </div>
 
         <!-- Controls: Search & Category Pills -->
@@ -210,8 +221,8 @@ export async function renderAdminProductsView(container, state, events) {
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               ${categories.map(cat => `
-                <button class="filter-pill ${selectedCategory === cat ? 'active' : ''} product-cat-filter" data-cat="${cat}">
-                  ${cat}
+                <button class="filter-pill ${selectedCategory.toLowerCase() === cat.toLowerCase() ? 'active' : ''} product-cat-filter" data-cat="${escapeHtml(cat)}">
+                  ${escapeHtml(cat)}
                 </button>
               `).join('')}
             </div>
@@ -334,14 +345,26 @@ export async function renderAdminProductsView(container, state, events) {
                 </div>
 
                 <div class="settings-form-group">
-                  <label class="settings-label" for="form-p-cat">Category *</label>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <label class="settings-label" for="form-p-cat" style="margin-bottom: 0;">Category *</label>
+                    <a href="#admin/categories" style="font-size: 0.78rem; color: var(--color-primary); font-weight: 700; text-decoration: none;">
+                      + Manage / Add Category
+                    </a>
+                  </div>
                   <select id="form-p-cat" class="settings-select" required>
-                    <option value="Seatings">Seatings</option>
-                    <option value="Surfaces">Surfaces</option>
-                    <option value="Decorations">Decorations</option>
-                    <option value="Greens">Greens</option>
-                    <option value="Long Sofa">Long Sofa</option>
-                    <option value="Combos">Combos</option>
+                    ${dynamicCats.length === 0 && !editingProduct?.category ? `
+                      <option value="">-- No categories created (Add in Settings > Categories) --</option>
+                    ` : ''}
+                    ${dynamicCats.map(catName => `
+                      <option value="${escapeHtml(catName)}" ${editingProduct?.category === catName ? 'selected' : ''}>
+                        ${escapeHtml(catName)}
+                      </option>
+                    `).join('')}
+                    ${editingProduct?.category && !dynamicCats.some(c => c.toLowerCase() === editingProduct.category.toLowerCase()) ? `
+                      <option value="${escapeHtml(editingProduct.category)}" selected>
+                        ${escapeHtml(editingProduct.category)} (Legacy / Custom)
+                      </option>
+                    ` : ''}
                   </select>
                 </div>
 
@@ -705,7 +728,7 @@ export async function renderAdminProductsView(container, state, events) {
     const q = id => container.querySelector(id);
     if (q('#form-p-id')) q('#form-p-id').value = prod.id || '';
     if (q('#form-p-name')) q('#form-p-name').value = prod.name || '';
-    if (q('#form-p-cat')) q('#form-p-cat').value = prod.category || 'Seatings';
+    if (q('#form-p-cat')) q('#form-p-cat').value = prod.category || (dynamicCats[0] || '');
     if (q('#form-p-price')) q('#form-p-price').value = prod.price || '';
     if (q('#form-p-orig-price')) q('#form-p-orig-price').value = prod.originalPrice || '';
     if (q('#form-p-badge')) q('#form-p-badge').value = prod.badge || '';

@@ -66,49 +66,6 @@ export const SEO_CONFIG = {
     googleMapsUrl: 'https://maps.google.com/?q=28.6967,80.5882'
   },
 
-  // Real verified product categories from src/data/products.json
-  categories: [
-    {
-      slug: 'seatings',
-      name: 'Seatings',
-      nameNepali: 'कुर्सी र बेन्च',
-      title: 'Comfortable Seatings & Chairs in Dhangadhi | Furniture Hub',
-      description: 'Explore ergonomic office chairs, accent lounge chairs, and minimalist wooden benches at Furniture Hub Dhangadhi, Kailali.'
-    },
-    {
-      slug: 'combos',
-      name: 'Combos',
-      nameNepali: 'कम्बो फर्निचर',
-      title: 'Living Room Furniture Combos in Dhangadhi | Furniture Hub',
-      description: 'Browse harmonized sofa and table furniture combos crafted for contemporary homes in Dhangadhi and Sudurpashchim.'
-    },
-    {
-      slug: 'surfaces',
-      name: 'Surfaces',
-      nameNepali: 'टेबल र डाइनिङ',
-      title: 'Dining & Side Tables in Dhangadhi | Furniture Hub',
-      description: 'Solid wood dining tables, Scandinavian side tables, and coffee tables built for durability and elegance in Dhangadhi.'
-    },
-    {
-      slug: 'decorations',
-      name: 'Decorations',
-      nameNepali: 'घर सजावट',
-      title: 'Home Decor & Lighting in Dhangadhi | Furniture Hub',
-      description: 'Handmade ceramic vases, standing arch lamps, and contemporary home decor accessories in Dhangadhi, Kailali.'
-    },
-    {
-      slug: 'greens',
-      name: 'Greens',
-      nameNepali: 'इनडोर प्लान्ट',
-      title: 'Botanical & Indoor Greens in Dhangadhi | Furniture Hub',
-      description: 'Enhance your indoor furniture spaces with curated botanical plants and greenery at Furniture Hub Dhangadhi.'
-    },
-    {
-      slug: 'long-sofa',
-      name: 'Long Sofa',
-      nameNepali: 'सोफा सेट',
-      title: 'Curved & Sectional Sofas in Dhangadhi | Furniture Hub',
-      description: 'Premium curved lounge sofas and living room sofa sets crafted with high-resilience foam and durable frames in Dhangadhi.'
-    }
-  ]
+  // Dynamic custom categories managed by admin
+  categories: []
 };

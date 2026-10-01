@@ -8,15 +8,8 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const productsPath = path.resolve('src/data/products.json');
 const products = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
 
-// Verified categories
-const categories = [
-  { slug: 'seatings', name: 'Seatings', description: 'Ergonomic office chairs, accent lounge chairs, and benches in Dhangadhi.' },
-  { slug: 'combos', name: 'Combos', description: 'Harmonized living room sofa and companion table combos in Dhangadhi.' },
-  { slug: 'surfaces', name: 'Surfaces', description: 'Solid wood dining tables, side tables, and coffee tables in Dhangadhi.' },
-  { slug: 'decorations', name: 'Decorations', description: 'Ceramic vases, standing arch lamps, and contemporary home decor in Dhangadhi.' },
-  { slug: 'greens', name: 'Greens', description: 'Indoor botanical greenery and decorative planters in Dhangadhi.' },
-  { slug: 'long-sofa', name: 'Long Sofa', description: 'Curved lounge sofas and sectional living room sofa sets in Dhangadhi.' }
-];
+// Custom categories are managed dynamically by administrator
+const categories = [];
 
 // Core pages
 const staticPages = [

@@ -89,7 +89,7 @@ export function renderNotFoundView(container, state, events) {
             <div class="figma-card-img-wrap">
               <img src="${resolveCloudImageUrl(product.image)}" alt="${product.name}" loading="lazy" onerror="this.src='/images/hero-living-room.png'">
             </div>
-            <span class="figma-card-category">${product.category || 'Decorations'}</span>
+            ${product.category ? `<span class="figma-card-category">${product.category}</span>` : ''}
             <h4 class="figma-card-title">${product.name}</h4>
             <div class="figma-card-rating">
               <span class="stars">${renderStars(product.rating || 5)}</span>

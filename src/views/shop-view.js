@@ -5,9 +5,15 @@ import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 import { escapeHtml } from '../utils/security.js';
 
 export function renderShopView(container, state, events, params) {
+  const availableCategories = Array.isArray(state?.categories) ? state.categories : [];
+  const categoryNames = availableCategories.map(c => typeof c === 'string' ? c : c.name).filter(Boolean);
+  const allCategoryOptions = ['All', ...categoryNames];
+
   const rawCategory = (params.get('category') || 'All').toLowerCase();
-  let activeCategory = ['All', 'Seatings', 'Surfaces', 'Decorations', 'Greens', 'Long Sofa', 'Combos']
-    .find(c => c.toLowerCase() === rawCategory || c.toLowerCase().replace(/\s+/g, '-') === rawCategory) || 'All';
+  let activeCategory = allCategoryOptions.find(c => {
+    const slug = c.toLowerCase().replace(/\s+/g, '-');
+    return c.toLowerCase() === rawCategory || slug === rawCategory;
+  }) || 'All';
   let activeFilter = params.get('filter') || 'all';
   let searchQuery = params.get('search') || '';
   let activeSort = params.get('sort') || 'featured';
@@ -18,7 +24,7 @@ export function renderShopView(container, state, events, params) {
   let filtered = state.products.slice();
 
   if (activeCategory && activeCategory !== 'All') {
-    filtered = filtered.filter(p => p.category.toLowerCase() === activeCategory.toLowerCase());
+    filtered = filtered.filter(p => p.category && p.category.toLowerCase() === activeCategory.toLowerCase());
   }
 
   if (activeFilter === 'new-arrivals') {
@@ -68,7 +74,7 @@ export function renderShopView(container, state, events, params) {
     return s;
   }
 
-  const categories = ['All', 'Seatings', 'Surfaces', 'Decorations', 'Greens', 'Long Sofa', 'Combos'];
+  const categories = allCategoryOptions;
 
   let pageHeading = 'Furniture Collection in Dhangadhi';
   let pageSubheading = 'Explore our catalog of executive chairs, hand-finished surfaces, and signature living room combos.';
@@ -103,11 +109,11 @@ export function renderShopView(container, state, events, params) {
         </div>
       </div>
 
-      <!-- Category Filter Pills (Figma: Chairs, Surfaces, Decorations, Greens, Long Sofa, Combos) -->
+      <!-- Category Filter Pills -->
       <div class="filter-pills" id="shop-category-pills">
         ${categories.map(cat => `
-          <button class="filter-pill ${activeCategory === cat ? 'active' : ''}" data-category="${cat}">
-            ${cat === 'Seatings' ? 'Chairs & Seatings' : cat}
+          <button class="filter-pill ${activeCategory.toLowerCase() === cat.toLowerCase() ? 'active' : ''}" data-category="${escapeHtml(cat)}">
+            ${escapeHtml(cat)}
           </button>
         `).join('')}
       </div>
@@ -218,13 +224,13 @@ export function renderShopView(container, state, events, params) {
                 <span class="sidebar-count-badge">${state.products.length}</span>
               </button>
             </li>
-            ${['Seatings', 'Surfaces', 'Decorations', 'Greens', 'Long Sofa', 'Combos'].map(cat => {
-              const count = state.products.filter(p => p.category.toLowerCase() === cat.toLowerCase()).length;
+            ${categoryNames.map(cat => {
+              const count = state.products.filter(p => p.category && p.category.toLowerCase() === cat.toLowerCase()).length;
               const isActive = activeCategory.toLowerCase() === cat.toLowerCase();
               return `
                 <li class="sidebar-cat-item">
-                  <button class="sidebar-cat-btn ${isActive ? 'active' : ''}" data-category="${cat}">
-                    <span>${cat === 'Seatings' ? 'Chairs & Seatings' : cat}</span>
+                  <button class="sidebar-cat-btn ${isActive ? 'active' : ''}" data-category="${escapeHtml(cat)}">
+                    <span>${escapeHtml(cat)}</span>
                     <span class="sidebar-count-badge">${count}</span>
                   </button>
                 </li>

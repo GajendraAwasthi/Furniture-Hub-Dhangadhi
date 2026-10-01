@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateCartTotals } from '../src/cart/pricing.js';
-import { createOrder, fetchCoupons, fetchOrderByReference, setClientForTesting } from '../src/services/supabase.js';
+import { createOrder, fetchCoupons, fetchOrderByReference, setClientForTesting, fetchCategories, saveCategory, deleteCategory } from '../src/services/supabase.js';
+import { validateCategoryInput } from '../src/security/validation.js';
 import { renderCartDrawer } from '../src/components/cart-drawer.js';
 import { renderNavbar } from '../src/components/navbar.js';
 import { signCartSession, verifyCartSession } from '../src/cart/service.js';
 import { singleFlight } from '../src/checkout/single-flight.js';
 import { renderHomeView } from '../src/views/home-view.js';
+import { renderShopView } from '../src/views/shop-view.js';
 import { renderProductDetailView } from '../src/views/product-detail-view.js';
 import { renderUserProfileModal } from '../src/components/user-profile-modal.js';
 import { renderAdminOverviewView } from '../src/views/admin/admin-overview-view.js';
@@ -339,4 +341,159 @@ test('Total Sales Volume excludes cancelled orders from the revenue total', asyn
   // When all orders are cancelled, the KPI value should show 0
   assert.match(container.innerHTML, /kpi-val[^>]*>Rs\.\s*0</, 'All-cancelled scenario should show Rs. 0');
 });
+
+test('category management requires verified admin privileges and fails closed', async () => {
+  clearVerifiedAdminUser();
+  assert.equal(isCurrentAdmin(), false);
+
+  await assert.rejects(
+    async () => saveCategory({ name: 'Rogue Category' }),
+    /Unauthorized/,
+    'Unauthenticated user must not be able to save categories'
+  );
+
+  await assert.rejects(
+    async () => deleteCategory('some-cat-slug'),
+    /Unauthorized/,
+    'Unauthenticated user must not be able to delete categories'
+  );
+});
+
+test('category input validation enforces constraints and defends against attacks', () => {
+  // 1. Prototype pollution defense
+  assert.throws(
+    () => validateCategoryInput(JSON.parse('{"name":"Pollute","__proto__":{"polluted":true}}')),
+    /prototype pollution attempt/i,
+    'Prototype pollution attempts on category input must be rejected'
+  );
+
+  // 2. Length constraints
+  assert.throws(
+    () => validateCategoryInput({ name: 'A' }),
+    /between 2 and 50 characters/,
+    'Category names shorter than 2 characters must be rejected'
+  );
+  assert.throws(
+    () => validateCategoryInput({ name: 'X'.repeat(51) }),
+    /between 2 and 50 characters/,
+    'Category names longer than 50 characters must be rejected'
+  );
+
+  // 3. Slug constraints
+  assert.throws(
+    () => validateCategoryInput({ name: 'Valid Name', slug: 'INVALID SLUG!' }),
+    /Category slug may only contain lowercase alphanumeric/,
+    'Invalid slug characters must be rejected'
+  );
+
+  // 4. Duplicate prevention
+  const existing = [
+    { id: 'living-room', name: 'Living Room', slug: 'living-room' },
+    { id: 'bedroom', name: 'Bedroom', slug: 'bedroom' }
+  ];
+  assert.throws(
+    () => validateCategoryInput({ name: 'living room' }, existing),
+    /already exists/,
+    'Duplicate category names (case-insensitive) must be rejected'
+  );
+  assert.throws(
+    () => validateCategoryInput({ name: 'New Room', slug: 'bedroom' }, existing),
+    /already exists/,
+    'Duplicate category slugs must be rejected'
+  );
+
+  // 5. Valid category sanitization
+  const valid = validateCategoryInput({
+    name: '  Executive Office  ',
+    description: '<b>High-grade</b> desks & chairs',
+    icon: '🪑'
+  });
+  assert.equal(valid.name, 'Executive Office');
+  assert.equal(valid.slug, 'executive-office');
+  assert.equal(valid.icon, '🪑');
+  assert.equal(valid.description.includes('<b>'), false, 'HTML tags in description must be sanitized');
+});
+
+test('category lifecycle: verified admin can create, list, and delete categories', async () => {
+  const previousStorage = globalThis.localStorage;
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: key => values.delete(key),
+    key: index => [...values.keys()][index] ?? null,
+    get length() { return values.size; }
+  };
+  setClientForTesting(null);
+
+  try {
+    setVerifiedAdminUser({ id: 'admin-1', role: 'admin', email: 'admin@furniturehub.com' });
+    assert.equal(isCurrentAdmin(), true);
+
+    // Initial categories should be empty (all older categories removed)
+    const initial = await fetchCategories();
+    assert.equal(initial.length, 0, 'Categories should start empty with all older categories removed');
+
+    // Create custom category 1
+    const cat1 = await saveCategory({ name: 'Executive Desks', icon: '🪵' });
+    assert.equal(cat1.slug, 'executive-desks');
+    assert.equal(cat1.icon, '🪵');
+
+    // Create custom category 2
+    const cat2 = await saveCategory({ name: 'Ergonomic Seating', icon: '🪑' });
+    assert.equal(cat2.slug, 'ergonomic-seating');
+
+    const updated = await fetchCategories();
+    assert.equal(updated.length, 2);
+    assert.equal(updated[0].name, 'Executive Desks');
+    assert.equal(updated[1].name, 'Ergonomic Seating');
+
+    // Delete category 1
+    await deleteCategory('executive-desks');
+    const afterDelete = await fetchCategories();
+    assert.equal(afterDelete.length, 1);
+    assert.equal(afterDelete[0].slug, 'ergonomic-seating');
+  } finally {
+    clearVerifiedAdminUser();
+    globalThis.localStorage = previousStorage;
+  }
+});
+
+test('category rendering escapes malicious payloads across all store and admin views', async () => {
+  const xssPayload = '"><script>alert("xss")</script>';
+  const maliciousCat = {
+    id: 'xss-cat',
+    name: xssPayload,
+    slug: 'xss-cat',
+    icon: '⚠️',
+    description: xssPayload
+  };
+
+  const state = {
+    categories: [maliciousCat],
+    products: [{ id: 'p1', name: 'Table', category: xssPayload, price: 5000, image: '/table.png' }],
+    cart: [],
+    wishlist: [],
+    customerUser: null
+  };
+
+  const container = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+  const events = { emit: () => {}, on: () => {} };
+
+  // 1. Navbar
+  renderNavbar(container, state, events);
+  assert.doesNotMatch(container.innerHTML, /<script>alert\("xss"\)<\/script>/, 'Navbar must not contain unescaped script tag');
+  assert.match(container.innerHTML, /&lt;script&gt;alert/, 'Navbar must escape category names');
+
+  // 2. Shop View
+  renderShopView(container, state, events, new URLSearchParams());
+  assert.doesNotMatch(container.innerHTML, /<script>alert\("xss"\)<\/script>/, 'Shop view must not contain unescaped script tag');
+  assert.match(container.innerHTML, /&lt;script&gt;alert/, 'Shop view must escape category pills and sidebar');
+
+  // 3. Home View
+  renderHomeView(container, state, events);
+  assert.doesNotMatch(container.innerHTML, /<script>alert\("xss"\)<\/script>/, 'Home view must not contain unescaped script tag');
+  assert.match(container.innerHTML, /&lt;script&gt;alert/, 'Home view must escape category cards');
+});
+
 

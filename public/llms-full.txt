@@ -14,21 +14,16 @@
 
 ## 2. Furniture Collections & Catalog URLs
 - **All Products**: https://www.furniturehubdhangadhi.com/shop
-- **Seatings**: https://www.furniturehubdhangadhi.com/category/seatings
+- **Featured Furniture Items**:
   - Argo Office Chair (Rs. 18,500): https://www.furniturehubdhangadhi.com/products/argo-office-chair
   - Valentina Accent Chair (Rs. 14,000): https://www.furniturehubdhangadhi.com/products/valentina-accent-chair
   - Nordic Bench (Rs. 9,500): https://www.furniturehubdhangadhi.com/products/nordic-bench
-- **Combos**: https://www.furniturehubdhangadhi.com/category/combos
   - Sofa Decor Combo (Rs. 42,000): https://www.furniturehubdhangadhi.com/products/sofa-decor-combo
-- **Surfaces**: https://www.furniturehubdhangadhi.com/category/surfaces
   - Scandinavian Dining Table (Rs. 38,000): https://www.furniturehubdhangadhi.com/products/scandinavian-dining-table
   - Winnie Side Table (Rs. 7,500): https://www.furniturehubdhangadhi.com/products/winnie-side-table
-- **Decorations**: https://www.furniturehubdhangadhi.com/category/decorations
   - Artisan Ceramic Vase (Rs. 3,200): https://www.furniturehubdhangadhi.com/products/artisan-ceramic-vase
   - Halo Arch Floor Lamp (Rs. 11,500): https://www.furniturehubdhangadhi.com/products/halo-arch-floor-lamp
-- **Greens**: https://www.furniturehubdhangadhi.com/category/greens
   - Botanical Indoor Plant (Rs. 2,800): https://www.furniturehubdhangadhi.com/products/botanical-indoor-plant
-- **Long Sofa**: https://www.furniturehubdhangadhi.com/category/long-sofa
   - Zenith Curved Lounge Sofa (Rs. 65,000): https://www.furniturehubdhangadhi.com/products/zenith-curved-lounge-sofa
 
 ## 3. Delivery Coverage & Logistics
