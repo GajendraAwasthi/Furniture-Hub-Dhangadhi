@@ -54,7 +54,7 @@ export function renderHomeView(container, state, events) {
     <section class="figma-hero">
       <div class="figma-hero-content">
         <h1 class="figma-hero-title">
-          Find the Right Furniture<br>that Matches You and Your Home
+          Find the Right Furniture <br>that Matches You and Your Home
         </h1>
         <p class="figma-hero-subtitle">
           Browse through our diverse range of meticulously curated furniture, curated to bring out your individuality and cater to your sense of style.
