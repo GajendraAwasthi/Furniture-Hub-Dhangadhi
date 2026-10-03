@@ -28,7 +28,7 @@ import { renderOnboardingView } from './views/customer/customer-onboarding-view.
 import { renderTrackOrderView } from './views/track/track-order-view.js';
 import { openPostLoginOnboardingModal } from './components/post-login-onboarding-modal.js';
 import { getBrandLoaderHtml, showGlobalBrandLoader, hideGlobalBrandLoader } from './components/brand-loader.js';
-import { getCurrentUser, createOrder, fetchProducts, fetchCategories, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient, fetchCoupons } from './services/supabase.js';
+import { getCurrentUser, createOrder, fetchProducts, fetchCategories, fetchHeroBanners, loginWithOAuth, checkIsSupabaseAdmin, syncSupabaseAdminsCache, getClient, fetchCoupons } from './services/supabase.js';
 import { generateWhatsAppLink, syncSellerNumberFromCloud } from './services/whatsapp.js';
 import { 
   getCurrentCustomer, 
@@ -79,7 +79,8 @@ const state = {
   couponApplied: false,
   coupon: null,
   searchQuery: '',
-  categories: []
+  categories: [],
+  heroBanners: []
 };
 
 // Event Bus
@@ -143,6 +144,10 @@ function showToast(message, type = 'success') {
 events.on('categories-updated', (newCats) => {
   state.categories = Array.isArray(newCats) ? newCats : [];
   updateChrome();
+});
+
+events.on('banners-updated', (newBanners) => {
+  state.heroBanners = Array.isArray(newBanners) ? newBanners : [];
 });
 
 events.on('toast', ({ message, type }) => {
@@ -1116,6 +1121,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.warn('Category database fetch error:', err);
     state.categories = [];
+  }
+
+  try {
+    const dbBanners = await fetchHeroBanners();
+    state.heroBanners = Array.isArray(dbBanners) ? dbBanners : [];
+  } catch (err) {
+    console.warn('Hero banners fetch error:', err);
+    state.heroBanners = [];
   }
 
   try {

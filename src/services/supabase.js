@@ -822,6 +822,8 @@ export async function deleteOrder(orderId) {
 // STORE SETTINGS & COUPONS
 // ==========================================================================
 
+export const DEFAULT_HERO_BANNERS = [];
+
 const DEFAULT_SETTINGS = {
   storeName: 'Furniture Hub Dhangadhi',
   contactEmail: 'support@furniturehubdhangadhi.com',
@@ -835,7 +837,8 @@ const DEFAULT_SETTINGS = {
   freeShippingThreshold: 0,
   lowStockThreshold: 3,
   maintenanceMode: false,
-  categories: []
+  categories: [],
+  heroBanners: DEFAULT_HERO_BANNERS
 };
 
 export async function fetchStoreSettings() {
@@ -853,6 +856,9 @@ export async function fetchStoreSettings() {
         if (!Array.isArray(merged.categories)) {
           merged.categories = [];
         }
+        if (!Array.isArray(merged.heroBanners) || merged.heroBanners.length === 0) {
+          merged.heroBanners = DEFAULT_HERO_BANNERS;
+        }
         return merged;
       }
     } catch { /* ignore */ }
@@ -865,7 +871,10 @@ export async function fetchStoreSettings() {
       return {
         ...DEFAULT_SETTINGS,
         ...parsed,
-        categories: Array.isArray(parsed.categories) ? parsed.categories : []
+        categories: Array.isArray(parsed.categories) ? parsed.categories : [],
+        heroBanners: (Array.isArray(parsed.heroBanners) && parsed.heroBanners.length > 0)
+          ? parsed.heroBanners
+          : DEFAULT_HERO_BANNERS
       };
     } catch { /* ignore */ }
   }
@@ -954,6 +963,67 @@ export async function deleteCategory(categoryIdOrSlug) {
   };
 
   await saveStoreSettings(updatedSettings);
+  return updatedList;
+}
+
+export async function fetchHeroBanners() {
+  const settings = await fetchStoreSettings();
+  return (Array.isArray(settings.heroBanners) && settings.heroBanners.length > 0)
+    ? settings.heroBanners
+    : DEFAULT_HERO_BANNERS;
+}
+
+export async function saveHeroBanner(bannerData) {
+  if (!isCurrentAdmin()) {
+    throw new Error('Unauthorized: Administrator authentication required to manage hero banners.');
+  }
+  if (!bannerData || !bannerData.url || typeof bannerData.url !== 'string') {
+    throw new Error('A valid image URL is required for the banner.');
+  }
+  if (bannerData.url.length > 2_000_000) {
+    throw new Error('Image is too large. Please use a smaller file (max ~1.5 MB after compression).');
+  }
+
+  const settings = await fetchStoreSettings();
+  const banners = Array.isArray(settings.heroBanners) ? settings.heroBanners : [];
+
+  const entry = {
+    id: bannerData.id || `banner-${Date.now()}`,
+    url: bannerData.url,
+    alt: (bannerData.alt || 'Furniture Hub Dhangadhi').slice(0, 120),
+    order: typeof bannerData.order === 'number' ? bannerData.order : banners.length,
+    createdAt: bannerData.createdAt || new Date().toISOString()
+  };
+
+  const existingIdx = banners.findIndex(b => b.id === entry.id);
+  let updatedList;
+  if (existingIdx >= 0) {
+    updatedList = [...banners];
+    updatedList[existingIdx] = { ...updatedList[existingIdx], ...entry };
+  } else {
+    updatedList = [...banners, entry];
+  }
+
+  await saveStoreSettings({ ...settings, heroBanners: updatedList });
+  return entry;
+}
+
+export async function deleteHeroBanner(bannerId) {
+  if (!isCurrentAdmin()) {
+    throw new Error('Unauthorized: Administrator authentication required to delete hero banners.');
+  }
+  const cleanId = String(bannerId || '').trim();
+  if (!cleanId) throw new Error('Valid banner ID is required for deletion.');
+
+  const settings = await fetchStoreSettings();
+  const banners = Array.isArray(settings.heroBanners) ? settings.heroBanners : [];
+  const updatedList = banners.filter(b => b.id !== cleanId);
+
+  if (updatedList.length === banners.length) {
+    throw new Error(`Banner "${cleanId}" was not found.`);
+  }
+
+  await saveStoreSettings({ ...settings, heroBanners: updatedList });
   return updatedList;
 }
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculateCartTotals } from '../src/cart/pricing.js';
-import { createOrder, fetchCoupons, fetchOrderByReference, setClientForTesting, fetchCategories, saveCategory, deleteCategory } from '../src/services/supabase.js';
+import { createOrder, fetchCoupons, fetchOrderByReference, setClientForTesting, fetchCategories, saveCategory, deleteCategory, fetchHeroBanners, saveHeroBanner, deleteHeroBanner } from '../src/services/supabase.js';
 import { validateCategoryInput } from '../src/security/validation.js';
 import { renderCartDrawer } from '../src/components/cart-drawer.js';
 import { renderNavbar } from '../src/components/navbar.js';
@@ -495,5 +495,99 @@ test('category rendering escapes malicious payloads across all store and admin v
   assert.doesNotMatch(container.innerHTML, /<script>alert\("xss"\)<\/script>/, 'Home view must not contain unescaped script tag');
   assert.match(container.innerHTML, /&lt;script&gt;alert/, 'Home view must escape category cards');
 });
+
+test('hero banner management requires verified admin privileges and fails closed', async () => {
+  clearVerifiedAdminUser();
+  await assert.rejects(
+    () => saveHeroBanner({ url: 'data:image/webp;base64,abc', alt: 'Test' }),
+    /Unauthorized/
+  );
+  await assert.rejects(
+    () => deleteHeroBanner('banner-1'),
+    /Unauthorized/
+  );
+});
+
+test('hero banner lifecycle: verified admin can save, list, and delete hero banners', async () => {
+  const previousStorage = globalThis.localStorage;
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: key => values.delete(key),
+    key: index => [...values.keys()][index] ?? null,
+    get length() { return values.size; }
+  };
+  setClientForTesting(null);
+
+  try {
+    setVerifiedAdminUser({ id: 'admin-1', role: 'admin', email: 'admin@furniturehubdhangadhi.com' });
+    const testBanner = {
+      id: `test-banner-${Date.now()}`,
+      url: '/images/banner-living-room.jpg',
+      alt: 'Living Room Promo'
+    };
+
+    const saved = await saveHeroBanner(testBanner);
+    assert.equal(saved.id, testBanner.id);
+    assert.equal(saved.alt, testBanner.alt);
+
+    const banners = await fetchHeroBanners();
+    assert.ok(banners.some(b => b.id === testBanner.id));
+
+    await deleteHeroBanner(testBanner.id);
+    const afterDelete = await fetchHeroBanners();
+    assert.ok(!afterDelete.some(b => b.id === testBanner.id));
+  } finally {
+    clearVerifiedAdminUser();
+    globalThis.localStorage = previousStorage;
+  }
+});
+
+test('hero banner rendering escapes malicious alt text and URLs in home and admin views', async () => {
+  const previousStorage = globalThis.localStorage;
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: key => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: key => values.delete(key),
+    key: index => [...values.keys()][index] ?? null,
+    get length() { return values.size; }
+  };
+  setClientForTesting(null);
+
+  try {
+    const xssPayload = '"><script>alert("banner-xss")</script>';
+    const maliciousBanner = {
+      id: 'malicious-banner',
+      url: 'https://example.com/img.jpg" onload="alert(1)',
+      alt: xssPayload
+    };
+
+    const state = {
+      heroBanners: [maliciousBanner],
+      categories: [],
+      products: [],
+      cart: [],
+      wishlist: [],
+      customerUser: null
+    };
+
+    const container = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+    const events = { emit: () => {}, on: () => {} };
+
+    renderHomeView(container, state, events);
+    assert.doesNotMatch(container.innerHTML, /<script>alert\("banner-xss"\)<\/script>/, 'Home view must not execute banner script');
+    assert.match(container.innerHTML, /&lt;script&gt;alert/, 'Home view must escape banner alt text');
+
+    setVerifiedAdminUser({ id: 'admin-1', role: 'admin', email: 'admin@furniturehubdhangadhi.com' });
+    await renderAdminSettingsView(container, state, events, 'banners');
+    assert.doesNotMatch(container.innerHTML, /<script>alert\("banner-xss"\)<\/script>/, 'Admin settings view must not execute banner script');
+  } finally {
+    clearVerifiedAdminUser();
+    globalThis.localStorage = previousStorage;
+  }
+});
+
 
 

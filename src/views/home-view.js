@@ -4,6 +4,7 @@ import { getTopReviews } from '../services/reviews.js';
 import { openProductReviewsModal } from '../components/product-reviews-modal.js';
 import { resolveCloudImageUrl } from '../utils/cloud-image-resolver.js';
 import { escapeHtml } from '../utils/security.js';
+import { DEFAULT_HERO_BANNERS } from '../services/supabase.js';
 
 export function renderHomeView(container, state, events) {
   function renderStars(rating = 5) {
@@ -44,11 +45,14 @@ export function renderHomeView(container, state, events) {
   const newArrivals = state.products.filter(p => p.isNewArrival).slice(0, 4);
   const bestSellers = state.products.filter(p => p.isBestSeller).slice(0, 4);
   const reviewsData = getTopReviews(3);
+  const banners = (Array.isArray(state?.heroBanners) && state.heroBanners.length > 0)
+    ? state.heroBanners
+    : DEFAULT_HERO_BANNERS;
 
   container.innerHTML = `
     <!-- SCREENSHOT 1: HERO SECTION -->
     <section class="figma-hero">
-      <div class="site-container">
+      <div class="figma-hero-content">
         <h1 class="figma-hero-title">
           Find the Right Furniture<br>that Matches You and Your Home
         </h1>
@@ -75,94 +79,29 @@ export function renderHomeView(container, state, events) {
             Shop Now
           </a>
         </div>
+      </div>
 
-        <!-- VALUE PROPOSITION HIGHLIGHT (Direct Import, No Middleman, Custom Production) -->
-        <!-- VALUE PROPOSITION HIGHLIGHT (Direct Import, No Middleman, Custom Production) -->
-        <div class="fh-value-proposition-banner" id="hero-value-proposition">
-          <div class="fh-vp-headline">
-            <div class="fh-vp-title-line">THE SAME FURNITURE</div>
-            <div class="fh-vp-title-line">YOU SEE ONLINE —</div>
-            <div class="fh-vp-title-line fh-vp-price-line">
-              <span>AT A BETTER PRICE!</span>
-              <span class="fh-vp-flame" role="img" aria-label="deal">🔥</span>
-            </div>
+      <!-- HERO BANNER SLIDESHOW (Fits inside the exact bottom box, edge-to-edge) -->
+      ${(Array.isArray(banners) && banners.length > 0) ? `
+      <div class="fh-hero-slideshow" id="hero-slideshow" aria-label="Featured Furniture Collections" role="region">
+        <div class="fh-slideshow-viewport">
+          <div class="fh-slideshow-track" id="hero-slideshow-track">
+            ${banners.map((b, i) => `
+              <div class="fh-slide" data-slide="${i}">
+                <img src="${escapeHtml(b.url)}" alt="${escapeHtml(b.alt || 'Furniture Hub Dhangadhi')}" class="fh-slide-img" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async" draggable="false">
+              </div>
+            `).join('')}
           </div>
-
-          <div class="fh-vp-badges">
-            <!-- Direct Import -->
-            <div class="fh-vp-badge">
-              <div class="fh-vp-icon-wrap" title="Direct Import">
-                <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <!-- Globe -->
-                  <circle cx="17" cy="19" r="13"></circle>
-                  <path d="M17 6c3.6 3.6 5.5 8.2 5.5 13s-1.9 9.4-5.5 13c-3.6-3.6-5.5-8.2-5.5-13s1.9-9.4 5.5-13z"></path>
-                  <path d="M4 19h26"></path>
-                  <path d="M6.5 12.5c3-1.6 6.5-2.5 10.5-2.5s7.5.9 10.5 2.5"></path>
-                  <!-- Curved orbit arrow -->
-                  <path d="M21 5.5c5.5.8 10 4.2 11.5 9.5"></path>
-                  <polyline points="33.5 10 33.5 15.5 28 14.5"></polyline>
-                  <!-- Isometric parcel box in foreground with background masking -->
-                  <path d="M21 24l8-4 8 4-8 4-8-4z" fill="var(--color-bg-light)"></path>
-                  <path d="M25 22l8 4"></path>
-                  <path d="M21 24v10.5l8 4v-10.5l-8-4z" fill="var(--color-bg-light)"></path>
-                  <path d="M37 24v10.5l-8 4v-10.5l8-4z" fill="var(--color-bg-light)"></path>
-                  <line x1="29" y1="28" x2="29" y2="38.5"></line>
-                  <line x1="33" y1="26" x2="33" y2="29.5"></line>
-                </svg>
-              </div>
-              <span class="fh-vp-badge-label">DIRECT<br>IMPORT</span>
-            </div>
-
-            <!-- No Middleman -->
-            <div class="fh-vp-badge">
-              <div class="fh-vp-icon-wrap" title="No Middleman">
-                <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <!-- Outer circle -->
-                  <circle cx="22" cy="22" r="19"></circle>
-                  <!-- Dollar Sign -->
-                  <line x1="22" y1="7.5" x2="22" y2="17.5"></line>
-                  <path d="M24.5 10.2c0-1.1-.9-1.7-2.3-1.7s-2.3.7-2.3 1.5c0 1.8 4.6 1.3 4.6 3.2 0 1.1-.9 1.8-2.3 1.8s-2.3-.7-2.3-1.7"></path>
-                  <!-- Handshake -->
-                  <path d="M7 23.5l4-2.5v5l-4-2.5z"></path>
-                  <path d="M37 23.5l-4-2.5v5l4-2.5z"></path>
-                  <path d="M11 23.5l5 3 4-1.5"></path>
-                  <path d="M33 23.5l-5 3-4-1.5"></path>
-                  <path d="M16.5 28l4.5 3.5 4.5-3.5"></path>
-                  <path d="M18.5 32.5l2.5 2 2.5-2"></path>
-                  <!-- Restriction Slash across circle from top-right to bottom-left -->
-                  <line x1="35.5" y1="8.5" x2="8.5" y2="35.5" stroke-width="1.8"></line>
-                </svg>
-              </div>
-              <span class="fh-vp-badge-label">NO<br>MIDDLEMAN</span>
-            </div>
-
-            <!-- Custom Production -->
-            <div class="fh-vp-badge">
-              <div class="fh-vp-icon-wrap" title="Custom Production">
-                <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <!-- Mechanical gear in top-left background -->
-                  <path d="M23 4.5h2v2h-2z M23 16.5h2v2h-2z M17 10.5h2v2h-2z M29 10.5h2v2h-2z M18.5 6l1.4 1.4-1.4 1.4-1.4-1.4z M27 14.5l1.4 1.4-1.4 1.4-1.4-1.4z M18.5 15l1.4-1.4 1.4 1.4-1.4 1.4z M27 6.5l1.4-1.4 1.4 1.4-1.4 1.4z" fill="currentColor"></path>
-                  <circle cx="24" cy="11.5" r="5.5"></circle>
-                  <circle cx="24" cy="11.5" r="2.5"></circle>
-                  <!-- Bench plane sole/workpiece line -->
-                  <line x1="6" y1="36" x2="38" y2="36" stroke-width="1.6"></line>
-                  <!-- Front wooden knob -->
-                  <circle cx="11.5" cy="27" r="2.2" fill="var(--color-bg-light)"></circle>
-                  <path d="M10.2 29l-1 4h4.6l-1-4" fill="var(--color-bg-light)"></path>
-                  <!-- Plane body -->
-                  <path d="M14 33c2-2 4.5-3 7.5-3 3 0 5 1 7 3h6c1 0 1.8-.8 1.8-1.8 0-1.8-1.2-3.2-3-3.2h-5" fill="var(--color-bg-light)"></path>
-                  <!-- Angled cutting blade / iron -->
-                  <line x1="22" y1="20" x2="28" y2="33" stroke-width="2.2"></line>
-                  <line x1="23.5" y1="22.5" x2="28.5" y2="32.5" stroke-width="1.4"></line>
-                  <!-- Rear tote handle -->
-                  <path d="M31.5 28c1-2.5 2.5-4.5 4.5-4.5 2 0 3 1.5 3 4.5 0 2.2-1 3.5-2.5 3.5h-1.5"></path>
-                </svg>
-              </div>
-              <span class="fh-vp-badge-label">CUSTOM<br>PRODUCTION</span>
-            </div>
+          ${banners.length > 1 ? `
+          <div class="fh-slideshow-dots" id="hero-slideshow-dots" role="tablist" aria-label="Slide indicators">
+            ${banners.map((_, i) => `
+              <button class="fh-slideshow-dot ${i === 0 ? 'active' : ''}" data-slide-index="${i}" aria-label="Go to slide ${i + 1}" role="tab" aria-selected="${i === 0 ? 'true' : 'false'}"></button>
+            `).join('')}
           </div>
+          ` : ''}
         </div>
       </div>
+      ` : ''}
     </section>
 
     <!-- SCREENSHOT 2: NEW ARRIVALS -->
@@ -402,5 +341,58 @@ export function renderHomeView(container, state, events) {
         newsletterForm.reset();
       }
     });
+  }
+
+  // Hero Banner Slideshow (Automatic 5-second smooth scroll transition with dots indicator)
+  const slideshowEl = container.querySelector('#hero-slideshow');
+  if (slideshowEl) {
+    const track = slideshowEl.querySelector('#hero-slideshow-track');
+    const dots = slideshowEl.querySelectorAll('.fh-slideshow-dot');
+    let currentSlide = 0;
+    const totalSlides = track?.children.length || 0;
+    let autoTimer = null;
+
+    function updateDots(activeIdx) {
+      dots.forEach((dot, idx) => {
+        const isActive = idx === activeIdx;
+        dot.classList.toggle('active', isActive);
+        dot.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+    }
+
+    function goToSlide(idx) {
+      if (totalSlides <= 1) return;
+      currentSlide = ((idx % totalSlides) + totalSlides) % totalSlides;
+      if (track) {
+        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+      }
+      updateDots(currentSlide);
+    }
+
+    function startTimer() {
+      if (totalSlides > 1) {
+        if (autoTimer) clearInterval(autoTimer);
+        autoTimer = setInterval(() => goToSlide(currentSlide + 1), 5000);
+      }
+    }
+
+    dots.forEach((dot, idx) => {
+      dot.addEventListener('click', (e) => {
+        e.preventDefault();
+        goToSlide(idx);
+        startTimer(); // Reset the 5s interval on user interaction
+      });
+    });
+
+    startTimer();
+
+    // Cleanup on navigation
+    const observer = new MutationObserver(() => {
+      if (!document.contains(slideshowEl)) {
+        if (autoTimer) clearInterval(autoTimer);
+        observer.disconnect();
+      }
+    });
+    observer.observe(container, { childList: true });
   }
 }
